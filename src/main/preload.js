@@ -64,6 +64,16 @@ contextBridge.exposeInMainWorld('ch', {
     onChanged: (handler) => on('scheduler:changed', handler),
   },
 
+  connectors: {
+    status: () => invoke('connectors:status'),
+    connect: (name, credentials) => invoke('connectors:connect', { name, credentials }),
+    sync: (name) => invoke('connectors:sync', { name }),
+    options: (name, options) => invoke('connectors:options', { name, options }),
+    disconnect: (name) => invoke('connectors:disconnect', { name }),
+    preview: (name) => invoke('connectors:preview', { name }),
+    onChanged: (handler) => on('connectors:changed', handler),
+  },
+
   companion: {
     status: () => invoke('companion:status'),
     start: (port) => invoke('companion:start', { port }),

@@ -48,6 +48,7 @@ const DEFAULT_SETTINGS = {
   queueSlots: [],
   onboardingDone: false,
   backupKeepDays: 14,
+  connections: {},
   companionEnabled: false,
   companionPort: 7788,
   companionToken: null,

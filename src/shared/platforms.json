@@ -143,7 +143,7 @@
     "studioUrl": "https://dashboard.twitch.tv/insights",
     "csvHint": "Twitch Creator Dashboard → Insights → Kanalanalysen → CSV exportieren",
     "limits": { "title": 140, "body": 0, "tags": 10, "aspect": "16:9" },
-    "metrics": ["avgViewers", "peakViewers", "hoursWatched", "streamMinutes", "chatMessages", "followersGained", "subsGained"],
+    "metrics": ["avgViewers", "peakViewers", "hoursWatched", "streamMinutes", "views", "chatMessages", "followersGained", "subsGained"],
     "bestSlots": [{ "days": [2, 4, 6], "time": "19:00" }, { "days": [0], "time": "16:00" }],
     "formats": ["Just Chatting", "Gameplay-Stream", "Co-Stream", "Werkstatt-Stream", "Community-Abend", "Speedrun", "Watchparty"],
     "tips": [

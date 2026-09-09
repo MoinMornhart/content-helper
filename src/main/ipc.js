@@ -30,9 +30,10 @@ function assertCollection(name) {
  * @param {import('./scheduler').Scheduler} scheduler
  * @param {import('./updater').Updater} updater
  * @param {import('./companion').Companion} companion
+ * @param {import('./connectors').Connectors} connectors
  * @param {() => Electron.BrowserWindow|null} getWindow
  */
-function registerIpc(store, scheduler, updater, companion, getWindow) {
+function registerIpc(store, scheduler, updater, companion, connectors, getWindow) {
   const handle = (channel, fn) => {
     ipcMain.handle(channel, async (_event, payload = {}) => {
       try {
@@ -157,6 +158,64 @@ function registerIpc(store, scheduler, updater, companion, getWindow) {
   // ------------------------------------------------------------- Scheduler
   handle('scheduler:summary', () => scheduler.summary());
   handle('scheduler:tick', () => scheduler.tick());
+
+  // ------------------------------------------------------------- Verbindungen
+  handle('connectors:status', () => connectors.status());
+
+  /** Zugangsdaten hinterlegen und sofort gegen die Gegenstelle prüfen. */
+  handle('connectors:connect', async ({ name, credentials }) => {
+    const connector = connectors.connector(name);
+    if (name === 'twitch') {
+      connector.saveConfig({
+        clientId: String(credentials.clientId || '').trim(),
+        clientSecret: String(credentials.clientSecret || '').trim(),
+      });
+      const channel = await connector.verify(credentials.login);
+      return { channel, status: connector.status() };
+    }
+    if (name === 'youtube') {
+      const channel = await connector.resolve(credentials.channel);
+      return { channel, status: connector.status() };
+    }
+    throw new Error(`Unbekannte Verbindung: ${name}`);
+  });
+
+  handle('connectors:sync', async ({ name }) => {
+    if (name) {
+      const connector = connectors.connector(name);
+      try {
+        return { [name]: await connector.sync() };
+      } catch (error) {
+        connector.saveConfig({ lastError: error.message });
+        throw error;
+      }
+    }
+    return connectors.syncAll();
+  });
+
+  handle('connectors:options', ({ name, options }) => {
+    connectors.connector(name).saveConfig(options);
+    return connectors.status();
+  });
+
+  handle('connectors:disconnect', ({ name }) => {
+    connectors.connector(name).disconnect();
+    return connectors.status();
+  });
+
+  handle('connectors:preview', async ({ name }) => {
+    if (name === 'twitch') {
+      return {
+        live: await connectors.twitch.currentStream(),
+        broadcasts: await connectors.twitch.recentBroadcasts(5),
+        clips: await connectors.twitch.topClips({ days: 7, limit: 5 }),
+      };
+    }
+    if (name === 'youtube') {
+      return { videos: (await connectors.youtube.recentVideos()).slice(0, 5) };
+    }
+    throw new Error(`Unbekannte Verbindung: ${name}`);
+  });
 
   // ------------------------------------------------------------- Handy-Begleiter
   handle('companion:status', () => companion.status());

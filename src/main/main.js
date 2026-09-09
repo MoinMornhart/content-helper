@@ -15,6 +15,7 @@ const { Scheduler } = require('./scheduler');
 const { registerIpc } = require('./ipc');
 const { Updater } = require('./updater');
 const { Companion } = require('./companion');
+const { Connectors } = require('./connectors');
 
 const isDev = process.argv.includes('--dev');
 const startHidden = process.argv.includes('--hidden');
@@ -25,6 +26,7 @@ let store = null;
 let scheduler = null;
 let updater = null;
 let companion = null;
+let connectors = null;
 let quitting = false;
 
 const getWindow = () => mainWindow;
@@ -202,12 +204,15 @@ app.whenReady().then(() => {
 
   companion = new Companion(store, scheduler, getWindow);
 
-  registerIpc(store, scheduler, updater, companion, getWindow);
+  connectors = new Connectors(store, getWindow);
+
+  registerIpc(store, scheduler, updater, companion, connectors, getWindow);
   createWindow();
   buildMenu();
   buildTray();
   scheduler.start();
   updater.start();
+  connectors.start();
 
   // Der Handy-Begleiter startet nur, wenn er zuletzt aktiv war.
   if (store.settings().companionEnabled) {
@@ -224,6 +229,7 @@ app.on('before-quit', () => {
   scheduler?.stop();
   updater?.stop();
   companion?.stop();
+  connectors?.stop();
   store?.flush();
 });
 
