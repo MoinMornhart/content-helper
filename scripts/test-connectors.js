@@ -1,0 +1,205 @@
+'use strict';
+
+/**
+ * Test der Verbindungen – ohne Netzzugriff.
+ *
+ * Geprüft wird das, was ohne Gegenstelle prüfbar ist und wo Fehler wehtun:
+ * das Lesen des YouTube-Feeds, das Umrechnen der Twitch-Dauerangaben, das
+ * Zusammenfassen einer Stream-Sitzung zu Durchschnitt und Spitze sowie der
+ * Abgleich, der bei wiederholtem Lauf nichts verdoppeln und nichts von Hand
+ * Eingetragenes überschreiben darf.
+ *
+ *     node scripts/test-connectors.js
+ */
+
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+const { Store } = require('../src/main/store');
+const { parseFeed, decode, extractChannelId } = require('../src/main/connectors/youtube');
+const { TwitchConnector, parseDuration } = require('../src/main/connectors/twitch');
+const { upsertAnalytics, upsertPublishedPost, linkAnalyticsToPost } = require('../src/main/connectors/shared');
+
+const results = [];
+const check = (name, condition, detail = '') => {
+  results.push({ name, ok: Boolean(condition) });
+  process.stdout.write(`  ${condition ? 'ok  ' : 'FEHL'} ${name}${!condition && detail ? ` – ${detail}` : ''}\n`);
+};
+
+// ------------------------------------------------------------------ Beispiel-Feed
+
+const FEED = `<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015" xmlns:media="http://search.yahoo.com/mrss/" xmlns="http://www.w3.org/2005/Atom">
+  <title>Mein Kanal</title>
+  <entry>
+    <id>yt:video:AAAAAAAAAAA</id>
+    <yt:videoId>AAAAAAAAAAA</yt:videoId>
+    <title>Fünf Fehler beim Streamen &amp; wie du sie vermeidest</title>
+    <published>2026-09-01T17:00:00+00:00</published>
+    <media:group>
+      <media:description>Kurze Beschreibung mit &lt;Zeichen&gt; drin.</media:description>
+      <media:community>
+        <media:starRating count="640" average="4.95"/>
+        <media:statistics views="14200"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:BBBBBBBBBBB</id>
+    <yt:videoId>BBBBBBBBBBB</yt:videoId>
+    <title>Setup-Tour 2026</title>
+    <published>2026-08-24T10:30:00+00:00</published>
+    <media:group>
+      <media:description>Ohne Statistik-Block.</media:description>
+    </media:group>
+  </entry>
+</feed>`;
+
+const videos = parseFeed(FEED);
+
+check('Feed liefert beide Videos', videos.length === 2, `${videos.length} gefunden`);
+check('Video-Kennung gelesen', videos[0].id === 'AAAAAAAAAAA', videos[0].id);
+check('Aufrufe gelesen', videos[0].views === 14200, String(videos[0].views));
+check('Likes gelesen', videos[0].likes === 640, String(videos[0].likes));
+check('Adresse gebaut', videos[0].url === 'https://www.youtube.com/watch?v=AAAAAAAAAAA');
+check('Ersatzdarstellungen aufgelöst', videos[0].title.includes('Streamen & wie'), videos[0].title);
+check('Beschreibung entschlüsselt', videos[0].description.includes('<Zeichen>'), videos[0].description);
+check('Fehlende Statistik ergibt null', videos[1].views === null && videos[1].likes === null);
+check('Zeitpunkt übernommen', videos[1].published.startsWith('2026-08-24'));
+check('Reihenfolge des Feeds bleibt', videos[0].id === 'AAAAAAAAAAA' && videos[1].id === 'BBBBBBBBBBB');
+check('Entschlüsselung einzeln', decode('a &amp;lt; b') === 'a &lt; b');
+
+// ------------------------------------------------------------------ Kanal-Kennung
+
+/*
+ * Nachstellung einer echten YouTube-Kanalseite: dort steht vor der eigenen
+ * Kennung ein empfohlener Fremdkanal. Genau daran ist die erste Fassung
+ * gescheitert – sie hat den falschen Kanal verbunden.
+ */
+const CHANNEL_PAGE = `<!doctype html><html><head>
+<meta property="og:site_name" content="YouTube">
+<link rel="canonical" href="https://www.youtube.com/channel/UCrichtigrichtigrichtigr">
+<meta property="og:url" content="https://www.youtube.com/channel/UCrichtigrichtigrichtigr">
+</head><body>
+<script>var data = {"channelId":"UCfremdfremdfremdfremdfr","title":"Empfohlener Kanal"};</script>
+<script>var own = {"externalId":"UCrichtigrichtigrichtigr"};</script>
+</body></html>`;
+
+check(
+  'Eigene Kanal-Kennung statt empfohlener',
+  extractChannelId(CHANNEL_PAGE) === 'UCrichtigrichtigrichtigr',
+  String(extractChannelId(CHANNEL_PAGE))
+);
+check(
+  'Ohne kanonische Adresse greift das Ersatzfeld',
+  extractChannelId('<script>{"externalId":"UCrichtigrichtigrichtigr","channelId":"UCfremdfremdfremdfremdfr"}</script>') === 'UCrichtigrichtigrichtigr'
+);
+check('Ohne verlässliches Feld lieber nichts', extractChannelId('<html><body>nichts hier</body></html>') === null);
+check('Fremde Kennung wird nicht geraten', extractChannelId('{"channelId":"UCfremdfremdfremdfremdfr"}') === null);
+
+// ------------------------------------------------------------------ Twitch-Dauer
+
+check('Dauer mit Stunden', parseDuration('3h21m5s') === 3 * 3600 + 21 * 60 + 5);
+check('Dauer ohne Stunden', parseDuration('47m12s') === 47 * 60 + 12);
+check('Dauer nur Sekunden', parseDuration('58s') === 58);
+check('Unsinnige Dauer ergibt 0', parseDuration('kaputt') === 0);
+
+// ------------------------------------------------------------------ Abgleich
+
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'content-helper-connectors-'));
+const store = new Store(tmp);
+
+const entry = {
+  externalId: 'youtube:video:AAAAAAAAAAA',
+  platformId: 'youtube',
+  date: '2026-09-01',
+  title: 'Fünf Fehler beim Streamen',
+  metrics: { views: 14200, likes: 640 },
+  source: 'youtube',
+};
+
+check('Erster Abgleich legt an', upsertAnalytics(store, entry) === 'added');
+check('Zweiter Abgleich aktualisiert', upsertAnalytics(store, { ...entry, metrics: { views: 15100, likes: 660 } }) === 'updated');
+check('Kein doppelter Eintrag', store.list('analytics').length === 1, `${store.list('analytics').length} Einträge`);
+check('Neue Aufrufe übernommen', store.list('analytics')[0].metrics.views === 15100);
+
+// Von Hand ergaenzte Werte muessen einen Abgleich ueberleben.
+store.update('analytics', store.list('analytics')[0].id, {
+  metrics: { ...store.list('analytics')[0].metrics, ctr: 5.4, avgViewSec: 214 },
+});
+upsertAnalytics(store, { ...entry, metrics: { views: 16000, likes: 700 } });
+const merged = store.list('analytics')[0].metrics;
+check('Handeingabe bleibt erhalten', merged.ctr === 5.4 && merged.avgViewSec === 214, JSON.stringify(merged));
+check('Automatische Werte werden aufgefrischt', merged.views === 16000 && merged.likes === 700);
+
+const postId = upsertPublishedPost(store, {
+  externalId: 'youtube:video:AAAAAAAAAAA',
+  title: 'Fünf Fehler beim Streamen',
+  platforms: ['youtube'],
+  publishedAt: '2026-09-01T17:00:00Z',
+});
+check('Beitrag wird angelegt', Boolean(postId));
+check('Beitrag gilt als veröffentlicht', store.get('posts', postId).status === 'published');
+check('Beitrag wird nicht verdoppelt', upsertPublishedPost(store, {
+  externalId: 'youtube:video:AAAAAAAAAAA',
+  title: 'Anderer Titel',
+  platforms: ['youtube'],
+  publishedAt: '2026-09-01T17:00:00Z',
+}) === null);
+check('Titel bestehender Beiträge bleibt unangetastet', store.get('posts', postId).title === 'Fünf Fehler beim Streamen');
+check('Messwert wird verknüpft', linkAnalyticsToPost(store, 'youtube:video:AAAAAAAAAAA', postId) === true);
+check('Verknüpfung sitzt', store.list('analytics')[0].postId === postId);
+
+// ------------------------------------------------------------------ Stream-Sitzung
+
+const twitch = new TwitchConnector(store);
+const startedAt = new Date(Date.now() - 90 * 60000).toISOString();
+twitch.session = {
+  streamId: '4711',
+  title: 'Werkstatt-Abend',
+  game: 'Just Chatting',
+  startedAt,
+  samples: [
+    { at: Date.now() - 80 * 60000, viewers: 20 },
+    { at: Date.now() - 40 * 60000, viewers: 48 },
+    { at: Date.now() - 10 * 60000, viewers: 34 },
+  ],
+};
+
+const finished = twitch.finishSession();
+const session = store.list('analytics').find((item) => item.externalId === 'twitch:session:4711');
+
+check('Sitzung wird gespeichert', finished.saved === true);
+check('Durchschnitt berechnet', session?.metrics.avgViewers === 34, String(session?.metrics.avgViewers));
+check('Spitzenwert erkannt', session?.metrics.peakViewers === 48, String(session?.metrics.peakViewers));
+check('Dauer plausibel', session?.metrics.streamMinutes >= 89 && session.metrics.streamMinutes <= 91, String(session?.metrics.streamMinutes));
+check('Gesehene Stunden abgeleitet', session?.metrics.hoursWatched > 45 && session.metrics.hoursWatched < 55, String(session?.metrics.hoursWatched));
+check('Sitzung ist danach beendet', twitch.session === null);
+
+// Dieselbe Sitzung darf kein zweites Mal geschrieben werden.
+twitch.session = { streamId: '4711', title: 'Werkstatt-Abend', startedAt, samples: [{ at: Date.now(), viewers: 10 }] };
+check('Sitzung wird nicht verdoppelt', twitch.finishSession().saved === false);
+
+// ------------------------------------------------------------------ Zugangsdaten
+
+twitch.saveConfig({ clientId: 'abc123', clientSecret: 'geheim', login: 'moinmornhart' });
+check('Verbindung gilt als eingerichtet', twitch.isConfigured() === true);
+check('Geheimnis steht nicht im Status', JSON.stringify(twitch.status()).includes('geheim') === false);
+twitch.disconnect();
+check('Trennen entfernt die Zugangsdaten', twitch.isConfigured() === false);
+check('Zahlen bleiben nach dem Trennen erhalten', store.list('analytics').length >= 2);
+
+// ------------------------------------------------------------------ Abschluss
+
+store.flush();
+try {
+  fs.rmSync(tmp, { recursive: true, force: true, maxRetries: 3 });
+} catch { /* Reste raeumt das System auf */ }
+
+const failed = results.filter((result) => !result.ok);
+if (failed.length) {
+  process.stdout.write(`\nFEHLGESCHLAGEN – ${failed.length} von ${results.length} Prüfungen.\n`);
+  process.exit(1);
+}
+process.stdout.write(`\nAlle ${results.length} Prüfungen bestanden.\n`);

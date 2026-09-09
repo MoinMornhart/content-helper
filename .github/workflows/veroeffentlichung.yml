@@ -46,6 +46,9 @@ jobs:
       - name: Handy-Begleiter von aussen prüfen
         run: node scripts/test-companion.js
 
+      - name: Verbindungen prüfen
+        run: node scripts/test-connectors.js
+
       - name: App-Symbole erzeugen
         run: node scripts/make-icon.js
 

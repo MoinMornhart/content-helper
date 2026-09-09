@@ -31,6 +31,7 @@ offline, ohne Abo, ohne dass deine Inhalte auf fremden Servern landen.
 | **Analytics** | Kennzahlen je Kanal, Trendkurven, Format-Vergleich, CSV-Import aus den Studios |
 | **Coach** | Konkrete Verbesserungsvorschläge auf Basis deiner echten Zahlen |
 | **Kanäle** | 20 Plattformen von YouTube über TikTok, Instagram und Twitch bis Newsletter und Blog |
+| **Verbindungen** | Twitch und YouTube holen ihre Zahlen selbst – neue Videos, Streams und Clips landen automatisch im Verlauf |
 | **Handy** | Installierbare Begleit-App fürs iPhone und Android – verbunden über dein eigenes WLAN |
 
 ## Ohne API-Schlüssel
@@ -44,6 +45,36 @@ Stattdessen arbeitet die App als präzise Übergabemaschine:
 - **Kennzahlen** – per CSV-Export aus YouTube Studio, TikTok Studio, Meta Business Suite
   und Twitch Insights oder per schneller Handeingabe.
 - **Ideen und Texte** – regelbasierte Generatoren, die lokal laufen.
+
+## Verbindungen: Zahlen kommen von selbst
+
+Alle 20 Minuten holt die App ab, was die Plattformen freiwillig herausgeben.
+
+**YouTube – ohne jeden Schlüssel.** Es genügt der Kanalname oder das @Handle. YouTube
+veröffentlicht für jeden Kanal einen offenen Feed; daraus liest die App die neuesten
+Videos mit Titel, Datum, Aufrufen und Likes und legt sie als veröffentlichte Beiträge an,
+damit Kalender und Coach den tatsächlichen Rhythmus kennen.
+
+**Twitch – mit einer eigenen, kostenlosen Anwendung.** Twitch gibt Daten nur an
+registrierte Anwendungen heraus; die ist in zwei Minuten unter
+[dev.twitch.tv](https://dev.twitch.tv/console/apps) angelegt und verursacht keine Kosten.
+Die App führt Schritt für Schritt durch die Einrichtung. Danach kommen automatisch:
+
+- vergangene Übertragungen mit Aufrufen und Dauer,
+- die stärksten Clips der Woche, auf Wunsch direkt als Kurzvideo-Ideen,
+- und während du live bist, alle zwei Minuten die Zuschauerzahl – daraus entstehen
+  Durchschnitt, Spitzenwert und geschaute Stunden je Stream.
+
+Eine Anmeldung mit dem Twitch-Konto ist nicht nötig, weil ausschliesslich öffentlich
+einsehbare Kanaldaten abgefragt werden. Kennung und Geheimnis liegen im lokalen
+Datenordner.
+
+**X (Twitter) – nicht möglich.** X verlangt seit 2023 für jeden lesenden Zugriff ein
+kostenpflichtiges Abonnement ab mehreren hundert Dollar im Monat. Einen kostenlosen oder
+schlüsselfreien Weg gibt es nicht. Für X bleibt der CSV-Import aus X Analytics.
+
+Von Hand eingetragene Werte überleben jeden Abgleich: automatisch geholte Zahlen werden
+aufgefrischt, eigene Ergänzungen bleiben unangetastet.
 
 ## Handy-Begleiter
 

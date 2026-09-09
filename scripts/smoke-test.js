@@ -20,9 +20,11 @@ const { app, BrowserWindow } = require('electron');
 const { Store } = require('../src/main/store');
 const { Scheduler } = require('../src/main/scheduler');
 const { Updater } = require('../src/main/updater');
+const { Companion } = require('../src/main/companion');
+const { Connectors } = require('../src/main/connectors');
 const { registerIpc } = require('../src/main/ipc');
 
-const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'mobile', 'settings'];
+const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'connections', 'mobile', 'settings'];
 
 const problems = [];
 const logs = [];
@@ -96,7 +98,11 @@ app.whenReady().then(async () => {
   let win = null;
   const scheduler = new Scheduler(store, () => win);
   const updater = new Updater(store, () => win);
-  registerIpc(store, scheduler, updater, () => win);
+  const companion = new Companion(store, scheduler, () => win);
+  const connectors = new Connectors(store, () => win);
+  // Bewusst ohne start(): der Test soll weder ins Netz gehen noch einen
+  // Anschluss belegen – geprueft wird, dass die Ansichten damit umgehen.
+  registerIpc(store, scheduler, updater, companion, connectors, () => win);
 
   win = new BrowserWindow({
     width: 1440,

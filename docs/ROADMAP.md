@@ -24,7 +24,15 @@ Der Ausbau erfolgt in Stufen. Jede Stufe ist für sich benutzbar – die App ist
 - [x] Trendkurven, Format- und Zeitfenster-Vergleich
 - [x] Coach: regelbasierte, konkrete Verbesserungsvorschläge aus den eigenen Zahlen
 
-## Stufe 5 – Komfort
+## Stufe 5 – Automatischer Abgleich
+- [x] YouTube über den offenen Kanal-Feed, ganz ohne Zugangsschlüssel
+- [x] Twitch über eine eigene, kostenlose Anwendung: Übertragungen, Clips, Live-Zuschauer
+- [x] Abtastung laufender Streams für Durchschnitt und Spitzenwert
+- [x] Abgleich ohne Dubletten, Handeingaben bleiben erhalten
+- [ ] Instagram und TikTok – beide geben ohne geschäftliches Konto und Prüfverfahren nichts heraus
+- [ ] X – erst wieder, wenn es einen bezahlbaren Lesezugang gibt
+
+## Stufe 6 – Komfort
 - [ ] Windows-Installer und Auto-Update
 - [ ] Freigabe-Workflow (Entwurf → Review → geplant)
 - [ ] Globale Suche über alle Inhalte, Ideen und Notizen
