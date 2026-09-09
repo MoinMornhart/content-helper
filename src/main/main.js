@@ -61,6 +61,16 @@ function createWindow() {
     if (isDev) mainWindow.webContents.openDevTools({ mode: 'detach' });
   });
 
+  // Im Entwicklungsmodus landen Meldungen der Oberflaeche auch im Terminal.
+  if (isDev) {
+    mainWindow.webContents.on('console-message', (...args) => {
+      const info = typeof args[0] === 'object' && args[0]?.message !== undefined
+        ? args[0]
+        : { level: args[1], message: args[2], lineNumber: args[3], sourceId: args[4] };
+      console.log(`[Oberflaeche/${info.level}] ${info.message}  (${info.sourceId}:${info.lineNumber})`);
+    });
+  }
+
   // Externe Links gehoeren in den Systembrowser, nicht in die App.
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (/^https?:\/\//i.test(url)) shell.openExternal(url);

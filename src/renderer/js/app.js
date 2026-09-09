@@ -222,6 +222,9 @@ async function main() {
     }
   });
 
+  // Zugriff fuer den Rauchtest und die Entwicklerwerkzeuge.
+  window.__app = { goto, state, store };
+
   await goto(settings.onboardingDone ? 'dashboard' : 'settings');
   refreshBadges();
   setInterval(refreshBadges, 60_000);
