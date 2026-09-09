@@ -5,7 +5,7 @@
  * Plattform und deine eigenen Zahlen und stellt beides nebeneinander.
  */
 
-import { h, card, fill } from '../lib/dom.js';
+import { h, card } from '../lib/dom.js';
 import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import * as an from '../lib/analytics.js';

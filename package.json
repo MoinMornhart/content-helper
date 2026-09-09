@@ -13,7 +13,8 @@
     "dist": "electron-builder --win",
     "pack": "electron-builder --win --dir",
     "lint": "node scripts/check-syntax.js",
-    "pretest": "node scripts/check-syntax.js",
+    "test:companion": "node scripts/test-companion.js",
+    "pretest": "node scripts/check-syntax.js && node scripts/test-companion.js",
     "test": "electron scripts/smoke-test.js",
     "icons": "node scripts/make-icon.js"
   },

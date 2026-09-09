@@ -10,7 +10,7 @@ import { h, card, empty, fill } from '../lib/dom.js';
 import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
-import { active, glyph, platform, suggestedSlots } from '../lib/platforms.js';
+import { active, glyph, platform } from '../lib/platforms.js';
 import { toast, confirm, modal } from '../lib/ui.js';
 
 export const title = 'Warteschlange';

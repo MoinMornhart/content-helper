@@ -10,7 +10,7 @@ import { h, card, empty, bar } from '../lib/dom.js';
 import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import { insights, healthScore } from '../lib/coach.js';
-import { active, platform } from '../lib/platforms.js';
+import { active } from '../lib/platforms.js';
 import { toast } from '../lib/ui.js';
 
 export const title = 'Coach';

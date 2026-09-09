@@ -5,7 +5,6 @@ import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
 import { insights, healthScore } from '../lib/coach.js';
-import { glyph, platformName } from '../lib/platforms.js';
 import { toast } from '../lib/ui.js';
 
 export const title = 'Dashboard';

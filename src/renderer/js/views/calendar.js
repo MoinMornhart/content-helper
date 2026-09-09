@@ -1,10 +1,10 @@
 /** Kalender: Monats- und Wochenansicht mit Umplanen per Ziehen. */
 
-import { h, card, fill } from '../lib/dom.js';
+import { h, card } from '../lib/dom.js';
 import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
-import { glyph, platform } from '../lib/platforms.js';
+import { platform } from '../lib/platforms.js';
 import { toast, segmented } from '../lib/ui.js';
 
 export const title = 'Kalender';
