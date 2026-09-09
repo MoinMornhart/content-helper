@@ -170,17 +170,26 @@ export function applyTheme(settings) {
 
 // ------------------------------------------------------------------ Aktualisierung
 
+/**
+ * Meldet ausdruecklich, wenn die Pruefung gar nicht stattfinden konnte.
+ * Ein "alles aktuell" darf nur stehen, wenn wirklich nachgesehen wurde –
+ * eine falsche Beruhigung ist schlimmer als eine offene Fehlermeldung.
+ */
 async function checkUpdateManually() {
   toast('Suche nach einer neueren Version …', 'info', 2000);
   const result = await window.ch.update.check(true);
-  if (!result?.ok) return toast(`Update-Prüfung fehlgeschlagen: ${result?.error || 'unbekannt'}`, 'danger');
+  if (!result?.ok) return toast(`Update-Prüfung fehlgeschlagen: ${result?.error || 'unbekannt'}`, 'danger', 7000);
+
   const info = result.data;
   if (info.available) {
-    toast(`Version ${info.latest} ist verfügbar.`, 'ok', 6000);
+    toast(`Version ${info.latest} ist verfügbar – du hast ${info.current}.`, 'ok', 8000);
+    showUpdateBanner(info);
   } else if (info.offline) {
-    toast('Keine Verbindung – Prüfung später erneut versuchen.', 'warn');
+    toast(`Prüfung nicht möglich: ${info.error || 'keine Verbindung'}.`, 'warn', 7000);
+  } else if (info.noReleases) {
+    toast('Prüfung nicht möglich: Auf der Projektseite ist keine Veröffentlichung sichtbar.', 'warn', 7000);
   } else {
-    toast('Du hast bereits die neueste Version.', 'ok');
+    toast(`Alles aktuell – Version ${info.current} ist die neueste.`, 'ok');
   }
 }
 
