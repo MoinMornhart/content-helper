@@ -1,0 +1,177 @@
+'use strict';
+
+/**
+ * Hintergrund-Scheduler.
+ *
+ * Prueft im Minutentakt alle geplanten Beitraege und loest zwei Ereignisse aus:
+ * eine Vorwarnung (Standard: 15 Minuten vorher) und die Faelligkeit selbst.
+ * Faellige Beitraege wechseln in den Status "due" und werden als
+ * Desktop-Benachrichtigung gemeldet; auf Wunsch landet der fertige Text direkt
+ * in der Zwischenablage und die Upload-Seite oeffnet sich.
+ *
+ * Bewusst ohne Plattform-API: der Scheduler erinnert und bereitet vor,
+ * veroeffentlicht aber nichts hinter dem Ruecken des Nutzers.
+ */
+
+const { Notification, clipboard, shell } = require('electron');
+
+const TICK_MS = 30_000;
+const MISSED_AFTER_MS = 6 * 60 * 60 * 1000;
+
+class Scheduler {
+  /**
+   * @param {import('./store').Store} store
+   * @param {() => Electron.BrowserWindow|null} getWindow
+   */
+  constructor(store, getWindow) {
+    this.store = store;
+    this.getWindow = getWindow;
+    this.timer = null;
+    this.platforms = new Map(
+      require('../shared/platforms.json').map((platform) => [platform.id, platform])
+    );
+  }
+
+  start() {
+    if (this.timer) return;
+    this.tick();
+    this.timer = setInterval(() => this.tick(), TICK_MS);
+  }
+
+  stop() {
+    clearInterval(this.timer);
+    this.timer = null;
+  }
+
+  /** Ein Durchlauf: Vorwarnungen, Faelligkeiten und verpasste Termine. */
+  tick() {
+    const settings = this.store.settings();
+    const now = Date.now();
+    const lead = (settings.leadTimeMinutes ?? 15) * 60_000;
+    const changed = [];
+
+    for (const post of this.store.list('posts')) {
+      if (!post.scheduledAt) continue;
+      const due = new Date(post.scheduledAt).getTime();
+      if (Number.isNaN(due)) continue;
+
+      if (post.status === 'scheduled') {
+        if (due <= now) {
+          this.store.update('posts', post.id, { status: 'due', dueNotifiedAt: new Date().toISOString() });
+          this.onDue(post, settings);
+          changed.push(post.id);
+        } else if (due - now <= lead && !post.preNotifiedAt) {
+          this.store.update('posts', post.id, { preNotifiedAt: new Date().toISOString() });
+          this.notify(
+            `Gleich faellig: ${this.titleOf(post)}`,
+            `In ${Math.max(1, Math.round((due - now) / 60000))} Minuten fuer ${this.platformNames(post)}.`,
+            settings
+          );
+          changed.push(post.id);
+        }
+      } else if (post.status === 'due' && now - due > MISSED_AFTER_MS) {
+        this.store.update('posts', post.id, { status: 'missed' });
+        changed.push(post.id);
+      }
+    }
+
+    if (changed.length) this.send('scheduler:changed', { ids: changed });
+    return changed;
+  }
+
+  /** Faelliger Beitrag: benachrichtigen, vorbereiten, Fenster nach vorn holen. */
+  onDue(post, settings) {
+    const platform = this.platforms.get(post.platforms?.[0]);
+
+    if (settings.copyToClipboardOnDue) {
+      const text = this.renderForClipboard(post, post.platforms?.[0]);
+      if (text) clipboard.writeText(text);
+    }
+    if (settings.autoOpenUploadPage && platform?.uploadUrl) {
+      shell.openExternal(platform.uploadUrl).catch(() => {});
+    }
+
+    this.notify(
+      `Jetzt faellig: ${this.titleOf(post)}`,
+      `${this.platformNames(post)}${settings.copyToClipboardOnDue ? ' – Text liegt in der Zwischenablage.' : ''}`,
+      settings
+    );
+
+    this.store.insert('activity', {
+      type: 'due',
+      postId: post.id,
+      title: this.titleOf(post),
+      at: new Date().toISOString(),
+    });
+
+    const win = this.getWindow();
+    if (win && !win.isDestroyed()) {
+      win.show();
+      win.flashFrame(true);
+    }
+  }
+
+  /**
+   * Baut den fertigen Veroeffentlichungstext fuer eine Plattform:
+   * plattformspezifische Fassung, sonst der gemeinsame Text, plus Hashtags.
+   */
+  renderForClipboard(post, platformId) {
+    const variant = post.perPlatform?.[platformId] || {};
+    const parts = [];
+    const title = variant.title ?? post.title;
+    const body = variant.body ?? post.body;
+    if (title && this.platforms.get(platformId)?.limits?.title) parts.push(title);
+    if (body) parts.push(body);
+    const tags = variant.hashtags?.length ? variant.hashtags : post.hashtags;
+    if (tags?.length) parts.push(tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`)).join(' '));
+    return parts.filter(Boolean).join('\n\n');
+  }
+
+  titleOf(post) {
+    return post.title?.trim() || post.body?.slice(0, 60).trim() || 'Beitrag ohne Titel';
+  }
+
+  platformNames(post) {
+    const names = (post.platforms || []).map((id) => this.platforms.get(id)?.name || id);
+    if (!names.length) return 'ohne Kanal';
+    if (names.length <= 3) return names.join(', ');
+    return `${names.slice(0, 3).join(', ')} und ${names.length - 3} weitere`;
+  }
+
+  notify(title, body, settings = this.store.settings()) {
+    if (!settings.notifications || !Notification.isSupported()) return;
+    const notification = new Notification({ title, body, silent: false });
+    notification.on('click', () => {
+      const win = this.getWindow();
+      if (win && !win.isDestroyed()) {
+        win.show();
+        win.focus();
+      }
+    });
+    notification.show();
+  }
+
+  send(channel, payload) {
+    const win = this.getWindow();
+    if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+  }
+
+  /** Kompakter Ueberblick fuer Tray-Menue und Dashboard. */
+  summary() {
+    const now = Date.now();
+    const posts = this.store.list('posts');
+    const upcoming = posts
+      .filter((post) => post.status === 'scheduled' && new Date(post.scheduledAt).getTime() > now)
+      .sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt));
+    return {
+      dueCount: posts.filter((post) => post.status === 'due').length,
+      missedCount: posts.filter((post) => post.status === 'missed').length,
+      scheduledCount: upcoming.length,
+      next: upcoming[0]
+        ? { id: upcoming[0].id, title: this.titleOf(upcoming[0]), at: upcoming[0].scheduledAt }
+        : null,
+    };
+  }
+}
+
+module.exports = { Scheduler };
