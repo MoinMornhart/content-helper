@@ -29,9 +29,10 @@ function assertCollection(name) {
  * @param {import('./store').Store} store
  * @param {import('./scheduler').Scheduler} scheduler
  * @param {import('./updater').Updater} updater
+ * @param {import('./companion').Companion} companion
  * @param {() => Electron.BrowserWindow|null} getWindow
  */
-function registerIpc(store, scheduler, updater, getWindow) {
+function registerIpc(store, scheduler, updater, companion, getWindow) {
   const handle = (channel, fn) => {
     ipcMain.handle(channel, async (_event, payload = {}) => {
       try {
@@ -156,6 +157,12 @@ function registerIpc(store, scheduler, updater, getWindow) {
   // ------------------------------------------------------------- Scheduler
   handle('scheduler:summary', () => scheduler.summary());
   handle('scheduler:tick', () => scheduler.tick());
+
+  // ------------------------------------------------------------- Handy-Begleiter
+  handle('companion:status', () => companion.status());
+  handle('companion:start', ({ port }) => companion.start(port || undefined));
+  handle('companion:stop', async () => { await companion.stop(); return companion.status(); });
+  handle('companion:newToken', () => { companion.newToken(); return companion.status(); });
 
   // ------------------------------------------------------------- Aktualisierung
   handle('update:check', ({ force }) => updater.check({ manual: Boolean(force), skipThrottle: true }));

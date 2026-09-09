@@ -141,6 +141,8 @@ const targets = [
   { file: path.join(__dirname, '..', 'build', 'icon.png'), size: 512 },
   { file: path.join(__dirname, '..', 'src', 'renderer', 'assets', 'icon.png'), size: 256 },
   { file: path.join(__dirname, '..', 'src', 'renderer', 'assets', 'tray.png'), size: 32 },
+  { file: path.join(__dirname, '..', 'src', 'mobile', 'icon-192.png'), size: 192 },
+  { file: path.join(__dirname, '..', 'src', 'mobile', 'icon-512.png'), size: 512 },
 ];
 
 for (const target of targets) {

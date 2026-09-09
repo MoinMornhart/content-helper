@@ -27,6 +27,7 @@ const NAV = [
     { id: 'channels', label: 'Kanäle', icon: '⬡' },
   ] },
   { group: 'System', items: [
+    { id: 'mobile', label: 'Handy', icon: '▯' },
     { id: 'settings', label: 'Einstellungen', icon: '⚙' },
   ] },
 ];
@@ -199,6 +200,12 @@ async function main() {
   window.ch.scheduler.onChanged(() => {
     refreshBadges();
     if (['dashboard', 'queue', 'calendar'].includes(state.view)) goto(state.view, state.params);
+  });
+
+  // Was am Handy passiert, soll hier sofort sichtbar werden.
+  window.ch.companion.onChanged(async () => {
+    await store.reload();
+    goto(state.view, state.params);
   });
 
   window.ch.nav.onGoto(({ view }) => goto(view));

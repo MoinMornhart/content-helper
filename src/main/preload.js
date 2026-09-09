@@ -64,6 +64,14 @@ contextBridge.exposeInMainWorld('ch', {
     onChanged: (handler) => on('scheduler:changed', handler),
   },
 
+  companion: {
+    status: () => invoke('companion:status'),
+    start: (port) => invoke('companion:start', { port }),
+    stop: () => invoke('companion:stop'),
+    newToken: () => invoke('companion:newToken'),
+    onChanged: (handler) => on('companion:changed', handler),
+  },
+
   update: {
     check: (force) => invoke('update:check', { force }),
     openReleasePage: () => invoke('update:openReleasePage'),
