@@ -1,8 +1,15 @@
 # Content Helper
 
+[![Prüfung](https://github.com/MoinMornhart/content-helper/actions/workflows/pruefung.yml/badge.svg)](https://github.com/MoinMornhart/content-helper/actions/workflows/pruefung.yml)
+[![Neueste Version](https://img.shields.io/github/v/release/MoinMornhart/content-helper?label=Download&color=8b5cf6)](https://github.com/MoinMornhart/content-helper/releases/latest)
+[![Lizenz](https://img.shields.io/badge/Lizenz-MIT-10b981)](LICENSE)
+
 **XXL Desktop-Werkzeugkasten für Creator.** Eine native Windows-App (Electron), die Content-Planung,
 Multi-Plattform-Veröffentlichung, Ideenfindung und Performance-Analyse an einem Ort bündelt –
 und dabei **alle Daten lokal auf deinem PC** speichert.
+
+**→ [Fertige Version herunterladen](https://github.com/MoinMornhart/content-helper/releases/latest)**
+(Installer oder portable Einzeldatei, kein Konto nötig)
 
 > Status: aktive Entwicklung. Siehe [docs/ROADMAP.md](docs/ROADMAP.md) für den Stand der Ausbaustufen.
 
@@ -64,6 +71,18 @@ npm run icons   # App-Symbole neu erzeugen
 
 Voraussetzung ist Node.js 20 oder neuer. Weitere Abhängigkeiten gibt es nicht:
 kein Build-Schritt, kein Framework, keine Laufzeitpakete.
+
+## Neue Version veröffentlichen
+
+```bash
+npm version minor            # hebt die Nummer und setzt den Versionsstempel
+git push origin main --tags  # GitHub baut und veröffentlicht automatisch
+```
+
+Der Arbeitsablauf unter `.github/workflows/` baut daraufhin Installer und portable
+Fassung und hängt beide an die Veröffentlichung. Genau von dort liest die App beim
+Start ihre Update-Prüfung – alle Nutzer bekommen die neue Fassung also automatisch
+gemeldet.
 
 ## Datenspeicherung
 

@@ -1,0 +1,64 @@
+# Baut die Windows-Fassungen und hängt sie an die Veröffentlichung.
+#
+# Ausgelöst durch einen Versionsstempel:
+#
+#     npm version minor          # hebt die Nummer in package.json und setzt den Stempel
+#     git push origin main --tags
+#
+# Danach entstehen hier Installer und portable Fassung und landen automatisch
+# unter „Releases“. Genau von dort liest die App beim Start ihre Update-Prüfung –
+# ohne diesen Schritt gäbe es nichts zu finden.
+
+name: Veröffentlichung
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Vorhandener Versionsstempel, z. B. v0.2.0'
+        required: true
+
+jobs:
+  windows:
+    name: Windows-Installer bauen
+    runs-on: windows-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Quellcode holen
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        run: npm ci
+
+      - name: Syntax aller Module prüfen
+        run: node scripts/check-syntax.js
+
+      - name: Handy-Begleiter von aussen prüfen
+        run: node scripts/test-companion.js
+
+      - name: App-Symbole erzeugen
+        run: node scripts/make-icon.js
+
+      - name: Installer und portable Fassung bauen
+        run: npx electron-builder --win --publish never
+
+      - name: An die Veröffentlichung hängen
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          if ! gh release view "$TAG" > /dev/null 2>&1; then
+            gh release create "$TAG" --title "Content Helper ${TAG#v}" --generate-notes
+          fi
+          gh release upload "$TAG" release/*.exe --clobber

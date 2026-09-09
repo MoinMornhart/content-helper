@@ -1,0 +1,40 @@
+# Prüft jede Änderung an main und jeden Pull Request.
+#
+# Bewusst ohne Electron: Syntaxprüfung und der Test des WLAN-Servers laufen mit
+# reinem Node und brauchen weder Bildschirm noch heruntergeladene Binärdateien.
+# Der Rauchtest über alle Ansichten braucht eine echte Fensterumgebung und wird
+# deshalb lokal mit `npm test` gefahren.
+
+name: Prüfung
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  pruefung:
+    name: Syntax und WLAN-Server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Quellcode holen
+        uses: actions/checkout@v4
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Abhängigkeiten installieren
+        # --ignore-scripts spart den Download der Electron-Binärdatei,
+        # die für diese Prüfungen nicht gebraucht wird.
+        run: npm ci --ignore-scripts
+
+      - name: Syntax aller Module prüfen
+        run: node scripts/check-syntax.js
+
+      - name: Handy-Begleiter von aussen prüfen
+        run: node scripts/test-companion.js
