@@ -25,6 +25,7 @@ const NAV = [
     { id: 'analytics', label: 'Analytics', icon: '◫' },
     { id: 'coach', label: 'Coach', icon: '◎' },
     { id: 'channels', label: 'Kanäle', icon: '⬡' },
+    { id: 'connections', label: 'Verbindungen', icon: '⇄' },
   ] },
   { group: 'System', items: [
     { id: 'mobile', label: 'Handy', icon: '▯' },
@@ -200,6 +201,12 @@ async function main() {
   window.ch.scheduler.onChanged(() => {
     refreshBadges();
     if (['dashboard', 'queue', 'calendar'].includes(state.view)) goto(state.view, state.params);
+  });
+
+  // Neue Zahlen aus einer Verbindung sollen sofort erscheinen.
+  window.ch.connectors.onChanged(async () => {
+    await store.reload();
+    goto(state.view, state.params);
   });
 
   // Was am Handy passiert, soll hier sofort sichtbar werden.
