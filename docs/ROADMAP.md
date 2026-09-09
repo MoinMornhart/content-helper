@@ -24,19 +24,25 @@ Der Ausbau erfolgt in Stufen. Jede Stufe ist für sich benutzbar – die App ist
 - [x] Trendkurven, Format- und Zeitfenster-Vergleich
 - [x] Coach: regelbasierte, konkrete Verbesserungsvorschläge aus den eigenen Zahlen
 
-## Stufe 5 – Echte Anbindung
-- [ ] OAuth-Verbindungen je Plattform (eigene Developer-Apps erforderlich)
-- [ ] Automatisches Veröffentlichen statt Erinnerung
-- [ ] Automatischer Kennzahlen-Abruf über die offiziellen APIs
-
-## Stufe 6 – Komfort
+## Stufe 5 – Komfort
 - [ ] Windows-Installer und Auto-Update
-- [ ] Team-/Freigabe-Workflow (Entwurf → Review → geplant)
-- [ ] Optionale KI-Anbindung für Titel-, Hook- und Beschreibungsvorschläge
+- [ ] Freigabe-Workflow (Entwurf → Review → geplant)
+- [ ] Globale Suche über alle Inhalte, Ideen und Notizen
 
-## Bewusste Grenzen
-Auto-Publishing braucht pro Plattform eine eigene, verifizierte Developer-App
-(YouTube Data API, Meta Graph API, TikTok Content Posting API, X API v2, LinkedIn,
-Twitch Helix …). Bis diese Zugänge stehen, arbeitet der Scheduler als **präzise
-Erinnerungs- und Übergabe-Maschine**: er legt Text, Tags, Thumbnail und Checkliste
-zur Sekunde bereit und öffnet den passenden Upload-Dialog.
+## Grundsatz: ohne API-Schlüssel
+Die App ist bewusst so gebaut, dass sie **keine API-Keys, keine Developer-Apps und keine
+OAuth-Anmeldungen** benötigt. Jede Plattform würde dafür eine eigene, oft verifizierungs-
+pflichtige Anwendung verlangen (YouTube Data API, Meta Graph API, TikTok Content Posting API,
+X API, Twitch Helix …) – mit Kosten, Wartezeiten und Schlüsselverwaltung.
+
+Stattdessen arbeitet der Content Helper als **präzise Übergabemaschine**:
+
+- **Veröffentlichen:** Der Scheduler legt zum Termin Text, Tags, Hashtags und Checkliste
+  fertig bereit, kopiert alles auf Wunsch in die Zwischenablage, öffnet die passende
+  Upload-Seite und markiert den Beitrag nach Bestätigung als veröffentlicht.
+- **Kennzahlen:** Import per CSV aus den offiziellen Studios (YouTube Studio, TikTok Studio,
+  Meta Business Suite, Twitch Insights) oder schnelle manuelle Erfassung.
+- **Ideen und Texte:** regelbasierte, lokal laufende Generatoren – keine Modell-Anbindung nötig.
+
+Damit funktioniert die Software sofort nach dem Start, dauerhaft kostenlos und ohne dass
+Inhalte den Rechner verlassen.

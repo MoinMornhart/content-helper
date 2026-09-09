@@ -1,0 +1,407 @@
+[
+  {
+    "id": "youtube",
+    "name": "YouTube",
+    "short": "YT",
+    "glyph": "▶",
+    "color": "#ff0033",
+    "kind": "video",
+    "family": "youtube",
+    "uploadUrl": "https://studio.youtube.com/",
+    "studioUrl": "https://studio.youtube.com/",
+    "csvHint": "YouTube Studio → Analytics → Erweiterter Modus → Exportieren → CSV",
+    "limits": { "title": 100, "body": 5000, "tagChars": 500, "hashtags": 15, "videoSecMin": 60, "videoSecMax": 43200, "aspect": "16:9" },
+    "hookWindowSec": 30,
+    "metrics": ["views", "impressions", "ctr", "avgViewSec", "watchHours", "likes", "comments", "shares", "subsGained"],
+    "bestSlots": [{ "days": [2, 4], "time": "17:00" }, { "days": [6, 0], "time": "11:00" }],
+    "formats": ["Tutorial", "Deep Dive", "Vlog", "Review", "Listicle", "Case Study", "Reaktion", "Q&A", "Dokumentation"],
+    "tips": [
+      "Das Thumbnail entscheidet vor dem Titel: ein Gesicht, ein Objekt, maximal drei Wörter.",
+      "Der Titel soll ein Versprechen enthalten, das die ersten 30 Sekunden sofort einlösen.",
+      "Kapitelmarken in der Beschreibung erhöhen die Wiedergabezeit messbar.",
+      "Eine CTR unter 4 % bei ordentlicher Wiedergabedauer ist fast immer ein Verpackungsproblem, kein Inhaltsproblem."
+    ]
+  },
+  {
+    "id": "youtube_shorts",
+    "name": "YouTube Shorts",
+    "short": "Shorts",
+    "glyph": "⚡",
+    "color": "#ff4e6a",
+    "kind": "short",
+    "family": "youtube",
+    "uploadUrl": "https://youtube.com/upload",
+    "studioUrl": "https://studio.youtube.com/",
+    "csvHint": "YouTube Studio → Analytics → Inhalte → Shorts filtern → Exportieren",
+    "limits": { "title": 100, "body": 5000, "hashtags": 5, "videoSecMin": 5, "videoSecMax": 180, "aspect": "9:16" },
+    "hookWindowSec": 3,
+    "metrics": ["views", "completionRate", "avgViewSec", "likes", "comments", "shares", "subsGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "12:00" }, { "days": [1, 2, 3, 4, 5], "time": "19:00" }],
+    "formats": ["Hook & Payoff", "Vorher/Nachher", "3 Tipps", "Mythos entlarvt", "Loop-Clip", "Ausschnitt aus Langvideo"],
+    "tips": [
+      "Die erste Sekunde muss eine Frage aufwerfen, die nur das Ende beantwortet.",
+      "Kein Intro, kein Logo, keine Begrüßung – direkt in die Aussage.",
+      "Untertitel sind Pflicht: der Großteil schaut stumm.",
+      "Ein sauberer Loop treibt die Abschlussrate über 100 Prozent."
+    ]
+  },
+  {
+    "id": "tiktok",
+    "name": "TikTok",
+    "short": "TT",
+    "glyph": "♪",
+    "color": "#25f4ee",
+    "kind": "short",
+    "family": "tiktok",
+    "uploadUrl": "https://www.tiktok.com/tiktokstudio/upload",
+    "studioUrl": "https://www.tiktok.com/tiktokstudio/analytics",
+    "csvHint": "TikTok Studio → Analysen → Übersicht → Daten herunterladen (CSV)",
+    "limits": { "title": 0, "body": 2200, "hashtags": 8, "videoSecMin": 3, "videoSecMax": 600, "aspect": "9:16" },
+    "hookWindowSec": 2,
+    "metrics": ["views", "completionRate", "avgViewSec", "likes", "comments", "shares", "followersGained", "profileVisits"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "18:00" }, { "days": [0, 6], "time": "10:00" }],
+    "formats": ["Storytime", "POV", "Tutorial in 30s", "Trend-Adaption", "Green-Screen-Kommentar", "Duett/Stitch"],
+    "tips": [
+      "Text-Overlay in Sekunde 0 ersetzt den Titel – ohne ihn wird weitergescrollt.",
+      "Kommentare sind Content: die häufigste Frage wird das nächste Video.",
+      "Trend-Sounds früh nutzen, spätestens nach fünf Tagen ist der Schub vorbei.",
+      "Unter 40 Prozent Abschlussrate liegt es fast immer an einer zu langen Einleitung."
+    ]
+  },
+  {
+    "id": "instagram_reels",
+    "name": "Instagram Reels",
+    "short": "Reels",
+    "glyph": "◉",
+    "color": "#e1306c",
+    "kind": "short",
+    "family": "meta",
+    "uploadUrl": "https://www.instagram.com/",
+    "studioUrl": "https://business.facebook.com/latest/insights/",
+    "csvHint": "Meta Business Suite → Insights → Inhalte → Exportieren",
+    "limits": { "title": 0, "body": 2200, "hashtags": 30, "videoSecMin": 3, "videoSecMax": 900, "aspect": "9:16" },
+    "hookWindowSec": 3,
+    "metrics": ["views", "reach", "completionRate", "likes", "comments", "shares", "saves", "followersGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "19:30" }, { "days": [0], "time": "11:00" }],
+    "formats": ["Reel-Tutorial", "Behind the Scenes", "Transformation", "Karussell-Teaser", "Zitat-Reel"],
+    "tips": [
+      "Shares und Saves wiegen im Ranking schwerer als Likes – baue einen Grund zum Weiterschicken ein.",
+      "Der Cover-Frame ist dein Thumbnail im Profilraster: bewusst wählen, nicht dem Zufall überlassen.",
+      "Drei bis fünf präzise Hashtags schlagen dreißig generische."
+    ]
+  },
+  {
+    "id": "instagram_feed",
+    "name": "Instagram Feed",
+    "short": "IG",
+    "glyph": "▣",
+    "color": "#c13584",
+    "kind": "image",
+    "family": "meta",
+    "uploadUrl": "https://www.instagram.com/",
+    "studioUrl": "https://business.facebook.com/latest/insights/",
+    "csvHint": "Meta Business Suite → Insights → Inhalte → Exportieren",
+    "limits": { "title": 0, "body": 2200, "hashtags": 30, "mediaCount": 20, "aspect": "4:5" },
+    "metrics": ["reach", "impressions", "likes", "comments", "shares", "saves", "profileVisits", "followersGained"],
+    "bestSlots": [{ "days": [1, 3, 5], "time": "18:00" }],
+    "formats": ["Karussell-Guide", "Vorher/Nachher", "Zitatkachel", "Mini-Case-Study", "Persönlicher Post"],
+    "tips": [
+      "Slide 1 verkauft, Slide 2 hält: die zweite Karte entscheidet über die Durchklickrate.",
+      "Das Format 4:5 belegt mehr Bildschirmfläche als 1:1 und gewinnt dadurch Aufmerksamkeit.",
+      "Die erste Caption-Zeile wird abgeschnitten – sie muss allein neugierig machen."
+    ]
+  },
+  {
+    "id": "instagram_story",
+    "name": "Instagram Story",
+    "short": "Story",
+    "glyph": "◌",
+    "color": "#f77737",
+    "kind": "story",
+    "family": "meta",
+    "uploadUrl": "https://www.instagram.com/",
+    "studioUrl": "https://business.facebook.com/latest/insights/",
+    "limits": { "title": 0, "body": 250, "videoSecMax": 60, "aspect": "9:16" },
+    "metrics": ["reach", "impressions", "storyReplies", "storyExits", "linkClicks"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "08:30" }, { "days": [1, 2, 3, 4, 5], "time": "20:00" }],
+    "formats": ["Umfrage", "Frage-Sticker", "Countdown", "Blick hinter die Kulissen", "Link-Story"],
+    "tips": [
+      "Ein Interaktions-Sticker in der ersten Story hält die ganze Sequenz zusammen.",
+      "Hohe Absprünge an einer bestimmten Position zeigen exakt, wo es langweilig wird.",
+      "Drei bis fünf Slides sind das Optimum, ab acht bricht die Durchsichtrate ein."
+    ]
+  },
+  {
+    "id": "twitch",
+    "name": "Twitch",
+    "short": "Twitch",
+    "glyph": "◈",
+    "color": "#9146ff",
+    "kind": "live",
+    "family": "twitch",
+    "uploadUrl": "https://dashboard.twitch.tv/stream-manager",
+    "studioUrl": "https://dashboard.twitch.tv/insights",
+    "csvHint": "Twitch Creator Dashboard → Insights → Kanalanalysen → CSV exportieren",
+    "limits": { "title": 140, "body": 0, "tags": 10, "aspect": "16:9" },
+    "metrics": ["avgViewers", "peakViewers", "hoursWatched", "streamMinutes", "chatMessages", "followersGained", "subsGained"],
+    "bestSlots": [{ "days": [2, 4, 6], "time": "19:00" }, { "days": [0], "time": "16:00" }],
+    "formats": ["Just Chatting", "Gameplay-Stream", "Co-Stream", "Werkstatt-Stream", "Community-Abend", "Speedrun", "Watchparty"],
+    "tips": [
+      "Verlässlichkeit schlägt Länge: drei feste Termine pro Woche bringen mehr als sieben zufällige.",
+      "Der Streamtitel wird in der Kategorie-Übersicht ohne Kontext gelesen – er muss allein funktionieren.",
+      "Aus jedem Stream mindestens zwei Clips ziehen: das ist dein Shorts-Nachschub für die Woche.",
+      "Die ersten zehn Minuten entscheiden über den Empfehlungs-Traffic: keine Pausen, keine Technikprobleme.",
+      "Die Ø-Zuschauerzahl ist die Kennzahl, an der Twitch dich misst – nicht die Followerzahl."
+    ]
+  },
+  {
+    "id": "x",
+    "name": "X (Twitter)",
+    "short": "X",
+    "glyph": "✕",
+    "color": "#1d9bf0",
+    "kind": "text",
+    "family": "x",
+    "uploadUrl": "https://x.com/compose/post",
+    "studioUrl": "https://analytics.x.com/",
+    "limits": { "title": 0, "body": 280, "bodyPremium": 25000, "hashtags": 2, "mediaCount": 4, "videoSecMax": 140 },
+    "metrics": ["impressions", "likes", "replies", "reposts", "bookmarks", "linkClicks", "engagementRate", "followersGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "09:00" }, { "days": [1, 2, 3, 4, 5], "time": "17:30" }],
+    "formats": ["Thread", "Hot Take", "Erkenntnis des Tages", "Zahlen-Post", "Frage an die Timeline"],
+    "tips": [
+      "Der erste Post eines Threads muss allein stehen können – nur er wird verteilt.",
+      "Links im ersten Post drücken die Reichweite: lieber in die erste Antwort setzen.",
+      "Lesezeichen sind das ehrlichste Signal für Nützlichkeit."
+    ]
+  },
+  {
+    "id": "threads",
+    "name": "Threads",
+    "short": "Threads",
+    "glyph": "@",
+    "color": "#8f8f8f",
+    "kind": "text",
+    "family": "meta",
+    "uploadUrl": "https://www.threads.net/",
+    "limits": { "title": 0, "body": 500, "mediaCount": 20, "videoSecMax": 300 },
+    "metrics": ["views", "likes", "replies", "reposts", "followersGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "12:30" }],
+    "formats": ["Gedankensplitter", "Frage in die Runde", "Mini-Thread", "Update aus dem Alltag"],
+    "tips": [
+      "Threads belohnt Antworten stärker als Likes: stelle offene Fragen.",
+      "Ein Beitrag pro Gedanke, keine Kondensate aus fünf Themen.",
+      "Antworte in der ersten Stunde auf jeden Kommentar – das verlängert die Verteilung."
+    ]
+  },
+  {
+    "id": "bluesky",
+    "name": "Bluesky",
+    "short": "Bsky",
+    "glyph": "☁",
+    "color": "#0085ff",
+    "kind": "text",
+    "family": "atproto",
+    "uploadUrl": "https://bsky.app/",
+    "limits": { "title": 0, "body": 300, "mediaCount": 4, "videoSecMax": 180 },
+    "metrics": ["likes", "replies", "reposts", "followersGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "10:00" }],
+    "formats": ["Kurzgedanke", "Link mit Einordnung", "Bildpost", "Diskussionsanstoß"],
+    "tips": [
+      "Chronologische Feeds belohnen Regelmäßigkeit stärker als Timing-Optimierung.",
+      "Eigene Feeds und Starter-Packs sind der schnellste Weg zu Sichtbarkeit.",
+      "Alt-Texte sind hier gelebte Norm, nicht Kür."
+    ]
+  },
+  {
+    "id": "mastodon",
+    "name": "Mastodon",
+    "short": "Masto",
+    "glyph": "ⓜ",
+    "color": "#6364ff",
+    "kind": "text",
+    "family": "fediverse",
+    "uploadUrl": "https://mastodon.social/",
+    "limits": { "title": 0, "body": 500, "mediaCount": 4, "hashtags": 5 },
+    "metrics": ["likes", "replies", "reposts", "followersGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "09:30" }],
+    "formats": ["Fachbeitrag", "Werkstattbericht", "Link mit Kontext", "Hashtag-Beitrag"],
+    "tips": [
+      "Ohne Algorithmus zählen Hashtags wirklich – zwei bis drei präzise setzen.",
+      "Content-Warnings werden geschätzt und kosten keine Reichweite.",
+      "Boosts sind die Währung: schreibe Beiträge, die man weitergeben will."
+    ]
+  },
+  {
+    "id": "linkedin",
+    "name": "LinkedIn",
+    "short": "LI",
+    "glyph": "in",
+    "color": "#0a66c2",
+    "kind": "text",
+    "family": "linkedin",
+    "uploadUrl": "https://www.linkedin.com/feed/",
+    "limits": { "title": 0, "body": 3000, "hashtags": 5, "mediaCount": 20, "videoSecMax": 900 },
+    "metrics": ["impressions", "reach", "likes", "comments", "shares", "linkClicks", "engagementRate", "followersGained"],
+    "bestSlots": [{ "days": [2, 3, 4], "time": "08:00" }],
+    "formats": ["Erfahrungsbericht", "Zahlen und Lernkurve", "Karussell-PDF", "Branchenkommentar", "Mein größter Fehler"],
+    "tips": [
+      "Die ersten drei Zeilen stehen vor dem Aufklappen – dort gehört der Haken hin.",
+      "Externe Links in den ersten Kommentar statt in den Beitrag halten die Reichweite oben.",
+      "Kurze Absätze mit Leerzeilen: der Feed wird auf dem Handy gelesen."
+    ]
+  },
+  {
+    "id": "facebook",
+    "name": "Facebook",
+    "short": "FB",
+    "glyph": "f",
+    "color": "#1877f2",
+    "kind": "text",
+    "family": "meta",
+    "uploadUrl": "https://www.facebook.com/",
+    "studioUrl": "https://business.facebook.com/latest/insights/",
+    "limits": { "title": 0, "body": 63206, "hashtags": 3, "mediaCount": 30 },
+    "metrics": ["reach", "impressions", "likes", "comments", "shares", "linkClicks", "engagementRate"],
+    "bestSlots": [{ "days": [1, 3, 5], "time": "13:00" }],
+    "formats": ["Community-Frage", "Veranstaltungshinweis", "Foto-Album", "Längerer Erfahrungsbericht"],
+    "tips": [
+      "Gruppen erreichen mehr als Seiten – dort zuerst posten.",
+      "Native Videos schlagen geteilte YouTube-Links deutlich.",
+      "Der erste eigene Kommentar unter dem Beitrag ist wertvolle Zusatzfläche."
+    ]
+  },
+  {
+    "id": "pinterest",
+    "name": "Pinterest",
+    "short": "Pin",
+    "glyph": "P",
+    "color": "#e60023",
+    "kind": "image",
+    "family": "pinterest",
+    "uploadUrl": "https://www.pinterest.de/pin-builder/",
+    "studioUrl": "https://analytics.pinterest.com/",
+    "limits": { "title": 100, "body": 500, "hashtags": 5, "aspect": "2:3" },
+    "metrics": ["impressions", "saves", "repins", "outboundClicks", "followersGained"],
+    "bestSlots": [{ "days": [0, 6], "time": "20:00" }],
+    "formats": ["Anleitung als Grafik", "Checkliste", "Inspirationsbild", "Produkt-Pin", "Idea Pin"],
+    "tips": [
+      "Pinterest ist eine Suchmaschine: Keywords gehören in Titel, Beschreibung und Boardnamen.",
+      "Das Format 2:3 ist Pflicht, alles andere wird beschnitten.",
+      "Pins wirken über Monate – Inhalte hier sind langlebige Investitionen, keine Tagesware."
+    ]
+  },
+  {
+    "id": "reddit",
+    "name": "Reddit",
+    "short": "Reddit",
+    "glyph": "◕",
+    "color": "#ff4500",
+    "kind": "community",
+    "family": "reddit",
+    "uploadUrl": "https://www.reddit.com/submit",
+    "limits": { "title": 300, "body": 40000 },
+    "metrics": ["views", "upvotes", "comments", "shares"],
+    "bestSlots": [{ "days": [1, 2, 3, 4], "time": "15:00" }],
+    "formats": ["Erfahrungsbericht", "AMA", "Tool-Vorstellung", "Frage an die Community", "Ergebnis-Post"],
+    "tips": [
+      "Jedes Subreddit hat eigene Regeln – ein Verstoß kostet den Account, nicht nur den Beitrag.",
+      "Werbliche Sprache wird sofort abgestraft: schreibe wie ein Mitglied, nicht wie eine Marke.",
+      "Erst zwei Wochen mitdiskutieren, dann eigene Inhalte teilen."
+    ]
+  },
+  {
+    "id": "snapchat",
+    "name": "Snapchat",
+    "short": "Snap",
+    "glyph": "◔",
+    "color": "#f5d400",
+    "kind": "short",
+    "family": "snap",
+    "uploadUrl": "https://my.snapchat.com/",
+    "limits": { "title": 0, "body": 250, "videoSecMax": 60, "aspect": "9:16" },
+    "metrics": ["views", "completionRate", "shares", "followersGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "16:00" }],
+    "formats": ["Spotlight-Clip", "Story-Serie", "Schneller Tipp"],
+    "tips": [
+      "Spotlight belohnt vollständige Wiedergabe stärker als jede andere Interaktion.",
+      "Vertikal, roh und ungeschliffen funktioniert hier besser als hochpoliert.",
+      "Keine sichtbaren Wasserzeichen fremder Plattformen – die werden zuverlässig heruntergestuft."
+    ]
+  },
+  {
+    "id": "discord",
+    "name": "Discord",
+    "short": "DC",
+    "glyph": "◑",
+    "color": "#5865f2",
+    "kind": "community",
+    "family": "discord",
+    "uploadUrl": "https://discord.com/app",
+    "limits": { "title": 0, "body": 2000 },
+    "metrics": ["reach", "comments", "linkClicks"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "18:30" }],
+    "formats": ["Ankündigung", "Umfrage", "Community-Event", "Behind the Scenes"],
+    "tips": [
+      "Ankündigungskanäle sind für Ereignisse da, nicht für Alltagsgeplauder.",
+      "Die Erwähnung aller verliert bei jedem Einsatz an Wirkung – sparsam nutzen.",
+      "Die Community hier ist dein Testpublikum für Ideen vor der Produktion."
+    ]
+  },
+  {
+    "id": "telegram",
+    "name": "Telegram",
+    "short": "TG",
+    "glyph": "➤",
+    "color": "#2aabee",
+    "kind": "community",
+    "family": "telegram",
+    "uploadUrl": "https://web.telegram.org/",
+    "limits": { "title": 0, "body": 4096 },
+    "metrics": ["views", "shares", "linkClicks", "followersGained"],
+    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "09:00" }],
+    "formats": ["Kanal-Update", "Link-Sammlung", "Sprachnachricht", "Umfrage"],
+    "tips": [
+      "Ein Beitrag pro Gedanke – der Kanal wird wie ein Nachrichtenticker gelesen.",
+      "Weiterleitungen sind das Wachstumssignal: schreibe teilbare Einzelbeiträge.",
+      "Mehr als drei Beiträge am Tag kosten Abonnenten."
+    ]
+  },
+  {
+    "id": "newsletter",
+    "name": "Newsletter",
+    "short": "Mail",
+    "glyph": "✉",
+    "color": "#f59e0b",
+    "kind": "text",
+    "family": "owned",
+    "uploadUrl": "",
+    "limits": { "title": 60, "body": 20000 },
+    "metrics": ["reach", "openRate", "linkClicks", "followersGained", "unsubscribes"],
+    "bestSlots": [{ "days": [4], "time": "07:00" }],
+    "formats": ["Wochenrückblick", "Deep Dive", "Kuratierte Links", "Persönlicher Brief"],
+    "tips": [
+      "Die Betreffzeile ist das Thumbnail der E-Mail – 40 bis 55 Zeichen wirken am besten.",
+      "Ein Ziel pro Ausgabe: eine Handlung, nicht fünf Angebote.",
+      "Die Liste gehört dir – hier lohnt jede Stunde doppelt, weil kein Algorithmus dazwischensteht."
+    ]
+  },
+  {
+    "id": "blog",
+    "name": "Blog / Website",
+    "short": "Blog",
+    "glyph": "§",
+    "color": "#10b981",
+    "kind": "text",
+    "family": "owned",
+    "uploadUrl": "",
+    "limits": { "title": 70, "body": 100000 },
+    "metrics": ["views", "reach", "linkClicks", "avgViewSec"],
+    "bestSlots": [{ "days": [2], "time": "10:00" }],
+    "formats": ["Ratgeber", "Fallstudie", "Vergleich", "Glossar-Eintrag", "Transkript zum Video"],
+    "tips": [
+      "Ein Beitrag, eine Suchintention – gemischte Absichten ranken für nichts.",
+      "Jedes Video verdient einen Textbegleiter: das ist Reichweite ohne Zusatzdreh.",
+      "Interne Verlinkung schlägt fast jede andere schnelle Maßnahme."
+    ]
+  }
+]
