@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+release/
+out/
+
+# Lokale Nutzerdaten (niemals ins Repo!)
+data/
+*.local.json
+userdata/
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS / Editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+.vscode/
+.idea/
+
+# Secrets
+.env
+.env.*
+!.env.example
+secrets.json
