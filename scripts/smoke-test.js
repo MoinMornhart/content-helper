@@ -22,7 +22,7 @@ const { Scheduler } = require('../src/main/scheduler');
 const { Updater } = require('../src/main/updater');
 const { registerIpc } = require('../src/main/ipc');
 
-const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'settings'];
+const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'mobile', 'settings'];
 
 const problems = [];
 const logs = [];
@@ -151,6 +151,37 @@ app.whenReady().then(async () => {
     } catch (error) {
       problems.push(`Ansicht "${view}" warf: ${error.message}`);
     }
+  }
+
+  // ---------------------------------------------------------------- QR-Code
+  // Strukturpruefung: Groesse, Suchmuster, Taktmuster und dunkles Modul.
+  try {
+    const qr = await win.webContents.executeJavaScript(`(async () => {
+      const { matrixFor } = await import('./js/lib/qrcode.js');
+      const results = {};
+      for (const sample of ['http://192.168.178.42:7788/#0123456789abcdef0123456789abcdef', 'kurz', 'x'.repeat(150)]) {
+        const m = matrixFor(sample);
+        const size = m.length;
+        const finder = (r, c) => m[r][c] === 1 && m[r + 1][c + 1] === 0 && m[r + 2][c + 2] === 1 && m[r + 6][c] === 1;
+        results[sample.length] = {
+          size,
+          versionOk: (size - 17) % 4 === 0,
+          finders: finder(0, 0) && finder(0, size - 7) && finder(size - 7, 0),
+          timing: m[6][8] === 1 && m[6][9] === 0 && m[8][6] === 1,
+          darkModule: m[size - 8][8] === 1,
+          filled: m.every((row) => row.every((cell) => cell === 0 || cell === 1)),
+        };
+      }
+      return results;
+    })()`);
+
+    for (const [length, report] of Object.entries(qr)) {
+      const failed = Object.entries(report).filter(([key, value]) => key !== 'size' && value !== true);
+      if (failed.length) problems.push(`QR-Code (${length} Zeichen): ${failed.map(([key]) => key).join(', ')} fehlerhaft`);
+      else process.stdout.write(`  ok   QR-Code     ${length} Zeichen → ${report.size}x${report.size} Module\n`);
+    }
+  } catch (error) {
+    problems.push(`QR-Code-Pruefung warf: ${error.message}`);
   }
 
   store.flush();
