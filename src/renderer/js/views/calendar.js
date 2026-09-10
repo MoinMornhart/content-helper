@@ -5,7 +5,7 @@ import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
 import { platform } from '../lib/platforms.js';
-import { toast, segmented } from '../lib/ui.js';
+import { toast, segmented, modal, copy } from '../lib/ui.js';
 
 export const title = 'Kalender';
 export const lead = 'Was wann wohin geht – auf einen Blick.';
@@ -30,11 +30,78 @@ async function moveTo(postId, day, hour = null) {
   toast(`Verschoben auf ${fmt.dateTime(next)}.`, 'ok');
 }
 
+/**
+ * Kalender in Apple Kalender, Google oder Outlook bringen.
+ *
+ * Zwei Wege mit einem wichtigen Unterschied: Das Abonnement bleibt mit dem Plan
+ * verbunden und frischt sich selbst auf, funktioniert aber nur, solange dieser
+ * Rechner läuft. Die Datei ist überall dabei, kennt spätere Änderungen aber nicht.
+ */
+async function subscribeDialog() {
+  const result = await window.ch.calendar.subscription();
+  const info = result?.ok ? result.data : { running: false };
+
+  const step = (number, title, body) => h('div.row.gap-sm', { style: { alignItems: 'flex-start' } },
+    h('span.badge.badge--accent', { text: String(number) }),
+    h('div', null,
+      h('div.strong.text-sm', { text: title }),
+      h('div.text-sm.muted', { text: body })));
+
+  modal({
+    title: 'Kalender verbinden',
+    body: h('div.col.gap-lg', null,
+      // --- Abonnement
+      h('div', null,
+        h('div.row.between.mb-sm', null,
+          h('h3', { text: 'Abonnieren – bleibt aktuell' }),
+          h('span.badge', { class: info.running ? 'badge--ok' : 'badge--warn', text: info.running ? 'bereit' : 'Handy-Zugang aus' })),
+        info.running
+          ? h('div.col.gap-sm', null,
+              h('p.text-sm.muted', { text: 'Dein Kalender holt sich diese Adresse regelmässig selbst. Änderungen am Plan erscheinen dadurch von allein – solange dieser Rechner läuft und im selben Netz erreichbar ist.' }),
+              h('div.mono.text-xs.faint', { style: { wordBreak: 'break-all' }, text: info.url }),
+              h('div.row.wrap.gap-sm', null,
+                h('button.btn.btn--sm.btn--primary', { text: 'Adresse kopieren', onClick: () => copy(info.url, 'Adresse kopiert – im Kalender einfügen.') }),
+                h('button.btn.btn--sm', { text: 'In Apple Kalender öffnen', onClick: () => window.ch.system.openExternal(info.webcal) })),
+              h('hr.divider'),
+              h('div.col.gap-lg', null,
+                step('A', 'Apple Kalender (Mac)', 'Ablage → Neues Kalenderabonnement → Adresse einfügen. Aktualisierung auf „alle 15 Minuten“ stellen.'),
+                step('I', 'iPhone und iPad', 'Einstellungen → Apps → Kalender → Accounts → Account hinzufügen → Andere → Kalenderabo hinzufügen.'),
+                step('G', 'Google Kalender', 'Andere Kalender → + → Per URL. Achtung: Google erreicht deinen Rechner nur, wenn er aus dem Internet erreichbar ist – im Heimnetz klappt nur Apple und Outlook auf demselben Netz.'),
+                step('O', 'Outlook', 'Kalender hinzufügen → Aus dem Internet abonnieren → Adresse einfügen.')))
+          : h('div.notice.notice--warn', null,
+              h('span.notice__icon', { text: '!' }),
+              h('div', null,
+                h('div.strong.text-sm', { text: 'Dafür muss der Handy-Zugang laufen' }),
+                h('div.text-sm.muted', { text: 'Er stellt die Kalenderadresse im Heimnetz bereit. Einschalten unter „Handy“ – der Kalender läuft dann über dieselbe Verbindung.' })))),
+
+      h('hr.divider'),
+
+      // --- Datei
+      h('div', null,
+        h('h3.mb-sm', { text: 'Als Datei – überall dabei' }),
+        h('p.text-sm.muted.mb', { text: 'Eine .ics-Datei lässt sich in jede Kalender-App einlesen, auch ohne Netzwerk. Sie ist eine Momentaufnahme: spätere Änderungen am Plan stehen nicht darin.' }),
+        h('button.btn', {
+          text: 'Kalenderdatei speichern',
+          onClick: async () => {
+            const saved = await window.ch.calendar.export(true);
+            if (!saved?.ok) return toast(saved?.error || 'Speichern fehlgeschlagen.', 'danger');
+            if (saved.data.canceled) return;
+            toast(`${fmt.plural(saved.data.events, 'Termin', 'Termine')} gespeichert.`, 'ok');
+          },
+        })),
+
+      h('p.text-xs.faint', { text: 'Die Termine enthalten Titel, Kanäle, Text, Hashtags und Checkliste – und eine Erinnerung vor dem Termin.' })),
+  });
+}
+
 function chip(post, goto) {
   const color = platform(post.platforms?.[0])?.color || 'var(--accent)';
-  return h('div.cal__chip', {
+  return h(`div.cal__chip.is-${post.status}`, {
     draggable: true,
-    style: { borderLeftColor: color },
+    style: {
+      borderLeftColor: color,
+      background: `color-mix(in srgb, ${color} 14%, var(--surface-2))`,
+    },
     title: `${posts.titleOf(post)} · ${fmt.time(post.scheduledAt)}`,
     onDragStart: (event) => {
       event.dataTransfer.setData('text/plain', post.id);
@@ -83,7 +150,8 @@ function monthGrid(goto, refresh) {
 
     const cell = h(`div.cal__day${outside ? '.is-outside' : ''}${fmt.isToday(day) ? '.is-today' : ''}`, null,
       h('div.cal__date', null,
-        h('span', { text: String(day.getDate()) }),
+        h(`span.cal__num${fmt.isToday(day) ? '.is-today' : ''}`, { text: String(day.getDate()) }),
+        dayPosts.length > 1 ? h('span.cal__count', { text: String(dayPosts.length) }) : null,
         h('span.add', {
           text: '＋',
           title: 'Beitrag für diesen Tag',
@@ -118,7 +186,9 @@ function weekGrid(goto, refresh) {
     for (let i = 0; i < 7; i += 1) {
       const day = fmt.addDays(start, i);
       const inHour = posts.forDay(day).filter((post) => new Date(post.scheduledAt).getHours() === hour);
-      const cell = h('div.week__cell', null, ...inHour.map((post) => chip(post, goto)));
+      // Die laufende Stunde bekommt eine Marke, damit „jetzt“ sofort auffällt.
+      const isNow = fmt.isToday(day) && new Date().getHours() === hour;
+      const cell = h(`div.week__cell${isNow ? '.is-now' : ''}`, null, ...inHour.map((post) => chip(post, goto)));
       cell.addEventListener('dblclick', () => goto('composer', { fresh: true, day: fmt.dayKey(day), hour }));
       grid.append(dropTarget(cell, day, hour, refresh));
     }
@@ -147,6 +217,7 @@ export async function render({ goto, setActions, refresh }) {
     h('button.btn.btn--sm.btn--icon', { text: '‹', title: 'Zurück', onClick: () => step(-1) }),
     h('button.btn.btn--sm', { text: 'Heute', onClick: () => { cursor = new Date(); refresh(); } }),
     h('button.btn.btn--sm.btn--icon', { text: '›', title: 'Weiter', onClick: () => step(1) }),
+    h('button.btn.btn--sm', { text: '⇱ Kalender verbinden', title: 'In Apple Kalender, Google oder Outlook übernehmen', onClick: subscribeDialog }),
     h('button.btn.btn--sm.btn--primary', { text: '＋ Beitrag', onClick: () => goto('composer', { fresh: true }) })
   );
 
@@ -163,12 +234,23 @@ export async function render({ goto, setActions, refresh }) {
     (post) => !post.scheduledAt && ['draft', 'ready'].includes(post.status)
   );
 
+  const legend = h('div.cal-legend', null,
+    ...[
+      ['scheduled', 'Geplant'],
+      ['due', 'Jetzt fällig'],
+      ['published', 'Veröffentlicht'],
+      ['missed', 'Verpasst'],
+    ].map(([key, text]) =>
+      h('span.cal-legend__item', null, h(`span.status-dot.is-${key}`), h('span', { text }))));
+
   return h('div.col.gap-lg', null,
-    h('div.row.between', null,
-      h('h2', { text: label }),
-      h('div.row.gap-lg.text-sm.muted', null,
-        h('span', { text: `${fmt.plural(inRange.length, 'Beitrag', 'Beiträge')} im Zeitraum` }),
-        h('span', { text: `${published} bereits veröffentlicht` }))),
+    h('div.cal-head', null,
+      h('div', null,
+        h('h2.cal-head__title', { text: label }),
+        h('div.text-sm.muted', {
+          text: `${fmt.plural(inRange.length, 'Beitrag', 'Beiträge')} im Zeitraum · ${published} bereits veröffentlicht`,
+        })),
+      legend),
 
     mode === 'month' ? monthGrid(goto, refresh) : weekGrid(goto, refresh),
 

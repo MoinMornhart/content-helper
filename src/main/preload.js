@@ -59,6 +59,11 @@ contextBridge.exposeInMainWorld('ch', {
     saveText: (options) => invoke('files:saveText', options),
   },
 
+  calendar: {
+    export: (includePublished) => invoke('calendar:export', { includePublished }),
+    subscription: () => invoke('calendar:subscription'),
+  },
+
   scheduler: {
     summary: () => invoke('scheduler:summary'),
     tick: () => invoke('scheduler:tick'),

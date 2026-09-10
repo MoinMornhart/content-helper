@@ -49,6 +49,9 @@ jobs:
       - name: Verbindungen prüfen
         run: node scripts/test-connectors.js
 
+      - name: Kalender-Ausgabe prüfen
+        run: node scripts/test-calendar.js
+
       - name: App-Symbole erzeugen
         run: node scripts/make-icon.js
 

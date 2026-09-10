@@ -167,6 +167,40 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
     return { canceled: false, filePath: result.filePath };
   });
 
+  // ------------------------------------------------------------- Kalender
+  /** Plan als Kalenderdatei speichern – zum Einlesen in jede Kalender-App. */
+  handle('calendar:export', async ({ includePublished }) => {
+    const { buildCalendar } = require('./calendar');
+    const platforms = new Map(require('../shared/platforms.json').map((entry) => [entry.id, entry]));
+
+    const ics = buildCalendar(store.list('posts'), {
+      platforms,
+      reminderMinutes: store.settings().leadTimeMinutes ?? 15,
+      includePublished: includePublished !== false,
+    });
+
+    const result = await dialog.showSaveDialog(getWindow(), {
+      title: 'Kalender speichern',
+      defaultPath: path.join(app.getPath('documents'), 'content-helper.ics'),
+      filters: [{ name: 'Kalender', extensions: ['ics'] }],
+    });
+    if (result.canceled || !result.filePath) return { canceled: true };
+
+    fs.writeFileSync(result.filePath, ics, 'utf8');
+    return { canceled: false, filePath: result.filePath, events: (ics.match(/BEGIN:VEVENT/g) || []).length };
+  });
+
+  /** Adresse zum Abonnieren, sofern der Handy-Begleiter läuft. */
+  handle('calendar:subscription', () => {
+    const info = companion.status();
+    return {
+      running: info.running,
+      url: info.calendarUrl,
+      webcal: info.calendarUrl ? info.calendarUrl.replace(/^http:/, 'webcal:') : null,
+      addresses: info.addresses,
+    };
+  });
+
   // ------------------------------------------------------------- Scheduler
   handle('scheduler:summary', () => scheduler.summary());
   handle('scheduler:tick', () => scheduler.tick());

@@ -88,6 +88,10 @@ class Companion {
       url: this.server?.listening && addresses.length
         ? `http://${addresses[0].address}:${this.port}/#${this.token()}`
         : null,
+      // Adresse zum Abonnieren in Apple Kalender, Google und Outlook.
+      calendarUrl: this.server?.listening && addresses.length
+        ? `http://${addresses[0].address}:${this.port}/calendar.ics?t=${this.token()}`
+        : null,
       devices: [...this.devices.values()],
     };
   }
@@ -138,6 +142,10 @@ class Companion {
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('Referrer-Policy', 'no-referrer');
 
+    // Kalender-Abonnement: Kalender-Apps koennen keine Kopfzeilen mitschicken,
+    // deshalb steht der Schluessel hier in der Adresse.
+    if (url.pathname === '/calendar.ics') return this.serveCalendar(request, response, url);
+
     if (url.pathname.startsWith('/api/')) return this.handleApi(request, response, url);
     return this.serveStatic(url.pathname, response);
   }
@@ -154,6 +162,35 @@ class Companion {
 
     response.writeHead(200, { 'Content-Type': MIME[path.extname(target)] || 'application/octet-stream' });
     fs.createReadStream(target).pipe(response);
+  }
+
+  /**
+   * Liefert den Plan als Kalender aus.
+   *
+   * Apple Kalender, Google und Outlook holen diese Adresse in regelmässigen
+   * Abständen selbst ab – Änderungen am Plan erscheinen dadurch von allein,
+   * solange dieser Rechner läuft und erreichbar ist.
+   */
+  serveCalendar(request, response, url) {
+    if (!this.authorized(request, url)) {
+      response.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
+      return response.end('Nicht verbunden.');
+    }
+
+    const { buildCalendar } = require('./calendar');
+    const platforms = new Map(require('../shared/platforms.json').map((entry) => [entry.id, entry]));
+
+    const ics = buildCalendar(this.store.list('posts'), {
+      name: 'Content Helper',
+      platforms,
+      reminderMinutes: this.store.settings().leadTimeMinutes ?? 15,
+    });
+
+    response.writeHead(200, {
+      'Content-Type': 'text/calendar; charset=utf-8',
+      'Content-Disposition': 'inline; filename="content-helper.ics"',
+    });
+    response.end(ics);
   }
 
   authorized(request, url) {

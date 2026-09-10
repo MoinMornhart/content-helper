@@ -15,7 +15,8 @@
     "lint": "node scripts/check-syntax.js",
     "test:companion": "node scripts/test-companion.js",
     "test:connectors": "node scripts/test-connectors.js",
-    "pretest": "node scripts/check-syntax.js && node scripts/test-companion.js && node scripts/test-connectors.js",
+    "test:calendar": "node scripts/test-calendar.js",
+    "pretest": "node scripts/check-syntax.js && node scripts/test-companion.js && node scripts/test-connectors.js && node scripts/test-calendar.js",
     "test": "electron scripts/smoke-test.js",
     "icons": "node scripts/make-icon.js"
   },
