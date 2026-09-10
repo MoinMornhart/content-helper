@@ -75,6 +75,15 @@ contextBridge.exposeInMainWorld('ch', {
     onChanged: (handler) => on('connectors:changed', handler),
   },
 
+  twitch: {
+    authStatus: () => invoke('twitch:authStatus'),
+    setClientId: (clientId) => invoke('twitch:setClientId', { clientId }),
+    signIn: () => invoke('twitch:signIn'),
+    cancelAuth: () => invoke('twitch:cancelAuth'),
+    signOut: () => invoke('twitch:signOut'),
+    onAuth: (handler) => on('twitch:auth', handler),
+  },
+
   companion: {
     status: () => invoke('companion:status'),
     start: (port) => invoke('companion:start', { port }),

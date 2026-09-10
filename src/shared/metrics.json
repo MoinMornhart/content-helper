@@ -1,33 +1,204 @@
 {
-  "views":          { "label": "Aufrufe",              "short": "Views",     "type": "count",   "higherIsBetter": true },
-  "impressions":    { "label": "Impressionen",         "short": "Impr.",     "type": "count",   "higherIsBetter": true },
-  "reach":          { "label": "Reichweite",           "short": "Reach",     "type": "count",   "higherIsBetter": true },
-  "ctr":            { "label": "Klickrate (CTR)",      "short": "CTR",       "type": "percent", "higherIsBetter": true, "benchmark": 5 },
-  "avgViewSec":     { "label": "Ø Wiedergabedauer",    "short": "Ø Dauer",   "type": "seconds", "higherIsBetter": true },
-  "completionRate": { "label": "Abschlussrate",        "short": "Complete",  "type": "percent", "higherIsBetter": true, "benchmark": 45 },
-  "watchHours":     { "label": "Wiedergabezeit (Std)", "short": "Std",       "type": "number",  "higherIsBetter": true },
-  "likes":          { "label": "Likes",                "short": "Likes",     "type": "count",   "higherIsBetter": true },
-  "comments":       { "label": "Kommentare",           "short": "Komm.",     "type": "count",   "higherIsBetter": true },
-  "shares":         { "label": "Geteilt",              "short": "Shares",    "type": "count",   "higherIsBetter": true },
-  "saves":          { "label": "Gespeichert",          "short": "Saves",     "type": "count",   "higherIsBetter": true },
-  "engagementRate": { "label": "Engagement-Rate",      "short": "ER",        "type": "percent", "higherIsBetter": true, "benchmark": 4 },
-  "followersGained":{ "label": "Neue Follower",        "short": "+Follower", "type": "count",   "higherIsBetter": true },
-  "subsGained":     { "label": "Neue Abonnenten",      "short": "+Abos",     "type": "count",   "higherIsBetter": true },
-  "profileVisits":  { "label": "Profilaufrufe",        "short": "Profil",    "type": "count",   "higherIsBetter": true },
-  "linkClicks":     { "label": "Linkklicks",           "short": "Klicks",    "type": "count",   "higherIsBetter": true },
-  "replies":        { "label": "Antworten",            "short": "Replies",   "type": "count",   "higherIsBetter": true },
-  "reposts":        { "label": "Reposts",              "short": "Reposts",   "type": "count",   "higherIsBetter": true },
-  "bookmarks":      { "label": "Lesezeichen",          "short": "Marks",     "type": "count",   "higherIsBetter": true },
-  "upvotes":        { "label": "Upvotes",              "short": "Upvotes",   "type": "count",   "higherIsBetter": true },
-  "repins":         { "label": "Merken (Pins)",        "short": "Pins",      "type": "count",   "higherIsBetter": true },
-  "outboundClicks": { "label": "Ausgehende Klicks",    "short": "Outbound",  "type": "count",   "higherIsBetter": true },
-  "avgViewers":     { "label": "Ø Zuschauer",          "short": "Ø Viewer",  "type": "number",  "higherIsBetter": true },
-  "peakViewers":    { "label": "Spitzen-Zuschauer",    "short": "Peak",      "type": "count",   "higherIsBetter": true },
-  "hoursWatched":   { "label": "Gesehene Stunden",     "short": "Std ges.",  "type": "number",  "higherIsBetter": true },
-  "chatMessages":   { "label": "Chatnachrichten",      "short": "Chat",      "type": "count",   "higherIsBetter": true },
-  "streamMinutes":  { "label": "Streamdauer (Min)",    "short": "Min",       "type": "number",  "higherIsBetter": true },
-  "storyExits":     { "label": "Story-Absprünge",      "short": "Exits",     "type": "count",   "higherIsBetter": false },
-  "storyReplies":   { "label": "Story-Antworten",      "short": "Antw.",     "type": "count",   "higherIsBetter": true },
-  "unsubscribes":   { "label": "Abmeldungen",          "short": "-Abos",     "type": "count",   "higherIsBetter": false },
-  "openRate":       { "label": "Öffnungsrate",         "short": "Open",      "type": "percent", "higherIsBetter": true, "benchmark": 35 }
+  "views": {
+    "label": "Aufrufe",
+    "short": "Views",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "impressions": {
+    "label": "Impressionen",
+    "short": "Impr.",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "reach": {
+    "label": "Reichweite",
+    "short": "Reach",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "ctr": {
+    "label": "Klickrate (CTR)",
+    "short": "CTR",
+    "type": "percent",
+    "higherIsBetter": true,
+    "benchmark": 5
+  },
+  "avgViewSec": {
+    "label": "Ø Wiedergabedauer",
+    "short": "Ø Dauer",
+    "type": "seconds",
+    "higherIsBetter": true
+  },
+  "completionRate": {
+    "label": "Abschlussrate",
+    "short": "Complete",
+    "type": "percent",
+    "higherIsBetter": true,
+    "benchmark": 45
+  },
+  "watchHours": {
+    "label": "Wiedergabezeit (Std)",
+    "short": "Std",
+    "type": "number",
+    "higherIsBetter": true
+  },
+  "likes": {
+    "label": "Likes",
+    "short": "Likes",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "comments": {
+    "label": "Kommentare",
+    "short": "Komm.",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "shares": {
+    "label": "Geteilt",
+    "short": "Shares",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "saves": {
+    "label": "Gespeichert",
+    "short": "Saves",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "engagementRate": {
+    "label": "Engagement-Rate",
+    "short": "ER",
+    "type": "percent",
+    "higherIsBetter": true,
+    "benchmark": 4
+  },
+  "followersGained": {
+    "label": "Neue Follower",
+    "short": "+Follower",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "subsGained": {
+    "label": "Neue Abonnenten",
+    "short": "+Abos",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "profileVisits": {
+    "label": "Profilaufrufe",
+    "short": "Profil",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "linkClicks": {
+    "label": "Linkklicks",
+    "short": "Klicks",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "replies": {
+    "label": "Antworten",
+    "short": "Replies",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "reposts": {
+    "label": "Reposts",
+    "short": "Reposts",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "bookmarks": {
+    "label": "Lesezeichen",
+    "short": "Marks",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "upvotes": {
+    "label": "Upvotes",
+    "short": "Upvotes",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "repins": {
+    "label": "Merken (Pins)",
+    "short": "Pins",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "outboundClicks": {
+    "label": "Ausgehende Klicks",
+    "short": "Outbound",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "avgViewers": {
+    "label": "Ø Zuschauer",
+    "short": "Ø Viewer",
+    "type": "number",
+    "higherIsBetter": true
+  },
+  "peakViewers": {
+    "label": "Spitzen-Zuschauer",
+    "short": "Peak",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "hoursWatched": {
+    "label": "Gesehene Stunden",
+    "short": "Std ges.",
+    "type": "number",
+    "higherIsBetter": true
+  },
+  "chatMessages": {
+    "label": "Chatnachrichten",
+    "short": "Chat",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "streamMinutes": {
+    "label": "Streamdauer (Min)",
+    "short": "Min",
+    "type": "number",
+    "higherIsBetter": true
+  },
+  "storyExits": {
+    "label": "Story-Absprünge",
+    "short": "Exits",
+    "type": "count",
+    "higherIsBetter": false
+  },
+  "storyReplies": {
+    "label": "Story-Antworten",
+    "short": "Antw.",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "unsubscribes": {
+    "label": "Abmeldungen",
+    "short": "-Abos",
+    "type": "count",
+    "higherIsBetter": false
+  },
+  "openRate": {
+    "label": "Öffnungsrate",
+    "short": "Open",
+    "type": "percent",
+    "higherIsBetter": true,
+    "benchmark": 35
+  },
+  "followersTotal": {
+    "label": "Follower gesamt",
+    "short": "Follower",
+    "type": "count",
+    "higherIsBetter": true
+  },
+  "subsTotal": {
+    "label": "Abonnenten gesamt",
+    "short": "Abos ges.",
+    "type": "count",
+    "higherIsBetter": true
+  }
 }

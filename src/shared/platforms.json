@@ -10,11 +10,54 @@
     "uploadUrl": "https://studio.youtube.com/",
     "studioUrl": "https://studio.youtube.com/",
     "csvHint": "YouTube Studio → Analytics → Erweiterter Modus → Exportieren → CSV",
-    "limits": { "title": 100, "body": 5000, "tagChars": 500, "hashtags": 15, "videoSecMin": 60, "videoSecMax": 43200, "aspect": "16:9" },
+    "limits": {
+      "title": 100,
+      "body": 5000,
+      "tagChars": 500,
+      "hashtags": 15,
+      "videoSecMin": 60,
+      "videoSecMax": 43200,
+      "aspect": "16:9"
+    },
     "hookWindowSec": 30,
-    "metrics": ["views", "impressions", "ctr", "avgViewSec", "watchHours", "likes", "comments", "shares", "subsGained"],
-    "bestSlots": [{ "days": [2, 4], "time": "17:00" }, { "days": [6, 0], "time": "11:00" }],
-    "formats": ["Tutorial", "Deep Dive", "Vlog", "Review", "Listicle", "Case Study", "Reaktion", "Q&A", "Dokumentation"],
+    "metrics": [
+      "views",
+      "impressions",
+      "ctr",
+      "avgViewSec",
+      "watchHours",
+      "likes",
+      "comments",
+      "shares",
+      "subsGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          2,
+          4
+        ],
+        "time": "17:00"
+      },
+      {
+        "days": [
+          6,
+          0
+        ],
+        "time": "11:00"
+      }
+    ],
+    "formats": [
+      "Tutorial",
+      "Deep Dive",
+      "Vlog",
+      "Review",
+      "Listicle",
+      "Case Study",
+      "Reaktion",
+      "Q&A",
+      "Dokumentation"
+    ],
     "tips": [
       "Das Thumbnail entscheidet vor dem Titel: ein Gesicht, ein Objekt, maximal drei Wörter.",
       "Der Titel soll ein Versprechen enthalten, das die ersten 30 Sekunden sofort einlösen.",
@@ -33,11 +76,54 @@
     "uploadUrl": "https://youtube.com/upload",
     "studioUrl": "https://studio.youtube.com/",
     "csvHint": "YouTube Studio → Analytics → Inhalte → Shorts filtern → Exportieren",
-    "limits": { "title": 100, "body": 5000, "hashtags": 5, "videoSecMin": 5, "videoSecMax": 180, "aspect": "9:16" },
+    "limits": {
+      "title": 100,
+      "body": 5000,
+      "hashtags": 5,
+      "videoSecMin": 5,
+      "videoSecMax": 180,
+      "aspect": "9:16"
+    },
     "hookWindowSec": 3,
-    "metrics": ["views", "completionRate", "avgViewSec", "likes", "comments", "shares", "subsGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "12:00" }, { "days": [1, 2, 3, 4, 5], "time": "19:00" }],
-    "formats": ["Hook & Payoff", "Vorher/Nachher", "3 Tipps", "Mythos entlarvt", "Loop-Clip", "Ausschnitt aus Langvideo"],
+    "metrics": [
+      "views",
+      "completionRate",
+      "avgViewSec",
+      "likes",
+      "comments",
+      "shares",
+      "subsGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "12:00"
+      },
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "19:00"
+      }
+    ],
+    "formats": [
+      "Hook & Payoff",
+      "Vorher/Nachher",
+      "3 Tipps",
+      "Mythos entlarvt",
+      "Loop-Clip",
+      "Ausschnitt aus Langvideo"
+    ],
     "tips": [
       "Die erste Sekunde muss eine Frage aufwerfen, die nur das Ende beantwortet.",
       "Kein Intro, kein Logo, keine Begrüßung – direkt in die Aussage.",
@@ -56,11 +142,52 @@
     "uploadUrl": "https://www.tiktok.com/tiktokstudio/upload",
     "studioUrl": "https://www.tiktok.com/tiktokstudio/analytics",
     "csvHint": "TikTok Studio → Analysen → Übersicht → Daten herunterladen (CSV)",
-    "limits": { "title": 0, "body": 2200, "hashtags": 8, "videoSecMin": 3, "videoSecMax": 600, "aspect": "9:16" },
+    "limits": {
+      "title": 0,
+      "body": 2200,
+      "hashtags": 8,
+      "videoSecMin": 3,
+      "videoSecMax": 600,
+      "aspect": "9:16"
+    },
     "hookWindowSec": 2,
-    "metrics": ["views", "completionRate", "avgViewSec", "likes", "comments", "shares", "followersGained", "profileVisits"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "18:00" }, { "days": [0, 6], "time": "10:00" }],
-    "formats": ["Storytime", "POV", "Tutorial in 30s", "Trend-Adaption", "Green-Screen-Kommentar", "Duett/Stitch"],
+    "metrics": [
+      "views",
+      "completionRate",
+      "avgViewSec",
+      "likes",
+      "comments",
+      "shares",
+      "followersGained",
+      "profileVisits"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "18:00"
+      },
+      {
+        "days": [
+          0,
+          6
+        ],
+        "time": "10:00"
+      }
+    ],
+    "formats": [
+      "Storytime",
+      "POV",
+      "Tutorial in 30s",
+      "Trend-Adaption",
+      "Green-Screen-Kommentar",
+      "Duett/Stitch"
+    ],
     "tips": [
       "Text-Overlay in Sekunde 0 ersetzt den Titel – ohne ihn wird weitergescrollt.",
       "Kommentare sind Content: die häufigste Frage wird das nächste Video.",
@@ -79,11 +206,50 @@
     "uploadUrl": "https://www.instagram.com/",
     "studioUrl": "https://business.facebook.com/latest/insights/",
     "csvHint": "Meta Business Suite → Insights → Inhalte → Exportieren",
-    "limits": { "title": 0, "body": 2200, "hashtags": 30, "videoSecMin": 3, "videoSecMax": 900, "aspect": "9:16" },
+    "limits": {
+      "title": 0,
+      "body": 2200,
+      "hashtags": 30,
+      "videoSecMin": 3,
+      "videoSecMax": 900,
+      "aspect": "9:16"
+    },
     "hookWindowSec": 3,
-    "metrics": ["views", "reach", "completionRate", "likes", "comments", "shares", "saves", "followersGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "19:30" }, { "days": [0], "time": "11:00" }],
-    "formats": ["Reel-Tutorial", "Behind the Scenes", "Transformation", "Karussell-Teaser", "Zitat-Reel"],
+    "metrics": [
+      "views",
+      "reach",
+      "completionRate",
+      "likes",
+      "comments",
+      "shares",
+      "saves",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "19:30"
+      },
+      {
+        "days": [
+          0
+        ],
+        "time": "11:00"
+      }
+    ],
+    "formats": [
+      "Reel-Tutorial",
+      "Behind the Scenes",
+      "Transformation",
+      "Karussell-Teaser",
+      "Zitat-Reel"
+    ],
     "tips": [
       "Shares und Saves wiegen im Ranking schwerer als Likes – baue einen Grund zum Weiterschicken ein.",
       "Der Cover-Frame ist dein Thumbnail im Profilraster: bewusst wählen, nicht dem Zufall überlassen.",
@@ -101,10 +267,40 @@
     "uploadUrl": "https://www.instagram.com/",
     "studioUrl": "https://business.facebook.com/latest/insights/",
     "csvHint": "Meta Business Suite → Insights → Inhalte → Exportieren",
-    "limits": { "title": 0, "body": 2200, "hashtags": 30, "mediaCount": 20, "aspect": "4:5" },
-    "metrics": ["reach", "impressions", "likes", "comments", "shares", "saves", "profileVisits", "followersGained"],
-    "bestSlots": [{ "days": [1, 3, 5], "time": "18:00" }],
-    "formats": ["Karussell-Guide", "Vorher/Nachher", "Zitatkachel", "Mini-Case-Study", "Persönlicher Post"],
+    "limits": {
+      "title": 0,
+      "body": 2200,
+      "hashtags": 30,
+      "mediaCount": 20,
+      "aspect": "4:5"
+    },
+    "metrics": [
+      "reach",
+      "impressions",
+      "likes",
+      "comments",
+      "shares",
+      "saves",
+      "profileVisits",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          3,
+          5
+        ],
+        "time": "18:00"
+      }
+    ],
+    "formats": [
+      "Karussell-Guide",
+      "Vorher/Nachher",
+      "Zitatkachel",
+      "Mini-Case-Study",
+      "Persönlicher Post"
+    ],
     "tips": [
       "Slide 1 verkauft, Slide 2 hält: die zweite Karte entscheidet über die Durchklickrate.",
       "Das Format 4:5 belegt mehr Bildschirmfläche als 1:1 und gewinnt dadurch Aufmerksamkeit.",
@@ -121,10 +317,48 @@
     "family": "meta",
     "uploadUrl": "https://www.instagram.com/",
     "studioUrl": "https://business.facebook.com/latest/insights/",
-    "limits": { "title": 0, "body": 250, "videoSecMax": 60, "aspect": "9:16" },
-    "metrics": ["reach", "impressions", "storyReplies", "storyExits", "linkClicks"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "08:30" }, { "days": [1, 2, 3, 4, 5], "time": "20:00" }],
-    "formats": ["Umfrage", "Frage-Sticker", "Countdown", "Blick hinter die Kulissen", "Link-Story"],
+    "limits": {
+      "title": 0,
+      "body": 250,
+      "videoSecMax": 60,
+      "aspect": "9:16"
+    },
+    "metrics": [
+      "reach",
+      "impressions",
+      "storyReplies",
+      "storyExits",
+      "linkClicks"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "08:30"
+      },
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "20:00"
+      }
+    ],
+    "formats": [
+      "Umfrage",
+      "Frage-Sticker",
+      "Countdown",
+      "Blick hinter die Kulissen",
+      "Link-Story"
+    ],
     "tips": [
       "Ein Interaktions-Sticker in der ersten Story hält die ganze Sequenz zusammen.",
       "Hohe Absprünge an einer bestimmten Position zeigen exakt, wo es langweilig wird.",
@@ -142,10 +376,49 @@
     "uploadUrl": "https://dashboard.twitch.tv/stream-manager",
     "studioUrl": "https://dashboard.twitch.tv/insights",
     "csvHint": "Twitch Creator Dashboard → Insights → Kanalanalysen → CSV exportieren",
-    "limits": { "title": 140, "body": 0, "tags": 10, "aspect": "16:9" },
-    "metrics": ["avgViewers", "peakViewers", "hoursWatched", "streamMinutes", "views", "chatMessages", "followersGained", "subsGained"],
-    "bestSlots": [{ "days": [2, 4, 6], "time": "19:00" }, { "days": [0], "time": "16:00" }],
-    "formats": ["Just Chatting", "Gameplay-Stream", "Co-Stream", "Werkstatt-Stream", "Community-Abend", "Speedrun", "Watchparty"],
+    "limits": {
+      "title": 140,
+      "body": 0,
+      "tags": 10,
+      "aspect": "16:9"
+    },
+    "metrics": [
+      "avgViewers",
+      "peakViewers",
+      "hoursWatched",
+      "streamMinutes",
+      "views",
+      "followersTotal",
+      "followersGained",
+      "subsTotal",
+      "subsGained",
+      "chatMessages"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          2,
+          4,
+          6
+        ],
+        "time": "19:00"
+      },
+      {
+        "days": [
+          0
+        ],
+        "time": "16:00"
+      }
+    ],
+    "formats": [
+      "Just Chatting",
+      "Gameplay-Stream",
+      "Co-Stream",
+      "Werkstatt-Stream",
+      "Community-Abend",
+      "Speedrun",
+      "Watchparty"
+    ],
     "tips": [
       "Verlässlichkeit schlägt Länge: drei feste Termine pro Woche bringen mehr als sieben zufällige.",
       "Der Streamtitel wird in der Kategorie-Übersicht ohne Kontext gelesen – er muss allein funktionieren.",
@@ -164,10 +437,53 @@
     "family": "x",
     "uploadUrl": "https://x.com/compose/post",
     "studioUrl": "https://analytics.x.com/",
-    "limits": { "title": 0, "body": 280, "bodyPremium": 25000, "hashtags": 2, "mediaCount": 4, "videoSecMax": 140 },
-    "metrics": ["impressions", "likes", "replies", "reposts", "bookmarks", "linkClicks", "engagementRate", "followersGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "09:00" }, { "days": [1, 2, 3, 4, 5], "time": "17:30" }],
-    "formats": ["Thread", "Hot Take", "Erkenntnis des Tages", "Zahlen-Post", "Frage an die Timeline"],
+    "limits": {
+      "title": 0,
+      "body": 280,
+      "bodyPremium": 25000,
+      "hashtags": 2,
+      "mediaCount": 4,
+      "videoSecMax": 140
+    },
+    "metrics": [
+      "impressions",
+      "likes",
+      "replies",
+      "reposts",
+      "bookmarks",
+      "linkClicks",
+      "engagementRate",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "09:00"
+      },
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "17:30"
+      }
+    ],
+    "formats": [
+      "Thread",
+      "Hot Take",
+      "Erkenntnis des Tages",
+      "Zahlen-Post",
+      "Frage an die Timeline"
+    ],
     "tips": [
       "Der erste Post eines Threads muss allein stehen können – nur er wird verteilt.",
       "Links im ersten Post drücken die Reichweite: lieber in die erste Antwort setzen.",
@@ -183,10 +499,37 @@
     "kind": "text",
     "family": "meta",
     "uploadUrl": "https://www.threads.net/",
-    "limits": { "title": 0, "body": 500, "mediaCount": 20, "videoSecMax": 300 },
-    "metrics": ["views", "likes", "replies", "reposts", "followersGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "12:30" }],
-    "formats": ["Gedankensplitter", "Frage in die Runde", "Mini-Thread", "Update aus dem Alltag"],
+    "limits": {
+      "title": 0,
+      "body": 500,
+      "mediaCount": 20,
+      "videoSecMax": 300
+    },
+    "metrics": [
+      "views",
+      "likes",
+      "replies",
+      "reposts",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "12:30"
+      }
+    ],
+    "formats": [
+      "Gedankensplitter",
+      "Frage in die Runde",
+      "Mini-Thread",
+      "Update aus dem Alltag"
+    ],
     "tips": [
       "Threads belohnt Antworten stärker als Likes: stelle offene Fragen.",
       "Ein Beitrag pro Gedanke, keine Kondensate aus fünf Themen.",
@@ -202,10 +545,36 @@
     "kind": "text",
     "family": "atproto",
     "uploadUrl": "https://bsky.app/",
-    "limits": { "title": 0, "body": 300, "mediaCount": 4, "videoSecMax": 180 },
-    "metrics": ["likes", "replies", "reposts", "followersGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "10:00" }],
-    "formats": ["Kurzgedanke", "Link mit Einordnung", "Bildpost", "Diskussionsanstoß"],
+    "limits": {
+      "title": 0,
+      "body": 300,
+      "mediaCount": 4,
+      "videoSecMax": 180
+    },
+    "metrics": [
+      "likes",
+      "replies",
+      "reposts",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "10:00"
+      }
+    ],
+    "formats": [
+      "Kurzgedanke",
+      "Link mit Einordnung",
+      "Bildpost",
+      "Diskussionsanstoß"
+    ],
     "tips": [
       "Chronologische Feeds belohnen Regelmäßigkeit stärker als Timing-Optimierung.",
       "Eigene Feeds und Starter-Packs sind der schnellste Weg zu Sichtbarkeit.",
@@ -221,10 +590,36 @@
     "kind": "text",
     "family": "fediverse",
     "uploadUrl": "https://mastodon.social/",
-    "limits": { "title": 0, "body": 500, "mediaCount": 4, "hashtags": 5 },
-    "metrics": ["likes", "replies", "reposts", "followersGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "09:30" }],
-    "formats": ["Fachbeitrag", "Werkstattbericht", "Link mit Kontext", "Hashtag-Beitrag"],
+    "limits": {
+      "title": 0,
+      "body": 500,
+      "mediaCount": 4,
+      "hashtags": 5
+    },
+    "metrics": [
+      "likes",
+      "replies",
+      "reposts",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "09:30"
+      }
+    ],
+    "formats": [
+      "Fachbeitrag",
+      "Werkstattbericht",
+      "Link mit Kontext",
+      "Hashtag-Beitrag"
+    ],
     "tips": [
       "Ohne Algorithmus zählen Hashtags wirklich – zwei bis drei präzise setzen.",
       "Content-Warnings werden geschätzt und kosten keine Reichweite.",
@@ -240,10 +635,40 @@
     "kind": "text",
     "family": "linkedin",
     "uploadUrl": "https://www.linkedin.com/feed/",
-    "limits": { "title": 0, "body": 3000, "hashtags": 5, "mediaCount": 20, "videoSecMax": 900 },
-    "metrics": ["impressions", "reach", "likes", "comments", "shares", "linkClicks", "engagementRate", "followersGained"],
-    "bestSlots": [{ "days": [2, 3, 4], "time": "08:00" }],
-    "formats": ["Erfahrungsbericht", "Zahlen und Lernkurve", "Karussell-PDF", "Branchenkommentar", "Mein größter Fehler"],
+    "limits": {
+      "title": 0,
+      "body": 3000,
+      "hashtags": 5,
+      "mediaCount": 20,
+      "videoSecMax": 900
+    },
+    "metrics": [
+      "impressions",
+      "reach",
+      "likes",
+      "comments",
+      "shares",
+      "linkClicks",
+      "engagementRate",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          2,
+          3,
+          4
+        ],
+        "time": "08:00"
+      }
+    ],
+    "formats": [
+      "Erfahrungsbericht",
+      "Zahlen und Lernkurve",
+      "Karussell-PDF",
+      "Branchenkommentar",
+      "Mein größter Fehler"
+    ],
     "tips": [
       "Die ersten drei Zeilen stehen vor dem Aufklappen – dort gehört der Haken hin.",
       "Externe Links in den ersten Kommentar statt in den Beitrag halten die Reichweite oben.",
@@ -260,10 +685,37 @@
     "family": "meta",
     "uploadUrl": "https://www.facebook.com/",
     "studioUrl": "https://business.facebook.com/latest/insights/",
-    "limits": { "title": 0, "body": 63206, "hashtags": 3, "mediaCount": 30 },
-    "metrics": ["reach", "impressions", "likes", "comments", "shares", "linkClicks", "engagementRate"],
-    "bestSlots": [{ "days": [1, 3, 5], "time": "13:00" }],
-    "formats": ["Community-Frage", "Veranstaltungshinweis", "Foto-Album", "Längerer Erfahrungsbericht"],
+    "limits": {
+      "title": 0,
+      "body": 63206,
+      "hashtags": 3,
+      "mediaCount": 30
+    },
+    "metrics": [
+      "reach",
+      "impressions",
+      "likes",
+      "comments",
+      "shares",
+      "linkClicks",
+      "engagementRate"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          3,
+          5
+        ],
+        "time": "13:00"
+      }
+    ],
+    "formats": [
+      "Community-Frage",
+      "Veranstaltungshinweis",
+      "Foto-Album",
+      "Längerer Erfahrungsbericht"
+    ],
     "tips": [
       "Gruppen erreichen mehr als Seiten – dort zuerst posten.",
       "Native Videos schlagen geteilte YouTube-Links deutlich.",
@@ -280,10 +732,35 @@
     "family": "pinterest",
     "uploadUrl": "https://www.pinterest.de/pin-builder/",
     "studioUrl": "https://analytics.pinterest.com/",
-    "limits": { "title": 100, "body": 500, "hashtags": 5, "aspect": "2:3" },
-    "metrics": ["impressions", "saves", "repins", "outboundClicks", "followersGained"],
-    "bestSlots": [{ "days": [0, 6], "time": "20:00" }],
-    "formats": ["Anleitung als Grafik", "Checkliste", "Inspirationsbild", "Produkt-Pin", "Idea Pin"],
+    "limits": {
+      "title": 100,
+      "body": 500,
+      "hashtags": 5,
+      "aspect": "2:3"
+    },
+    "metrics": [
+      "impressions",
+      "saves",
+      "repins",
+      "outboundClicks",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          0,
+          6
+        ],
+        "time": "20:00"
+      }
+    ],
+    "formats": [
+      "Anleitung als Grafik",
+      "Checkliste",
+      "Inspirationsbild",
+      "Produkt-Pin",
+      "Idea Pin"
+    ],
     "tips": [
       "Pinterest ist eine Suchmaschine: Keywords gehören in Titel, Beschreibung und Boardnamen.",
       "Das Format 2:3 ist Pflicht, alles andere wird beschnitten.",
@@ -299,10 +776,34 @@
     "kind": "community",
     "family": "reddit",
     "uploadUrl": "https://www.reddit.com/submit",
-    "limits": { "title": 300, "body": 40000 },
-    "metrics": ["views", "upvotes", "comments", "shares"],
-    "bestSlots": [{ "days": [1, 2, 3, 4], "time": "15:00" }],
-    "formats": ["Erfahrungsbericht", "AMA", "Tool-Vorstellung", "Frage an die Community", "Ergebnis-Post"],
+    "limits": {
+      "title": 300,
+      "body": 40000
+    },
+    "metrics": [
+      "views",
+      "upvotes",
+      "comments",
+      "shares"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4
+        ],
+        "time": "15:00"
+      }
+    ],
+    "formats": [
+      "Erfahrungsbericht",
+      "AMA",
+      "Tool-Vorstellung",
+      "Frage an die Community",
+      "Ergebnis-Post"
+    ],
     "tips": [
       "Jedes Subreddit hat eigene Regeln – ein Verstoß kostet den Account, nicht nur den Beitrag.",
       "Werbliche Sprache wird sofort abgestraft: schreibe wie ein Mitglied, nicht wie eine Marke.",
@@ -318,10 +819,35 @@
     "kind": "short",
     "family": "snap",
     "uploadUrl": "https://my.snapchat.com/",
-    "limits": { "title": 0, "body": 250, "videoSecMax": 60, "aspect": "9:16" },
-    "metrics": ["views", "completionRate", "shares", "followersGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "16:00" }],
-    "formats": ["Spotlight-Clip", "Story-Serie", "Schneller Tipp"],
+    "limits": {
+      "title": 0,
+      "body": 250,
+      "videoSecMax": 60,
+      "aspect": "9:16"
+    },
+    "metrics": [
+      "views",
+      "completionRate",
+      "shares",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "16:00"
+      }
+    ],
+    "formats": [
+      "Spotlight-Clip",
+      "Story-Serie",
+      "Schneller Tipp"
+    ],
     "tips": [
       "Spotlight belohnt vollständige Wiedergabe stärker als jede andere Interaktion.",
       "Vertikal, roh und ungeschliffen funktioniert hier besser als hochpoliert.",
@@ -337,10 +863,33 @@
     "kind": "community",
     "family": "discord",
     "uploadUrl": "https://discord.com/app",
-    "limits": { "title": 0, "body": 2000 },
-    "metrics": ["reach", "comments", "linkClicks"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "18:30" }],
-    "formats": ["Ankündigung", "Umfrage", "Community-Event", "Behind the Scenes"],
+    "limits": {
+      "title": 0,
+      "body": 2000
+    },
+    "metrics": [
+      "reach",
+      "comments",
+      "linkClicks"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "18:30"
+      }
+    ],
+    "formats": [
+      "Ankündigung",
+      "Umfrage",
+      "Community-Event",
+      "Behind the Scenes"
+    ],
     "tips": [
       "Ankündigungskanäle sind für Ereignisse da, nicht für Alltagsgeplauder.",
       "Die Erwähnung aller verliert bei jedem Einsatz an Wirkung – sparsam nutzen.",
@@ -356,10 +905,34 @@
     "kind": "community",
     "family": "telegram",
     "uploadUrl": "https://web.telegram.org/",
-    "limits": { "title": 0, "body": 4096 },
-    "metrics": ["views", "shares", "linkClicks", "followersGained"],
-    "bestSlots": [{ "days": [1, 2, 3, 4, 5], "time": "09:00" }],
-    "formats": ["Kanal-Update", "Link-Sammlung", "Sprachnachricht", "Umfrage"],
+    "limits": {
+      "title": 0,
+      "body": 4096
+    },
+    "metrics": [
+      "views",
+      "shares",
+      "linkClicks",
+      "followersGained"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "time": "09:00"
+      }
+    ],
+    "formats": [
+      "Kanal-Update",
+      "Link-Sammlung",
+      "Sprachnachricht",
+      "Umfrage"
+    ],
     "tips": [
       "Ein Beitrag pro Gedanke – der Kanal wird wie ein Nachrichtenticker gelesen.",
       "Weiterleitungen sind das Wachstumssignal: schreibe teilbare Einzelbeiträge.",
@@ -375,10 +948,31 @@
     "kind": "text",
     "family": "owned",
     "uploadUrl": "",
-    "limits": { "title": 60, "body": 20000 },
-    "metrics": ["reach", "openRate", "linkClicks", "followersGained", "unsubscribes"],
-    "bestSlots": [{ "days": [4], "time": "07:00" }],
-    "formats": ["Wochenrückblick", "Deep Dive", "Kuratierte Links", "Persönlicher Brief"],
+    "limits": {
+      "title": 60,
+      "body": 20000
+    },
+    "metrics": [
+      "reach",
+      "openRate",
+      "linkClicks",
+      "followersGained",
+      "unsubscribes"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          4
+        ],
+        "time": "07:00"
+      }
+    ],
+    "formats": [
+      "Wochenrückblick",
+      "Deep Dive",
+      "Kuratierte Links",
+      "Persönlicher Brief"
+    ],
     "tips": [
       "Die Betreffzeile ist das Thumbnail der E-Mail – 40 bis 55 Zeichen wirken am besten.",
       "Ein Ziel pro Ausgabe: eine Handlung, nicht fünf Angebote.",
@@ -394,10 +988,31 @@
     "kind": "text",
     "family": "owned",
     "uploadUrl": "",
-    "limits": { "title": 70, "body": 100000 },
-    "metrics": ["views", "reach", "linkClicks", "avgViewSec"],
-    "bestSlots": [{ "days": [2], "time": "10:00" }],
-    "formats": ["Ratgeber", "Fallstudie", "Vergleich", "Glossar-Eintrag", "Transkript zum Video"],
+    "limits": {
+      "title": 70,
+      "body": 100000
+    },
+    "metrics": [
+      "views",
+      "reach",
+      "linkClicks",
+      "avgViewSec"
+    ],
+    "bestSlots": [
+      {
+        "days": [
+          2
+        ],
+        "time": "10:00"
+      }
+    ],
+    "formats": [
+      "Ratgeber",
+      "Fallstudie",
+      "Vergleich",
+      "Glossar-Eintrag",
+      "Transkript zum Video"
+    ],
     "tips": [
       "Ein Beitrag, eine Suchintention – gemischte Absichten ranken für nichts.",
       "Jedes Video verdient einen Textbegleiter: das ist Reichweite ohne Zusatzdreh.",

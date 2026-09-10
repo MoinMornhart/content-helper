@@ -18,6 +18,7 @@
  */
 
 const http = require('./http');
+const { TwitchAuth } = require('./twitch-auth');
 const { upsertAnalytics, upsertPublishedPost, linkAnalyticsToPost } = require('./shared');
 
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
@@ -33,6 +34,8 @@ class TwitchConnector {
     this.tokenExpires = 0;
     /** Laufende Sitzung: Stichproben der Zuschauerzahl während eines Streams. */
     this.session = null;
+    /** Anmeldung mit dem Twitch-Konto – der bevorzugte Weg. */
+    this.auth = new TwitchAuth(store);
   }
 
   config() {
@@ -46,9 +49,20 @@ class TwitchConnector {
     return connections.twitch;
   }
 
+  /**
+   * Nutzbar ist die Verbindung auf zwei Wegen: angemeldet mit dem eigenen
+   * Twitch-Konto (bevorzugt, liefert mehr Zahlen) oder mit hinterlegter Kennung
+   * und Geheimnis für rein öffentliche Daten.
+   */
   isConfigured() {
+    if (this.auth.isSignedIn() && this.config().userId) return true;
     const config = this.config();
     return Boolean(config.clientId && config.clientSecret && config.login);
+  }
+
+  /** Welcher Weg wird gerade genutzt? */
+  get mode() {
+    return this.auth.isSignedIn() ? 'login' : 'app';
   }
 
   // ---------------------------------------------------------------- Zugang
@@ -83,7 +97,13 @@ class TwitchConnector {
     return this.token;
   }
 
+  /**
+   * Ruft einen Helix-Endpunkt auf. Ist der Nutzer angemeldet, wird sein
+   * Merkmal verwendet – damit stehen auch Follower- und Abonnentenzahlen offen.
+   */
   async call(path, params = {}) {
+    if (this.auth.isSignedIn()) return this.auth.call(path, params);
+
     const token = await this.accessToken();
     const query = new URLSearchParams(
       Object.entries(params).filter(([, value]) => value !== null && value !== undefined)
@@ -249,8 +269,62 @@ class TwitchConnector {
       }
     }
 
+    // --- Kanalstand: Zahlen, die Twitch nur dem angemeldeten Inhaber zeigt
+    if (this.auth.isSignedIn()) {
+      result.channel = await this.snapshotChannel().catch(() => null);
+    }
+
     this.saveConfig({ lastSync: new Date().toISOString(), lastError: null });
     return result;
+  }
+
+  /**
+   * Hält Follower- und Abonnentenzahl als Tagesstand fest und berechnet den
+   * Zuwachs gegenüber dem letzten Stand.
+   *
+   * Wichtig ist die Trennung: Der Gesamtstand ist eine andere Aussage als der
+   * Zuwachs. Beides in dieselbe Kennzahl zu schreiben würde jede Auswertung
+   * verfälschen – ein Kanal mit 5000 Followern hätte sonst jeden Tag "5000 neue
+   * Follower".
+   */
+  async snapshotChannel() {
+    const followers = await this.auth.followerCount();
+    const subs = await this.auth.subscriberCount();
+    if (followers === null && subs === null) return null;
+
+    const today = new Date().toISOString().slice(0, 10);
+    const externalId = `twitch:channel:${today}`;
+
+    // Letzter Stand vor heute, um den Zuwachs zu bestimmen.
+    const previous = this.store.list('analytics')
+      .filter((entry) => entry.externalId?.startsWith('twitch:channel:') && entry.date < today)
+      .sort((a, b) => b.date.localeCompare(a.date))[0];
+
+    const metrics = {};
+    if (followers !== null) {
+      metrics.followersTotal = followers;
+      if (previous?.metrics?.followersTotal !== undefined) {
+        metrics.followersGained = followers - previous.metrics.followersTotal;
+      }
+    }
+    if (subs !== null) {
+      metrics.subsTotal = subs;
+      if (previous?.metrics?.subsTotal !== undefined) {
+        metrics.subsGained = subs - previous.metrics.subsTotal;
+      }
+    }
+
+    upsertAnalytics(this.store, {
+      externalId,
+      platformId: 'twitch',
+      date: today,
+      title: `Kanalstand ${this.config().displayName || this.config().login || ''}`.trim(),
+      metrics,
+      source: 'twitch',
+      note: previous ? `Zuwachs gegenüber ${previous.date}.` : 'Erster erfasster Stand.',
+    });
+
+    return { followers, subs };
   }
 
   /**

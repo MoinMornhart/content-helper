@@ -1,17 +1,16 @@
 /**
  * Verbindungen: Kanäle anbinden, damit Zahlen von selbst hereinkommen.
  *
- * YouTube läuft über den offenen Kanal-Feed und braucht gar nichts weiter.
- * Twitch braucht eine eigene, kostenlose Anwendung – dafür liefert es dann
- * vergangene Übertragungen, Clips und, während des Streams, Zuschauerzahlen im
- * Zwei-Minuten-Takt.
+ * Twitch läuft über eine gewöhnliche Anmeldung mit dem eigenen Konto – kein
+ * Geheimnis, kein Kanalname, kein Nachschlagen. YouTube braucht nicht einmal
+ * das, dort genügt der offene Kanal-Feed.
  */
 
 import { h, card, fill } from '../lib/dom.js';
 import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import { glyph } from '../lib/platforms.js';
-import { toast, confirm, modal } from '../lib/ui.js';
+import { toast, confirm, modal, copy } from '../lib/ui.js';
 
 export const title = 'Verbindungen';
 export const lead = 'Automatisch statt abtippen – so weit die Plattformen es zulassen.';
@@ -21,6 +20,11 @@ async function status() {
   return result?.ok ? result.data : { twitch: {}, youtube: {} };
 }
 
+async function twitchAuthStatus() {
+  const result = await window.ch.twitch.authStatus();
+  return result?.ok ? result.data : { signedIn: false, needsClientId: true };
+}
+
 /** Ergebnis eines Abgleichs in einen Satz fassen. */
 function describeSync(result) {
   const parts = [];
@@ -28,6 +32,7 @@ function describeSync(result) {
   if (result.updated) parts.push(`${result.updated} aufgefrischt`);
   if (result.posts) parts.push(`${fmt.plural(result.posts, 'Beitrag', 'Beiträge')} übernommen`);
   if (result.ideas) parts.push(`${fmt.plural(result.ideas, 'Clip-Idee', 'Clip-Ideen')}`);
+  if (result.channel?.followers != null) parts.push(`${fmt.num(result.channel.followers)} Follower`);
   if (result.live?.live) parts.push('Stream läuft gerade');
   return parts.length ? parts.join(' · ') : 'Nichts Neues gefunden.';
 }
@@ -41,71 +46,205 @@ async function runSync(name, refresh) {
   refresh();
 }
 
-// ------------------------------------------------------------------ Twitch
+// ------------------------------------------------------------------ Twitch-Anmeldung
 
-function twitchSetup(refresh) {
-  const clientId = h('input.input', { placeholder: 'Client-ID aus deiner Twitch-Anwendung' });
-  const clientSecret = h('input.input', { type: 'password', placeholder: 'Client-Secret' });
-  const login = h('input.input', { placeholder: 'Dein Kanalname, z. B. moinmornhart' });
-
-  const step = (number, title, body) => h('div.row.gap-sm', { style: { alignItems: 'flex-start' } },
-    h('span.badge.badge--accent', { text: String(number) }),
-    h('div', null,
-      h('div.strong.text-sm', { text: title }),
-      h('div.text-sm.muted', { text: body })));
+/**
+ * Einmaliger Schritt, falls keine Client-ID eingebaut ist.
+ *
+ * Bewusst kurz gehalten: gebraucht wird genau ein Wert, und der ist kein
+ * Geheimnis. Ein Client-Secret ist für diesen Anmeldeweg nicht nötig.
+ */
+function clientIdDialog(refresh) {
+  const input = h('input.input', { placeholder: 'z. B. gp762nuuoqcoxypju8c569th9wz7q5' });
 
   modal({
-    title: 'Twitch verbinden',
+    title: 'Einmalig: Twitch-Client-ID',
     body: h('div.col.gap-lg', null,
-      h('div.notice.notice--warn', null,
-        h('span.notice__icon', { text: '!' }),
+      h('div.notice.notice--accent', null,
+        h('span.notice__icon', { text: 'ℹ' }),
         h('div', null,
-          h('div.strong.text-sm', { text: 'Hierfür braucht es eine eigene Twitch-Anwendung' }),
-          h('div.text-sm.muted', { text: 'Sie ist kostenlos, in zwei Minuten angelegt und verursacht keine laufenden Kosten. Twitch gibt Kennzahlen grundsätzlich nur an registrierte Anwendungen heraus – ohne diesen Schritt geht es nicht. Beide Werte bleiben ausschliesslich auf diesem Rechner.' }))),
+          h('div.strong.text-sm', { text: 'Warum das nicht ganz entfallen kann' }),
+          h('div.text-sm.muted', { text: 'Twitch gibt Daten ausschliesslich an registrierte Anwendungen heraus – ohne Ausnahme, für jedes Programm. Die Client-ID ist dabei kein Passwort: sie steht in jeder öffentlichen App im Klartext. Du trägst sie genau einmal ein, danach meldest du dich nur noch ganz normal mit deinem Twitch-Konto an.' }))),
 
       h('div.col.gap-lg', null,
-        step(1, 'Anwendung anlegen', 'Öffne dev.twitch.tv/console/apps und klicke auf „Anwendung registrieren“.'),
-        step(2, 'Felder ausfüllen', 'Name frei wählbar (z. B. „Content Helper“), als OAuth-Weiterleitung http://localhost eintragen, Kategorie „Application Integration“, Clienttyp „Vertraulich“.'),
-        step(3, 'Werte kopieren', 'Nach dem Anlegen zeigt Twitch die Client-ID. Das Client-Secret erscheint einmalig über „Neues Secret“ – kopiere es sofort.')),
+        h('div.row.gap-sm', { style: { alignItems: 'flex-start' } },
+          h('span.badge.badge--accent', { text: '1' }),
+          h('div', null,
+            h('div.strong.text-sm', { text: 'Anwendung anlegen' }),
+            h('div.text-sm.muted', { text: 'dev.twitch.tv öffnen, „Anwendung registrieren“. Name frei wählbar.' }))),
+        h('div.row.gap-sm', { style: { alignItems: 'flex-start' } },
+          h('span.badge.badge--accent', { text: '2' }),
+          h('div', null,
+            h('div.strong.text-sm', { text: 'Clienttyp: Öffentlich' }),
+            h('div.text-sm.muted', { text: 'Als OAuth-Weiterleitung http://localhost eintragen, Kategorie „Application Integration“. Ein Secret brauchst du nicht.' }))),
+        h('div.row.gap-sm', { style: { alignItems: 'flex-start' } },
+          h('span.badge.badge--accent', { text: '3' }),
+          h('div', null,
+            h('div.strong.text-sm', { text: 'Client-ID kopieren' }),
+            h('div.text-sm.muted', { text: 'Sie steht direkt auf der Seite der Anwendung – hier einfügen.' })))),
 
       h('button.btn.btn--sm', {
         text: 'dev.twitch.tv öffnen',
-        onClick: () => window.ch.system.openExternal('https://dev.twitch.tv/console/apps'),
+        onClick: () => window.ch.system.openExternal('https://dev.twitch.tv/console/apps/create'),
       }),
 
-      h('hr.divider'),
-      h('label.field', null, h('span.field__label', { text: 'Client-ID' }), clientId),
-      h('label.field', null, h('span.field__label', { text: 'Client-Secret' }), clientSecret),
-      h('label.field', null, h('span.field__label', { text: 'Kanalname' }), login),
-      h('p.text-xs.faint', { text: 'Eine Anmeldung mit deinem Twitch-Konto ist nicht nötig: abgefragt werden nur Daten, die auf deiner Kanalseite ohnehin öffentlich stehen.' })),
+      h('label.field', null, h('span.field__label', { text: 'Client-ID' }), input)),
 
     actions: [
       {
-        label: 'Verbinden',
+        label: 'Speichern und anmelden',
         primary: true,
         action: async ({ close }) => {
-          if (!clientId.value.trim() || !clientSecret.value.trim() || !login.value.trim()) {
-            toast('Bitte alle drei Felder ausfüllen.', 'warn');
-            return false;
-          }
-          toast('Prüfe die Zugangsdaten …', 'info', 1600);
-          const result = await window.ch.connectors.connect('twitch', {
-            clientId: clientId.value,
-            clientSecret: clientSecret.value,
-            login: login.value,
-          });
-          if (!result?.ok) {
-            toast(result?.error || 'Verbindung fehlgeschlagen.', 'danger', 7000);
-            return false;
-          }
-          toast(`Verbunden mit ${result.data.channel.displayName}.`, 'ok');
+          if (!input.value.trim()) { toast('Bitte die Client-ID einfügen.', 'warn'); return false; }
+          const result = await window.ch.twitch.setClientId(input.value.trim());
+          if (!result?.ok) { toast(result?.error || 'Speichern fehlgeschlagen.', 'danger'); return false; }
           close();
-          await runSync('twitch', refresh);
+          signIn(refresh);
           return true;
         },
       },
     ],
   });
+}
+
+/**
+ * Die eigentliche Anmeldung: Twitch nennt einen kurzen Code, der Browser geht
+ * auf, der Nutzer bestätigt mit seinem Konto. Die App wartet derweil.
+ */
+async function signIn(refresh) {
+  const result = await window.ch.twitch.signIn();
+  if (!result?.ok) return toast(result?.error || 'Anmeldung konnte nicht gestartet werden.', 'danger', 7000);
+
+  const { userCode, url } = result.data;
+  const state = h('div.text-sm.muted', { text: 'Warte auf deine Bestätigung im Browser …' });
+
+  const instance = modal({
+    title: 'Bei Twitch anmelden',
+    size: 'narrow',
+    body: h('div.col.gap-lg', null,
+      h('p.text-sm.muted', { text: 'Der Browser sollte sich geöffnet haben. Gib dort diesen Code ein und bestätige mit deinem Twitch-Konto:' }),
+      h('div', {
+        style: {
+          fontFamily: 'var(--font-mono)',
+          fontSize: '31px',
+          letterSpacing: '0.22em',
+          textAlign: 'center',
+          padding: '18px',
+          borderRadius: 'var(--radius)',
+          background: 'var(--surface-2)',
+          border: '1px solid var(--border)',
+        },
+        text: userCode,
+      }),
+      h('div.row.gap-sm', null,
+        h('button.btn.btn--sm', { text: 'Code kopieren', onClick: () => copy(userCode, 'Code kopiert.') }),
+        h('button.btn.btn--sm', { text: 'Seite erneut öffnen', onClick: () => window.ch.system.openExternal(url) })),
+      state,
+      h('p.text-xs.faint', { text: 'Dein Passwort bekommt die App zu keinem Zeitpunkt zu sehen – die Anmeldung läuft vollständig bei Twitch.' })),
+    actions: [
+      { label: 'Abbrechen', action: () => window.ch.twitch.cancelAuth() },
+    ],
+    onClose: () => window.ch.twitch.cancelAuth(),
+  });
+
+  // Auf das Ergebnis warten, das der Hauptprozess meldet.
+  const off = window.ch.twitch.onAuth(async (update) => {
+    if (update.state === 'done') {
+      off();
+      instance.close();
+      toast(`Angemeldet als ${update.user?.display_name || 'Twitch-Konto'}.`, 'ok', 6000);
+      await store.reload();
+      refresh();
+    } else if (update.state === 'error') {
+      state.textContent = update.message;
+      state.style.color = 'var(--danger)';
+    } else if (update.state === 'cancelled') {
+      off();
+    }
+  });
+}
+
+function twitchCard(state, auth, refresh) {
+  const info = state.twitch;
+
+  // --- Noch nicht angemeldet
+  if (!auth.signedIn) {
+    return card(null, { class: 'card--accent' },
+      h('div.row.gap-sm.mb', null, glyph('twitch', 26), h('h3', { text: 'Twitch' }), h('span.badge', { text: 'nicht verbunden' })),
+      h('p.text-sm.muted.mb', { text: 'Angemeldet holt die App automatisch: vergangene Übertragungen mit Aufrufen und Dauer, die stärksten Clips der Woche als Kurzvideo-Ideen, deine Follower- und Abonnentenzahl – und während du live bist, alle zwei Minuten die Zuschauerzahl. Daraus entstehen Durchschnitt und Spitzenwert je Stream.' }),
+
+      auth.needsClientId
+        ? h('div.col.gap-sm', null,
+            h('div.text-xs.faint', { text: 'Einmalig ist eine Client-ID nötig – Twitch gibt Daten nur an registrierte Anwendungen heraus. Danach nie wieder.' }),
+            h('button.btn.btn--primary', { text: 'Einrichten und anmelden', onClick: () => clientIdDialog(refresh) }))
+        : h('button.btn.btn--primary', { text: 'Mit Twitch anmelden', onClick: () => signIn(refresh) }),
+
+      info.lastError
+        ? h('div.notice.notice--danger.mt', null,
+            h('span.notice__icon', { text: '✕' }),
+            h('div.text-sm', { text: info.lastError }))
+        : null);
+  }
+
+  // --- Angemeldet
+  return card(null, { class: 'card--accent' },
+    h('div.row.between.mb', null,
+      h('div.row.gap-sm', null,
+        glyph('twitch', 26),
+        h('div', null,
+          h('h3', { text: auth.displayName || auth.login }),
+          h('div.text-xs.faint', { text: `angemeldet${auth.signedInAt ? ` seit ${fmt.relative(auth.signedInAt)}` : ''}` }))),
+      h('span.badge.badge--ok', { text: 'angemeldet' })),
+
+    info.liveSession
+      ? h('div.notice.notice--ok.mb', null,
+          h('span.notice__icon', { text: '●' }),
+          h('div', null,
+            h('div.strong.text-sm', { text: 'Stream läuft – Zuschauerzahlen werden mitgeschrieben' }),
+            h('div.text-sm.muted', { text: `${fmt.plural(info.liveSession.samples, 'Stichprobe', 'Stichproben')} seit ${fmt.relative(info.liveSession.startedAt)}` })))
+      : null,
+
+    info.lastError || auth.lastError
+      ? h('div.notice.notice--danger.mb', null,
+          h('span.notice__icon', { text: '✕' }),
+          h('div', null,
+            h('div.strong.text-sm', { text: 'Letzter Abgleich schlug fehl' }),
+            h('div.text-sm.muted', { text: info.lastError || auth.lastError })))
+      : null,
+
+    h('div.row.between.text-sm.muted.mb', null,
+      h('span', { text: info.lastSync ? `Zuletzt abgeglichen ${fmt.relative(info.lastSync)}` : 'Noch nicht abgeglichen' }),
+      h('span', { text: 'automatisch alle 20 Minuten' })),
+
+    h('label.checkbox.mb', null,
+      h('input', {
+        type: 'checkbox',
+        checked: info.createClipIdeas !== false,
+        onChange: async (event) => {
+          await window.ch.connectors.options('twitch', { createClipIdeas: event.target.checked });
+          toast(event.target.checked ? 'Clips werden als Ideen übernommen.' : 'Clips werden nicht mehr übernommen.', 'ok');
+        },
+      }),
+      h('span.text-sm', { text: 'Aus starken Clips automatisch Kurzvideo-Ideen anlegen' })),
+
+    h('div.row.wrap.gap-sm', null,
+      h('button.btn.btn--sm.btn--primary', { text: 'Jetzt abgleichen', onClick: () => runSync('twitch', refresh) }),
+      h('button.btn.btn--sm', { text: 'Vorschau', onClick: twitchPreview }),
+      h('button.btn.btn--sm.btn--ghost', { text: 'Kanal öffnen', onClick: () => window.ch.system.openExternal(`https://twitch.tv/${auth.login}`) }),
+      h('button.btn.btn--sm.btn--danger', {
+        text: 'Abmelden',
+        onClick: async () => {
+          if (!(await confirm({
+            title: 'Von Twitch abmelden?',
+            message: 'Der Zugriff wird bei Twitch zurückgezogen. Bereits übernommene Zahlen bleiben erhalten.',
+            confirmLabel: 'Abmelden',
+            tone: 'danger',
+          }))) return;
+          await window.ch.twitch.signOut();
+          toast('Abgemeldet.', 'ok');
+          refresh();
+        },
+      })));
 }
 
 async function twitchPreview() {
@@ -147,76 +286,6 @@ async function twitchPreview() {
                   h('span.text-sm.muted.nowrap', { text: `${fmt.num(clip.views)} · ${clip.durationSeconds}s` }))))
           : h('p.text-sm.muted', { text: 'Diese Woche wurden keine Clips erstellt.' }))),
   });
-}
-
-function twitchCard(state, refresh) {
-  const info = state.twitch;
-
-  if (!info.configured) {
-    return card(null, { class: 'card--accent' },
-      h('div.row.gap-sm.mb', null, glyph('twitch', 26), h('h3', { text: 'Twitch' }), h('span.badge', { text: 'nicht verbunden' })),
-      h('p.text-sm.muted.mb', { text: 'Verbunden holt die App automatisch: vergangene Übertragungen mit Aufrufen und Dauer, die stärksten Clips der Woche als Kurzvideo-Ideen – und während du live bist, alle zwei Minuten die Zuschauerzahl. Daraus entstehen Durchschnitt und Spitzenwert je Stream.' }),
-      h('button.btn.btn--primary', { text: 'Twitch verbinden', onClick: () => twitchSetup(refresh) }));
-  }
-
-  return card(null, { class: 'card--accent' },
-    h('div.row.between.mb', null,
-      h('div.row.gap-sm', null,
-        glyph('twitch', 26),
-        h('div', null,
-          h('h3', { text: info.displayName || info.login }),
-          h('div.text-xs.faint', { text: `twitch.tv/${info.login}` }))),
-      h('span.badge.badge--ok', { text: 'verbunden' })),
-
-    info.liveSession
-      ? h('div.notice.notice--ok.mb', null,
-          h('span.notice__icon', { text: '●' }),
-          h('div', null,
-            h('div.strong.text-sm', { text: 'Stream läuft – Zuschauerzahlen werden mitgeschrieben' }),
-            h('div.text-sm.muted', { text: `${fmt.plural(info.liveSession.samples, 'Stichprobe', 'Stichproben')} seit ${fmt.relative(info.liveSession.startedAt)}` })))
-      : null,
-
-    info.lastError
-      ? h('div.notice.notice--danger.mb', null,
-          h('span.notice__icon', { text: '✕' }),
-          h('div', null,
-            h('div.strong.text-sm', { text: 'Letzter Abgleich schlug fehl' }),
-            h('div.text-sm.muted', { text: info.lastError })))
-      : null,
-
-    h('div.row.between.text-sm.muted.mb', null,
-      h('span', { text: info.lastSync ? `Zuletzt abgeglichen ${fmt.relative(info.lastSync)}` : 'Noch nie abgeglichen' }),
-      h('span', { text: 'automatisch alle 20 Minuten' })),
-
-    h('label.checkbox.mb', null,
-      h('input', {
-        type: 'checkbox',
-        checked: info.createClipIdeas,
-        onChange: async (event) => {
-          await window.ch.connectors.options('twitch', { createClipIdeas: event.target.checked });
-          toast(event.target.checked ? 'Clips werden als Ideen übernommen.' : 'Clips werden nicht mehr übernommen.', 'ok');
-        },
-      }),
-      h('span.text-sm', { text: 'Aus starken Clips automatisch Kurzvideo-Ideen anlegen' })),
-
-    h('div.row.wrap.gap-sm', null,
-      h('button.btn.btn--sm.btn--primary', { text: 'Jetzt abgleichen', onClick: () => runSync('twitch', refresh) }),
-      h('button.btn.btn--sm', { text: 'Vorschau', onClick: twitchPreview }),
-      h('button.btn.btn--sm.btn--ghost', { text: 'Kanal öffnen', onClick: () => window.ch.system.openExternal(`https://twitch.tv/${info.login}`) }),
-      h('button.btn.btn--sm.btn--danger', {
-        text: 'Trennen',
-        onClick: async () => {
-          if (!(await confirm({
-            title: 'Twitch trennen?',
-            message: 'Zugangsdaten und Kanalzuordnung werden gelöscht. Bereits übernommene Zahlen bleiben erhalten.',
-            confirmLabel: 'Trennen',
-            tone: 'danger',
-          }))) return;
-          await window.ch.connectors.disconnect('twitch');
-          toast('Twitch getrennt.', 'ok');
-          refresh();
-        },
-      })));
 }
 
 // ------------------------------------------------------------------ YouTube
@@ -299,7 +368,7 @@ function youtubeCard(state, refresh) {
       : null,
 
     h('div.row.between.text-sm.muted.mb', null,
-      h('span', { text: info.lastSync ? `Zuletzt abgeglichen ${fmt.relative(info.lastSync)}` : 'Noch nie abgeglichen' }),
+      h('span', { text: info.lastSync ? `Zuletzt abgeglichen ${fmt.relative(info.lastSync)}` : 'Noch nicht abgeglichen' }),
       h('span', { text: 'automatisch alle 20 Minuten' })),
 
     h('label.checkbox.mb', null,
@@ -336,7 +405,8 @@ function youtubeCard(state, refresh) {
 
 export async function render({ setActions, refresh, goto }) {
   const state = await status();
-  const connected = [state.twitch.configured, state.youtube.configured].filter(Boolean).length;
+  const auth = await twitchAuthStatus();
+  const connected = [auth.signedIn, state.youtube.configured].filter(Boolean).length;
 
   setActions(
     connected
@@ -374,7 +444,7 @@ export async function render({ setActions, refresh, goto }) {
         h('div.stat__meta', { text: 'während eines Streams alle 2 Minuten' })))),
 
     h('div.grid.grid-2', null,
-      twitchCard(state, refresh),
+      twitchCard(state, auth, refresh),
       youtubeCard(state, refresh)),
 
     // ---------------------------------------------------------------- X
@@ -390,5 +460,5 @@ export async function render({ setActions, refresh, goto }) {
       h('span.notice__icon', { text: 'ℹ' }),
       h('div', null,
         h('div.strong.text-sm', { text: 'Was mit den Daten passiert' }),
-        h('div.text-sm.muted', { text: 'Abgerufen wird ausschliesslich dein eigener Kanal. Alles landet unverändert im lokalen Datenordner, nichts wird weitergegeben. Zugangsdaten der Twitch-Anwendung liegen in derselben Datei wie deine Einstellungen und verlassen den Rechner nur, um sich bei Twitch selbst auszuweisen.' }))));
+        h('div.text-sm.muted', { text: 'Abgerufen wird ausschliesslich dein eigener Kanal. Alles landet unverändert im lokalen Datenordner, nichts wird weitergegeben. Bei der Anmeldung bekommt die App dein Passwort nie zu sehen – sie erhält von Twitch nur ein widerrufbares Merkmal, das du hier oder in deinen Twitch-Einstellungen jederzeit zurückziehen kannst.' }))));
 }

@@ -181,6 +181,51 @@ check('Sitzung ist danach beendet', twitch.session === null);
 twitch.session = { streamId: '4711', title: 'Werkstatt-Abend', startedAt, samples: [{ at: Date.now(), viewers: 10 }] };
 check('Sitzung wird nicht verdoppelt', twitch.finishSession().saved === false);
 
+// ------------------------------------------------------------------ Twitch-Anmeldung
+//
+// Ab hier wird auf Zusagen gewartet, deshalb laeuft der Rest in einer
+// asynchronen Klammer.
+
+(async () => {
+const auth = twitch.auth;
+
+check('Ohne Client-ID ist die Anmeldung nicht startbar', auth.needsClientId() === true);
+auth.saveConfig({ clientId: 'abcdef123456' });
+check('Hinterlegte Client-ID wird erkannt', auth.needsClientId() === false && auth.clientId() === 'abcdef123456');
+check('Noch nicht angemeldet', auth.isSignedIn() === false);
+check('Ohne Anmeldung gilt der Anwendungsweg', twitch.mode === 'app');
+
+auth.saveConfig({ refreshToken: 'geheimes-erneuerungsmerkmal', login: 'moinmornhart', userId: '4711', displayName: 'MoinMornhart' });
+check('Nach der Anmeldung erkannt', auth.isSignedIn() === true);
+check('Angemeldet gilt der Anmeldeweg', twitch.mode === 'login');
+check('Anmeldung allein genügt als Einrichtung', twitch.isConfigured() === true);
+check('Merkmal steht nicht im Status', JSON.stringify(auth.status()).includes('geheimes-erneuerungsmerkmal') === false);
+check('Status nennt den angemeldeten Kanal', auth.status().displayName === 'MoinMornhart');
+
+// Der Kanalstand muss Gesamtzahl und Zuwachs sauber trennen.
+const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+store.insert('analytics', {
+  externalId: `twitch:channel:${yesterday}`,
+  platformId: 'twitch',
+  date: yesterday,
+  title: 'Kanalstand',
+  metrics: { followersTotal: 1200, subsTotal: 40 },
+  source: 'twitch',
+});
+auth.followerCount = async () => 1247;
+auth.subscriberCount = async () => 43;
+
+await twitch.snapshotChannel();
+const today = new Date().toISOString().slice(0, 10);
+const snapshot = store.list('analytics').find((entry) => entry.externalId === `twitch:channel:${today}`);
+check('Kanalstand wird festgehalten', snapshot?.metrics.followersTotal === 1247, JSON.stringify(snapshot?.metrics));
+check('Zuwachs wird berechnet statt geraten', snapshot?.metrics.followersGained === 47, String(snapshot?.metrics.followersGained));
+check('Abonnenten getrennt gefuehrt', snapshot?.metrics.subsTotal === 43 && snapshot?.metrics.subsGained === 3);
+
+await auth.signOut();
+check('Abmelden entfernt das Merkmal', auth.isSignedIn() === false);
+check('Client-ID bleibt nach dem Abmelden erhalten', auth.clientId() === 'abcdef123456');
+
 // ------------------------------------------------------------------ Zugangsdaten
 
 twitch.saveConfig({ clientId: 'abc123', clientSecret: 'geheim', login: 'moinmornhart' });
@@ -203,3 +248,7 @@ if (failed.length) {
   process.exit(1);
 }
 process.stdout.write(`\nAlle ${results.length} Prüfungen bestanden.\n`);
+})().catch((error) => {
+  process.stdout.write(`\nAbbruch: ${error.stack}\n`);
+  process.exit(1);
+});

@@ -192,6 +192,37 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
     throw new Error(`Unbekannte Verbindung: ${name}`);
   });
 
+  // --- Anmeldung mit dem Twitch-Konto statt Kennung und Geheimnis
+  handle('twitch:authStatus', () => connectors.twitch.auth.status());
+
+  handle('twitch:setClientId', ({ clientId }) => {
+    connectors.twitch.auth.saveConfig({ clientId: String(clientId || '').trim() });
+    return connectors.twitch.auth.status();
+  });
+
+  /** Startet die Anmeldung und meldet den Fortschritt an die Oberflaeche. */
+  handle('twitch:signIn', async () => {
+    const start = await connectors.twitch.auth.begin((update) => {
+      const win = getWindow();
+      if (win && !win.isDestroyed()) win.webContents.send('twitch:auth', update);
+      if (update.state === 'done') {
+        // Direkt nach der Anmeldung einmal alles holen.
+        connectors.twitch.sync().catch(() => {});
+      }
+    });
+    return start;
+  });
+
+  handle('twitch:cancelAuth', () => {
+    connectors.twitch.auth.cancel();
+    return true;
+  });
+
+  handle('twitch:signOut', async () => {
+    await connectors.twitch.auth.signOut();
+    return connectors.twitch.auth.status();
+  });
+
   handle('connectors:sync', async ({ name }) => {
     if (name) {
       const connector = connectors.connector(name);
