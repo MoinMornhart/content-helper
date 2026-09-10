@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('ch', {
 
   media: {
     pick: () => invoke('media:pick'),
+    pickImage: () => invoke('media:pickImage'),
     reveal: (filePath) => invoke('media:reveal', { filePath }),
     open: (filePath) => invoke('media:open', { filePath }),
     thumbnail: (filePath) => invoke('media:thumbnail', { filePath }),
@@ -84,8 +85,13 @@ contextBridge.exposeInMainWorld('ch', {
 
   update: {
     check: (force) => invoke('update:check', { force }),
+    status: () => invoke('update:status'),
+    install: () => invoke('update:install'),
     openReleasePage: () => invoke('update:openReleasePage'),
     onAvailable: (handler) => on('update:available', handler),
+    onProgress: (handler) => on('update:progress', handler),
+    onReady: (handler) => on('update:ready', handler),
+    onState: (handler) => on('update:state', handler),
   },
 
   system: {

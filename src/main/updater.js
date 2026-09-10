@@ -1,13 +1,21 @@
 'use strict';
 
 /**
- * Update-Pruefung ohne API-Schluessel.
+ * Aktualisierung – die App holt sich neue Fassungen selbst.
  *
- * Fragt die oeffentliche Release-Adresse des Projekts auf GitHub ab und
- * vergleicht die dort veroeffentlichte Version mit der laufenden. Gefunden wird
- * nur informiert – heruntergeladen und installiert wird nichts im Hintergrund,
- * der Nutzer entscheidet. Ohne Netzverbindung bleibt die App vollstaendig
- * benutzbar, die Pruefung scheitert dann still.
+ * In der installierten Fassung übernimmt electron-updater die Arbeit: Es prüft
+ * beim Start und danach regelmässig die Veröffentlichungen des Projekts, lädt
+ * eine neuere Fassung im Hintergrund herunter und legt sie bereit. Eingespielt
+ * wird sie beim nächsten Beenden – oder sofort, wenn der Nutzer im Hinweis auf
+ * „Neu starten“ klickt. Es gibt dabei nichts von Hand herunterzuladen.
+ *
+ * Bewusste Grenze: Der Neustart wird nicht ohne Zutun erzwungen. Ein Programm,
+ * das sich mitten in der Arbeit selbst beendet, verliert Vertrauen und
+ * womöglich ungespeicherte Eingaben.
+ *
+ * Aus dem Quellordner heraus gestartet gibt es keine installierte Fassung, die
+ * sich ersetzen liesse. Dann wird nur nachgesehen und gemeldet – über die
+ * öffentliche Release-Adresse, ohne Zugangsschlüssel.
  */
 
 const { app, net, shell, Notification } = require('electron');
@@ -16,9 +24,9 @@ const REPO = 'MoinMornhart/content-helper';
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
 const RELEASES_PAGE = `https://github.com/${REPO}/releases/latest`;
 
-const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // laufende Sitzungen zusaetzlich alle sechs Stunden
-const STARTUP_DELAY_MS = 4_000;               // kurz nach dem Start, damit das Fenster zuerst erscheint
-const MIN_GAP_MS = 30 * 60 * 1000;            // Drosselung fuer wiederholte Pruefungen innerhalb einer Sitzung
+const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000;
+const STARTUP_DELAY_MS = 4_000;
+const MIN_GAP_MS = 30 * 60 * 1000;
 
 /**
  * Vergleicht zwei Versionen nach dem Muster major.minor.patch.
@@ -55,13 +63,87 @@ class Updater {
     this.timer = null;
     this.lastCheck = 0;
     this.lastResult = null;
+    /** Steht eine heruntergeladene Fassung zum Einspielen bereit? */
+    this.ready = null;
+    this.downloading = false;
+
+    /** Selbstaktualisierung gibt es nur in der installierten Fassung. */
+    this.canSelfUpdate = app.isPackaged;
+    this.native = null;
+
+    if (this.canSelfUpdate) this.setupNative();
   }
 
-  /**
-   * Beim Start wird immer geprueft – der Nutzer soll eine neue Version sofort
-   * beim Oeffnen sehen und nicht erst nach Stunden Laufzeit. Die Drosselung
-   * gilt nur fuer weitere Pruefungen innerhalb derselben Sitzung.
-   */
+  // ---------------------------------------------------------------- Selbstaktualisierung
+
+  setupNative() {
+    const { autoUpdater } = require('electron-updater');
+    this.native = autoUpdater;
+
+    autoUpdater.autoDownload = true;          // im Hintergrund holen, ohne Nachfrage
+    autoUpdater.autoInstallOnAppQuit = true;  // spaetestens beim Beenden einspielen
+    autoUpdater.allowPrerelease = false;
+    autoUpdater.logger = null;
+
+    autoUpdater.on('checking-for-update', () => this.send('update:state', { state: 'checking' }));
+
+    autoUpdater.on('update-available', (info) => {
+      this.lastResult = { available: true, current: app.getVersion(), latest: info.version, notes: info.releaseNotes || '' };
+      this.send('update:available', { ...this.lastResult, autoDownload: true });
+      this.downloading = true;
+    });
+
+    autoUpdater.on('update-not-available', () => {
+      this.lastResult = { available: false, current: app.getVersion(), latest: app.getVersion() };
+      this.send('update:state', { state: 'current' });
+    });
+
+    autoUpdater.on('download-progress', (progress) => {
+      this.send('update:progress', {
+        percent: Math.round(progress.percent),
+        transferred: progress.transferred,
+        total: progress.total,
+        bytesPerSecond: progress.bytesPerSecond,
+      });
+    });
+
+    autoUpdater.on('update-downloaded', (info) => {
+      this.downloading = false;
+      this.ready = { version: info.version, notes: info.releaseNotes || '' };
+      this.store.saveSettings({ pendingUpdateVersion: info.version });
+      this.send('update:ready', this.ready);
+      this.notifyReady(info.version);
+    });
+
+    autoUpdater.on('error', (error) => {
+      this.downloading = false;
+      const message = String(error?.message || error);
+      this.store.saveSettings({ lastUpdateError: message });
+      this.send('update:state', { state: 'error', message });
+    });
+  }
+
+  /** Meldet die fertige Fassung; ein Klick startet neu und spielt sie ein. */
+  notifyReady(version) {
+    if (this.store.settings().notifications === false || !Notification.isSupported()) return;
+    const notification = new Notification({
+      title: `Version ${version} ist bereit`,
+      body: 'Sie wird beim nächsten Beenden eingespielt. Klicken, um jetzt neu zu starten.',
+    });
+    notification.on('click', () => this.install());
+    notification.show();
+  }
+
+  /** Startet neu und spielt die heruntergeladene Fassung ein. */
+  install() {
+    if (!this.ready || !this.native) return false;
+    this.store.flush();
+    setImmediate(() => this.native.quitAndInstall(false, true));
+    return true;
+  }
+
+  // ---------------------------------------------------------------- Ablauf
+
   start() {
     if (this.timer) return;
     setTimeout(() => this.check({ skipThrottle: true }), STARTUP_DELAY_MS);
@@ -73,7 +155,89 @@ class Updater {
     this.timer = null;
   }
 
-  /** Holt die Release-Daten; wirft bei Netz- oder Serverfehlern. */
+  /**
+   * Prüft auf eine neuere Fassung. In der installierten App wird dabei
+   * gleichzeitig heruntergeladen.
+   *
+   * @param {{manual?: boolean, skipThrottle?: boolean}} options
+   */
+  async check(options = {}) {
+    const { manual = options === true, skipThrottle = options === true } =
+      typeof options === 'object' && options !== null ? options : {};
+
+    const settings = this.store.settings();
+    if (!manual && settings.autoUpdateCheck === false) return { available: false, disabled: true };
+    if (!manual && !skipThrottle && Date.now() - this.lastCheck < MIN_GAP_MS) {
+      return this.lastResult || { available: false, cached: true };
+    }
+    this.lastCheck = Date.now();
+    this.store.saveSettings({ lastUpdateCheck: new Date().toISOString() });
+
+    // Bereits heruntergeladen – nichts weiter zu tun.
+    if (this.ready) {
+      return { available: true, downloaded: true, current: app.getVersion(), latest: this.ready.version };
+    }
+
+    if (this.canSelfUpdate) {
+      try {
+        const result = await this.native.checkForUpdates();
+        const latest = result?.updateInfo?.version || app.getVersion();
+        this.lastResult = {
+          available: compareVersions(latest, app.getVersion()) > 0,
+          current: app.getVersion(),
+          latest,
+          downloading: this.downloading,
+          selfUpdate: true,
+        };
+        return this.lastResult;
+      } catch (error) {
+        this.lastResult = { available: false, offline: true, error: error.message, current: app.getVersion() };
+        return this.lastResult;
+      }
+    }
+
+    return this.checkViaApi();
+  }
+
+  /**
+   * Nachsehen ohne installierte Fassung: fragt die öffentliche Release-Adresse
+   * ab. Kein Konto, kein Zugangsschlüssel.
+   */
+  async checkViaApi() {
+    let release;
+    try {
+      release = await this.fetchLatest();
+    } catch (error) {
+      this.lastResult = { available: false, offline: true, error: error.message, current: app.getVersion() };
+      return this.lastResult;
+    }
+
+    if (!release?.tag_name) {
+      this.lastResult = { available: false, noReleases: true, current: app.getVersion() };
+      return this.lastResult;
+    }
+
+    const current = app.getVersion();
+    const latest = String(release.tag_name).replace(/^v/i, '');
+    const available = compareVersions(latest, current) > 0;
+
+    this.lastResult = {
+      available,
+      current,
+      latest,
+      name: release.name || `Version ${latest}`,
+      notes: (release.body || '').slice(0, 4000),
+      url: release.html_url || RELEASES_PAGE,
+      publishedAt: release.published_at || null,
+      // Aus dem Quellordner heraus gibt es nichts zu ersetzen.
+      sourceCheckout: true,
+    };
+    this.store.saveSettings({ lastKnownVersion: latest });
+
+    if (available) this.announce(this.lastResult);
+    return this.lastResult;
+  }
+
   fetchLatest() {
     return new Promise((resolve, reject) => {
       const request = net.request({ method: 'GET', url: API_URL });
@@ -90,7 +254,7 @@ class Updater {
         response.on('data', (chunk) => { body += chunk; });
         response.on('end', () => {
           clearTimeout(timeout);
-          if (response.statusCode === 404) return resolve(null); // noch kein Release veroeffentlicht
+          if (response.statusCode === 404) return resolve(null);
           if (response.statusCode !== 200) {
             return reject(new Error(`GitHub antwortete mit Status ${response.statusCode}.`));
           }
@@ -111,66 +275,10 @@ class Updater {
     });
   }
 
-  /**
-   * Fuehrt eine Pruefung durch.
-   * @param {{manual?: boolean, skipThrottle?: boolean}} options
-   *   manual   – vom Nutzer ausgeloest: prueft auch bei abgeschalteter Automatik.
-   *   skipThrottle – Drosselung uebergehen (Programmstart).
-   */
-  async check(options = {}) {
-    // Aeltere Aufrufe uebergaben ein einfaches true fuer "erzwingen".
-    const { manual = options === true, skipThrottle = options === true } =
-      typeof options === 'object' && options !== null ? options : {};
-
-    const settings = this.store.settings();
-    if (!manual && settings.autoUpdateCheck === false) {
-      return { available: false, disabled: true };
-    }
-    if (!manual && !skipThrottle && Date.now() - this.lastCheck < MIN_GAP_MS) {
-      return this.lastResult || { available: false, cached: true };
-    }
-    this.lastCheck = Date.now();
-
-    let release;
-    try {
-      release = await this.fetchLatest();
-    } catch (error) {
-      this.lastResult = { available: false, offline: true, error: error.message };
-      return this.lastResult;
-    }
-
-    if (!release || !release.tag_name) {
-      this.lastResult = { available: false, noReleases: true, current: app.getVersion() };
-      return this.lastResult;
-    }
-
-    const current = app.getVersion();
-    const latest = String(release.tag_name).replace(/^v/i, '');
-    const available = compareVersions(latest, current) > 0;
-
-    const result = {
-      available,
-      current,
-      latest,
-      name: release.name || `Version ${latest}`,
-      notes: (release.body || '').slice(0, 4000),
-      url: release.html_url || RELEASES_PAGE,
-      publishedAt: release.published_at || null,
-      asset: (release.assets || []).find((entry) => /\.exe$/i.test(entry.name))?.browser_download_url || null,
-    };
-    this.lastResult = result;
-
-    this.store.saveSettings({ lastUpdateCheck: new Date().toISOString(), lastKnownVersion: latest });
-
-    if (available) this.announce(result);
-    return result;
-  }
-
-  /** Meldet eine neue Version an die Oberflaeche – hoechstens einmal je Version. */
+  /** Hinweis, wenn nicht selbst aktualisiert werden kann – hoechstens einmal je Version. */
   announce(result) {
     const settings = this.store.settings();
-    const win = this.getWindow();
-    if (win && !win.isDestroyed()) win.webContents.send('update:available', result);
+    this.send('update:available', { ...result, autoDownload: false });
 
     if (settings.updateNotifiedFor === result.latest) return;
     this.store.saveSettings({ updateNotifiedFor: result.latest });
@@ -178,15 +286,31 @@ class Updater {
     if (settings.notifications !== false && Notification.isSupported()) {
       const notification = new Notification({
         title: `Content Helper ${result.latest} ist da`,
-        body: 'Klicken, um die Release-Seite mit den Neuerungen zu öffnen.',
+        body: 'Klicken, um die Veröffentlichung zu öffnen.',
       });
-      notification.on('click', () => shell.openExternal(result.url));
+      notification.on('click', () => shell.openExternal(result.url || RELEASES_PAGE));
       notification.show();
     }
   }
 
+  send(channel, payload) {
+    const win = this.getWindow();
+    if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+  }
+
   openReleasePage() {
     return shell.openExternal(this.lastResult?.url || RELEASES_PAGE);
+  }
+
+  status() {
+    return {
+      current: app.getVersion(),
+      canSelfUpdate: this.canSelfUpdate,
+      downloading: this.downloading,
+      ready: this.ready,
+      lastCheck: this.store.settings().lastUpdateCheck || null,
+      lastResult: this.lastResult,
+    };
   }
 }
 

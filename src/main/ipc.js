@@ -114,6 +114,18 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
     });
   });
 
+  /** Bild fuer den Hintergrund der Oberflaeche auswaehlen. */
+  handle('media:pickImage', async () => {
+    const result = await dialog.showOpenDialog(getWindow(), {
+      title: 'Hintergrundbild wählen',
+      properties: ['openFile'],
+      filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
+    });
+    if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+    const filePath = result.filePaths[0];
+    return { canceled: false, filePath, name: path.basename(filePath) };
+  });
+
   handle('media:reveal', ({ filePath }) => {
     shell.showItemInFolder(filePath);
     return true;
@@ -225,6 +237,8 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
 
   // ------------------------------------------------------------- Aktualisierung
   handle('update:check', ({ force }) => updater.check({ manual: Boolean(force), skipThrottle: true }));
+  handle('update:status', () => updater.status());
+  handle('update:install', () => updater.install());
   handle('update:openReleasePage', () => updater.openReleasePage());
 
   // ------------------------------------------------------------- System
