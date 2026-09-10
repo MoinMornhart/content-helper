@@ -55,10 +55,18 @@ veröffentlicht für jeden Kanal einen offenen Feed; daraus liest die App die ne
 Videos mit Titel, Datum, Aufrufen und Likes und legt sie als veröffentlichte Beiträge an,
 damit Kalender und Coach den tatsächlichen Rhythmus kennen.
 
-**Twitch – mit einer eigenen, kostenlosen Anwendung.** Twitch gibt Daten nur an
-registrierte Anwendungen heraus; die ist in zwei Minuten unter
-[dev.twitch.tv](https://dev.twitch.tv/console/apps) angelegt und verursacht keine Kosten.
-Die App führt Schritt für Schritt durch die Einrichtung. Danach kommen automatisch:
+Es lassen sich **beliebig viele Kanäle** verbinden – Hauptkanal, Clipkanal, Nebenprojekt.
+Jede Zahl trägt die Kennung ihres Kanals, und Analytics wie Assistent werten die Kanäle
+getrennt aus. Das ist nicht nur Ordnung: Ein Kanal mit 200 Aufrufen je Video und einer
+mit 200 000 im selben Topf würden jede Empfehlung verfälschen. Hat ein Kanal noch keine
+öffentlichen Videos, bleibt er verbunden und meldet das als Hinweis, nicht als Fehler.
+Gibt YouTube den Feed zeitweise nicht heraus, liest die App die Videoliste direkt von der
+Kanalseite.
+
+**Twitch – per Anmeldung mit dem eigenen Konto.** Knopf drücken, Browser geht auf,
+bestätigen, fertig – kein Secret, kein Kanalname. Twitch gibt Daten nur an registrierte
+Anwendungen heraus; übrig bleibt deshalb genau ein Wert, die Client-ID, die einmalig
+hinterlegt oder fest eingebaut wird. Danach kommen automatisch:
 
 - vergangene Übertragungen mit Aufrufen und Dauer,
 - die stärksten Clips der Woche, auf Wunsch direkt als Kurzvideo-Ideen,
