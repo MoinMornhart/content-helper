@@ -9,26 +9,31 @@ import { h, fill, qs } from './lib/dom.js';
 import * as store from './lib/store.js';
 import { toast } from './lib/ui.js';
 
+/**
+ * Navigation in vier Schritten des Arbeitsablaufs: sehen, machen, verstehen,
+ * einrichten. Was zur Einrichtung gehoert, steht unten und nicht zwischen den
+ * taeglich gebrauchten Ansichten.
+ */
 const NAV = [
   { group: 'Überblick', items: [
     { id: 'dashboard', label: 'Dashboard', icon: '◈' },
     { id: 'calendar', label: 'Kalender', icon: '▦' },
     { id: 'queue', label: 'Warteschlange', icon: '☰' },
   ] },
-  { group: 'Erstellen', items: [
-    { id: 'composer', label: 'Composer', icon: '✎' },
+  { group: 'Produzieren', items: [
     { id: 'assistant', label: 'Assistent', icon: '✧' },
     { id: 'ideas', label: 'Ideen', icon: '✦' },
     { id: 'scripts', label: 'Skripte', icon: '§' },
+    { id: 'composer', label: 'Composer', icon: '✎' },
     { id: 'media', label: 'Medien', icon: '▤' },
   ] },
-  { group: 'Verstehen', items: [
+  { group: 'Auswerten', items: [
     { id: 'analytics', label: 'Analytics', icon: '◫' },
     { id: 'coach', label: 'Coach', icon: '◎' },
-    { id: 'channels', label: 'Kanäle', icon: '⬡' },
-    { id: 'connections', label: 'Verbindungen', icon: '⇄' },
   ] },
-  { group: 'System', items: [
+  { group: 'Einrichten', items: [
+    { id: 'connections', label: 'Verbindungen', icon: '⇄' },
+    { id: 'channels', label: 'Kanäle', icon: '⬡' },
     { id: 'mobile', label: 'Handy', icon: '▯' },
     { id: 'settings', label: 'Einstellungen', icon: '⚙' },
   ] },
@@ -42,6 +47,9 @@ const state = {
 };
 
 const refs = {};
+
+/** Version, die gerade geladen wird oder bereitliegt. */
+let pendingVersion = null;
 
 // ------------------------------------------------------------------ Aufbau
 
@@ -63,6 +71,9 @@ function buildShell() {
     }
   }
 
+  // Steht in der Seitenleiste unten und bleibt beim Ansichtswechsel erhalten.
+  refs.update = h('div.update-slot');
+
   const sidebar = h('aside.sidebar', null,
     h('div.sidebar__brand', null,
       h('div.sidebar__logo', { text: '▶' }),
@@ -72,6 +83,9 @@ function buildShell() {
     nav,
     h('div.sidebar__footer', null,
       h('button.btn.btn--primary.btn--block', { text: '＋  Neuer Beitrag', onClick: () => goto('composer', { fresh: true }) }),
+      // Der Stand der Aktualisierung gehoert zur Version – und damit hierher,
+      // nicht in die Kopfzeile ueber den Inhalt.
+      refs.update,
       h('div.text-xs.faint.row.between', null,
         h('span', { id: 'version-label', text: '' }),
         h('button.btn.btn--ghost.btn--sm', { text: 'Update prüfen', onClick: checkUpdateManually }))));
@@ -164,9 +178,45 @@ async function refreshBadges() {
 
 // ------------------------------------------------------------------ Erscheinungsbild
 
+/** Wandelt einen Windows-Pfad in eine Adresse, die das Fenster laden darf. */
+export function fileUrl(filePath) {
+  const normalized = String(filePath).replace(/\\/g, '/');
+  return `file:///${encodeURI(normalized).replace(/^file:\/\/\//, '').replace(/#/g, '%23')}`;
+}
+
+/**
+ * Erscheinungsbild anwenden: Farbschema, Akzentfarbe und Hintergrund.
+ *
+ * Der Hintergrund liegt als eigene Ebene hinter der Oberflaeche, darueber ein
+ * einstellbarer Schleier. Ohne ihn wird Text auf hellen Bildern unlesbar –
+ * deshalb ist er nicht abschaltbar, sondern nur regelbar.
+ */
 export function applyTheme(settings) {
-  document.documentElement.dataset.theme = settings.theme || 'dark';
-  document.documentElement.dataset.accent = settings.accent || 'violet';
+  const root = document.documentElement;
+  root.dataset.theme = settings.theme || 'dark';
+  root.dataset.accent = settings.accent || 'violet';
+
+  if (settings.accentColor) root.style.setProperty('--accent-base', settings.accentColor);
+  else root.style.removeProperty('--accent-base');
+
+  const look = settings.appearance || {};
+  const background = look.background || 'none';
+
+  if (background === 'custom' && look.backgroundPath) {
+    root.dataset.bg = 'on';
+    delete root.dataset.bgPreset;
+    root.style.setProperty('--bg-image', `url("${fileUrl(look.backgroundPath)}")`);
+  } else if (background !== 'none') {
+    root.dataset.bg = 'on';
+    root.dataset.bgPreset = background;
+    root.style.removeProperty('--bg-image');
+  } else {
+    delete root.dataset.bg;
+    delete root.dataset.bgPreset;
+    root.style.removeProperty('--bg-image');
+  }
+
+  root.style.setProperty('--bg-dim', String(Math.min(95, Math.max(0, look.dim ?? 55)) / 100));
 }
 
 // ------------------------------------------------------------------ Aktualisierung
@@ -182,9 +232,14 @@ async function checkUpdateManually() {
   if (!result?.ok) return toast(`Update-Prüfung fehlgeschlagen: ${result?.error || 'unbekannt'}`, 'danger', 7000);
 
   const info = result.data;
-  if (info.available) {
+  if (info.downloaded) {
+    toast(`Version ${info.latest} liegt bereit – ein Neustart spielt sie ein.`, 'ok', 8000);
+  } else if (info.available && info.selfUpdate) {
+    toast(`Version ${info.latest} wird im Hintergrund geladen.`, 'ok', 7000);
+    setUpdateState({ state: 'downloading', latest: info.latest, percent: 0 });
+  } else if (info.available) {
     toast(`Version ${info.latest} ist verfügbar – du hast ${info.current}.`, 'ok', 8000);
-    showUpdateBanner(info);
+    setUpdateState({ state: 'manual', latest: info.latest });
   } else if (info.offline) {
     toast(`Prüfung nicht möglich: ${info.error || 'keine Verbindung'}.`, 'warn', 7000);
   } else if (info.noReleases) {
@@ -192,6 +247,57 @@ async function checkUpdateManually() {
   } else {
     toast(`Alles aktuell – Version ${info.current} ist die neueste.`, 'ok');
   }
+}
+
+/**
+ * Anzeige zum Stand der Aktualisierung in der Kopfzeile.
+ *
+ * Die installierte Fassung laedt neue Versionen von allein herunter; hier ist
+ * nur zu sehen, wie weit das ist und wann ein Neustart sie einspielt. Aus dem
+ * Quellordner heraus gibt es nichts zu ersetzen – dann fuehrt der Hinweis zur
+ * Veroeffentlichung.
+ */
+function setUpdateState({ state, latest, percent = 0 }) {
+  if (!refs.update) return;
+
+  if (state === 'downloading') {
+    fill(refs.update,
+      h('div.update-slot__box', null,
+        h('div.row.between', null,
+          h('span.text-xs.strong', { text: `Version ${latest || ''} wird geladen` }),
+          h('span.text-xs.faint', { text: `${percent} %` })),
+        h('div.bar.mt-sm', null, h('div.bar__fill', { style: { width: `${percent}%` } }))));
+    return;
+  }
+
+  if (state === 'ready') {
+    fill(refs.update,
+      h('div.update-slot__box.is-ready', null,
+        h('div.text-xs.strong.mb-sm', { text: `Version ${latest} liegt bereit` }),
+        h('button.btn.btn--primary.btn--sm.btn--block', {
+          text: 'Neu starten und einspielen',
+          title: 'Wird sonst automatisch beim nächsten Beenden eingespielt.',
+          onClick: async () => {
+            toast('Starte neu …', 'info', 4000);
+            await window.ch.update.install();
+          },
+        })));
+    return;
+  }
+
+  if (state === 'manual') {
+    fill(refs.update,
+      h('div.update-slot__box', null,
+        h('div.text-xs.strong.mb-sm', { text: `Version ${latest} verfügbar` }),
+        h('div.text-xs.faint.mb-sm', { text: 'Diese Fassung läuft aus dem Quellordner und kann sich nicht selbst ersetzen.' }),
+        h('button.btn.btn--sm.btn--block', {
+          text: 'Veröffentlichung öffnen',
+          onClick: () => window.ch.update.openReleasePage(),
+        })));
+    return;
+  }
+
+  fill(refs.update);
 }
 
 // ------------------------------------------------------------------ Start
@@ -227,7 +333,42 @@ async function main() {
 
   window.ch.nav.onGoto(({ view }) => goto(view));
   window.ch.nav.onAction(({ action }) => handleAction(action));
-  window.ch.update.onAvailable((info) => showUpdateBanner(info));
+  // Die installierte Fassung laedt von allein; hier wird nur der Stand gezeigt.
+  window.ch.update.onAvailable((info) => {
+    if (info.autoDownload) {
+      setUpdateState({ state: 'downloading', latest: info.latest, percent: 0 });
+      toast(`Version ${info.latest} wird im Hintergrund geladen.`, 'ok', 6000);
+    } else {
+      setUpdateState({ state: 'manual', latest: info.latest });
+      toast(`Version ${info.latest} ist verfügbar.`, 'ok', 8000);
+    }
+  });
+
+  window.ch.update.onProgress(({ percent }) => {
+    setUpdateState({ state: 'downloading', latest: pendingVersion, percent });
+  });
+
+  window.ch.update.onReady(({ version }) => {
+    pendingVersion = version;
+    setUpdateState({ state: 'ready', latest: version });
+    toast(`Version ${version} ist fertig geladen – ein Neustart spielt sie ein.`, 'ok', 9000);
+  });
+
+  window.ch.update.onState(({ state, message }) => {
+    if (state === 'error') console.warn('Aktualisierung:', message);
+  });
+
+  // Beim Start nachsehen, ob aus einer frueheren Sitzung schon etwas bereitliegt.
+  const updateStatus = await window.ch.update.status();
+  if (updateStatus?.ok) {
+    const info = updateStatus.data;
+    if (info.ready) {
+      pendingVersion = info.ready.version;
+      setUpdateState({ state: 'ready', latest: info.ready.version });
+    } else if (info.downloading) {
+      setUpdateState({ state: 'downloading', latest: info.lastResult?.latest, percent: 0 });
+    }
+  }
 
   document.addEventListener('keydown', (event) => {
     const inField = /^(INPUT|TEXTAREA|SELECT)$/.test(event.target.tagName);
@@ -270,18 +411,6 @@ function handleAction(action) {
     });
     default: return undefined;
   }
-}
-
-/** Dauerhafter Hinweis in der Kopfzeile, wenn eine neue Version bereitliegt. */
-function showUpdateBanner(info) {
-  if (qs('#update-banner')) return;
-  const banner = h('button.btn.btn--primary.btn--sm#update-banner', {
-    text: `Version ${info.latest} verfügbar`,
-    title: 'Zur Download-Seite',
-    onClick: () => window.ch.update.openReleasePage(),
-  });
-  refs.actions.prepend(banner);
-  toast(`Neue Version ${info.latest} verfügbar.`, 'ok', 8000);
 }
 
 main();

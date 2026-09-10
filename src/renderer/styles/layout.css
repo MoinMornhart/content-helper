@@ -227,3 +227,31 @@
   .sidebar__title, .sidebar__subtitle, .nav-item span:not(.nav-item__icon):not(.nav-item__badge), .nav-group { display: none; }
   .nav-item { justify-content: center; }
 }
+
+/* ------------------------------------------------------------------ Aktualisierung
+
+   Sitzt in der Seitenleiste direkt ueber der Versionsnummer: dort gehoert es
+   thematisch hin und verstellt nicht die Kopfzeile ueber dem Inhalt. Ist nichts
+   zu melden, nimmt der Bereich keinen Platz ein. */
+
+.update-slot:empty { display: none; }
+
+.update-slot__box {
+  padding: 9px 11px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+}
+
+.update-slot__box.is-ready {
+  border-color: color-mix(in srgb, var(--accent) 55%, var(--border));
+  background: var(--accent-soft);
+}
+
+/* In der schmalen Seitenleiste bleibt nur ein Punkt als Hinweis. */
+@media (max-width: 1000px) {
+  .update-slot__box { padding: 6px; text-align: center; }
+  .update-slot__box .btn { padding: 4px; font-size: 0; }
+  .update-slot__box .btn::after { content: "▲"; font-size: 12px; }
+  .update-slot__box > div:not(.bar) { display: none; }
+}

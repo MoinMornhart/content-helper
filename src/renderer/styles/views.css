@@ -313,3 +313,47 @@
 .swatch { width: 26px; height: 26px; border-radius: 50%; cursor: pointer; border: 2px solid transparent; transition: transform var(--speed); }
 .swatch:hover { transform: scale(1.12); }
 .swatch.is-active { border-color: var(--text); }
+
+/* ------------------------------------------------------------------ Hintergrundauswahl */
+
+.bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(132px, 1fr));
+  gap: 12px;
+}
+
+.bg-tile {
+  cursor: pointer;
+  border-radius: var(--radius);
+  border: 2px solid transparent;
+  padding: 3px;
+  transition: border-color var(--speed), transform var(--speed);
+}
+
+.bg-tile:hover { transform: translateY(-2px); }
+.bg-tile.is-active { border-color: var(--accent); }
+
+.bg-tile__preview {
+  aspect-ratio: 16 / 10;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background-size: cover;
+  background-position: center;
+}
+
+.bg-tile__preview--custom {
+  display: grid;
+  place-items: center;
+  background-color: var(--surface-2);
+  color: var(--text-faint);
+  font-size: 21px;
+}
+
+.bg-tile__label {
+  font-size: 11.5px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 6px 2px 2px;
+}
+
+.bg-tile.is-active .bg-tile__label { color: var(--text); font-weight: 620; }

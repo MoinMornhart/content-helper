@@ -68,11 +68,126 @@
   color-scheme: light;
 }
 
+/* Eigene Akzentfarbe: alles wird aus einem einzigen Wert abgeleitet, den die
+   Oberflaeche als --accent-base setzt. */
+[data-accent="custom"] {
+  --accent: var(--accent-base, #8b5cf6);
+  --accent-strong: color-mix(in srgb, var(--accent-base, #8b5cf6) 80%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent-base, #8b5cf6) 18%, transparent);
+  --accent-2: color-mix(in srgb, var(--accent-base, #8b5cf6) 55%, #ec4899);
+}
+
 [data-accent="violet"] { --accent: #8b5cf6; --accent-strong: #7c3aed; --accent-soft: rgba(139,92,246,.16); --accent-2: #ec4899; }
 [data-accent="blue"]   { --accent: #3b82f6; --accent-strong: #2563eb; --accent-soft: rgba(59,130,246,.16);  --accent-2: #06b6d4; }
 [data-accent="emerald"]{ --accent: #10b981; --accent-strong: #059669; --accent-soft: rgba(16,185,129,.16);  --accent-2: #84cc16; }
 [data-accent="amber"]  { --accent: #f59e0b; --accent-strong: #d97706; --accent-soft: rgba(245,158,11,.16);  --accent-2: #ef4444; }
 [data-accent="rose"]   { --accent: #f43f5e; --accent-strong: #e11d48; --accent-soft: rgba(244,63,94,.16);   --accent-2: #a855f7; }
+[data-accent="cyan"]   { --accent: #06b6d4; --accent-strong: #0891b2; --accent-soft: rgba(6,182,212,.16);   --accent-2: #3b82f6; }
+[data-accent="lime"]   { --accent: #84cc16; --accent-strong: #65a30d; --accent-soft: rgba(132,204,22,.16);  --accent-2: #22c55e; }
+[data-accent="orange"] { --accent: #f97316; --accent-strong: #ea580c; --accent-soft: rgba(249,115,22,.16);  --accent-2: #fbbf24; }
+[data-accent="slate"]  { --accent: #94a3b8; --accent-strong: #64748b; --accent-soft: rgba(148,163,184,.18); --accent-2: #cbd5e1; }
+
+/* ------------------------------------------------------------------ Hintergrund
+
+   Der Hintergrund liegt als eigene Ebene hinter allem. Darueber ein
+   abdunkelnder Schleier, dessen Staerke einstellbar ist – ohne ihn wird Text
+   auf hellen Bildern unlesbar. Ist ein Hintergrund gesetzt, werden Seitenleiste,
+   Kopfzeile und Karten leicht durchscheinend, sonst waere von dem Bild nichts
+   zu sehen. */
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background: var(--bg);
+  opacity: var(--bg-dim, 1);
+  pointer-events: none;
+  transition: opacity var(--speed);
+}
+
+/* Ohne Hintergrundbild bleibt alles wie gehabt vollflaechig deckend. */
+:root:not([data-bg="on"]) body::after { opacity: 1; }
+
+[data-bg="on"] {
+  --surface: rgba(23, 20, 35, 0.74);
+  --surface-2: rgba(30, 26, 45, 0.7);
+  --surface-3: rgba(38, 33, 56, 0.72);
+  --bg-elevated: rgba(18, 16, 28, 0.72);
+}
+
+[data-bg="on"][data-theme="light"] {
+  --surface: rgba(255, 255, 255, 0.82);
+  --surface-2: rgba(242, 240, 247, 0.78);
+  --surface-3: rgba(232, 229, 240, 0.8);
+  --bg-elevated: rgba(255, 255, 255, 0.8);
+}
+
+[data-bg="on"] .sidebar,
+[data-bg="on"] .topbar,
+[data-bg="on"] .card {
+  backdrop-filter: blur(14px);
+}
+
+/* Vorgefertigte Hintergruende – als Verlaeufe erzeugt, damit keine Bilddateien
+   mitgeliefert werden muessen und jede Bildschirmgroesse scharf bleibt. */
+[data-bg-preset="aurora"] body::before {
+  background-image:
+    radial-gradient(900px 600px at 15% 10%, #7c3aed 0%, transparent 60%),
+    radial-gradient(800px 700px at 85% 25%, #ec4899 0%, transparent 55%),
+    radial-gradient(1000px 800px at 50% 100%, #2563eb 0%, transparent 60%),
+    linear-gradient(160deg, #14102a, #060410);
+}
+[data-bg-preset="ocean"] body::before {
+  background-image:
+    radial-gradient(900px 700px at 20% 80%, #0891b2 0%, transparent 60%),
+    radial-gradient(900px 600px at 80% 10%, #1d4ed8 0%, transparent 55%),
+    linear-gradient(180deg, #041225, #02060f);
+}
+[data-bg-preset="forest"] body::before {
+  background-image:
+    radial-gradient(800px 700px at 25% 20%, #15803d 0%, transparent 60%),
+    radial-gradient(900px 700px at 75% 85%, #065f46 0%, transparent 60%),
+    linear-gradient(170deg, #06140d, #020806);
+}
+[data-bg-preset="sunset"] body::before {
+  background-image:
+    radial-gradient(900px 600px at 20% 15%, #f97316 0%, transparent 58%),
+    radial-gradient(900px 700px at 80% 80%, #be123c 0%, transparent 58%),
+    linear-gradient(165deg, #1c0a10, #070305);
+}
+[data-bg-preset="studio"] body::before {
+  background-image:
+    radial-gradient(1200px 500px at 50% -10%, rgba(255,255,255,.09) 0%, transparent 70%),
+    linear-gradient(180deg, #14131a, #08070c);
+}
+[data-bg-preset="grid"] body::before {
+  background-image:
+    linear-gradient(rgba(139,92,246,.14) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139,92,246,.14) 1px, transparent 1px),
+    linear-gradient(150deg, #0f0c1c, #06050c);
+  background-size: 42px 42px, 42px 42px, cover;
+}
+[data-bg-preset="mesh"] body::before {
+  background-image:
+    radial-gradient(400px 400px at 10% 20%, rgba(139,92,246,.5) 0%, transparent 60%),
+    radial-gradient(400px 400px at 70% 15%, rgba(236,72,153,.45) 0%, transparent 60%),
+    radial-gradient(500px 500px at 30% 85%, rgba(6,182,212,.4) 0%, transparent 60%),
+    radial-gradient(400px 400px at 90% 70%, rgba(132,204,22,.35) 0%, transparent 60%),
+    linear-gradient(150deg, #0d0b16, #07060d);
+}
 
 /* ------------------------------------------------------------------ Reset */
 

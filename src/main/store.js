@@ -35,6 +35,8 @@ const DEFAULT_SETTINGS = {
   schemaVersion: SCHEMA_VERSION,
   theme: 'dark',
   accent: 'violet',
+  accentColor: null,
+  appearance: { background: 'none', backgroundPath: null, dim: 55 },
   locale: 'de-DE',
   startOfWeek: 1,
   notifications: true,
