@@ -312,9 +312,20 @@ function youtubeSetup(refresh) {
           if (!input.value.trim()) { toast('Bitte den Kanal angeben.', 'warn'); return false; }
           toast('Suche den Kanal …', 'info', 1600);
           const result = await window.ch.connectors.connect('youtube', { channel: input.value });
-          if (!result?.ok) { toast(result?.error || 'Kanal nicht gefunden.', 'danger', 6000); return false; }
-          toast(`Verbunden mit „${result.data.channel.name}“.`, 'ok');
+          if (!result?.ok) { toast(result?.error || 'Kanal nicht gefunden.', 'danger', 8000); return false; }
+
+          const channel = result.data.channel;
           close();
+
+          // Der Kanal steht, aber YouTube gibt den Feed gerade nicht heraus.
+          // Dann waere ein sofortiger Abgleich sinnlos – der Takt holt ihn nach.
+          if (channel.warning) {
+            toast(`Verbunden mit „${channel.name}“ – ${channel.warning}`, 'warn', 12000);
+            refresh();
+            return true;
+          }
+
+          toast(`Verbunden mit „${channel.name}“.`, 'ok');
           await runSync('youtube', refresh);
           return true;
         },

@@ -17,7 +17,10 @@ const os = require('os');
 const path = require('path');
 
 const { Store } = require('../src/main/store');
-const { parseFeed, decode, extractChannelId } = require('../src/main/connectors/youtube');
+const {
+  parseFeed, decode, extractChannelId, channelTitle,
+  parseChannelVideos, parseViewCount, parseRelativeDate,
+} = require('../src/main/connectors/youtube');
 const { TwitchConnector, parseDuration } = require('../src/main/connectors/twitch');
 const { upsertAnalytics, upsertPublishedPost, linkAnalyticsToPost } = require('../src/main/connectors/shared');
 
@@ -97,6 +100,65 @@ check(
 );
 check('Ohne verlässliches Feld lieber nichts', extractChannelId('<html><body>nichts hier</body></html>') === null);
 check('Fremde Kennung wird nicht geraten', extractChannelId('{"channelId":"UCfremdfremdfremdfremdfr"}') === null);
+
+/*
+ * Der Kanalname wird auch dann gebraucht, wenn YouTube den Feed gerade nicht
+ * herausgibt – dann ist die Kanalseite die einzige Quelle dafuer.
+ */
+check(
+  'Kanalname aus der Seite gelesen',
+  channelTitle('<meta property="og:title" content="MoinMornhart">') === 'MoinMornhart',
+  String(channelTitle('<meta property="og:title" content="MoinMornhart">'))
+);
+check(
+  'Zusatz im Seitentitel wird abgeschnitten',
+  channelTitle('<title>MoinMornhart - YouTube</title>') === 'MoinMornhart',
+  String(channelTitle('<title>MoinMornhart - YouTube</title>'))
+);
+check('Ohne Titel bleibt es leer', channelTitle('<html></html>') === null);
+
+// ------------------------------------------------------------------ Kanalseite als Rueckfallebene
+
+check('Aufrufe mit Millionen-Abkuerzung', parseViewCount('1,2 Mio. Aufrufe') === 1200000, String(parseViewCount('1,2 Mio. Aufrufe')));
+check('Aufrufe mit Tausenderpunkten', parseViewCount('123.456 Aufrufe') === 123456, String(parseViewCount('123.456 Aufrufe')));
+check('Aufrufe auf Englisch', parseViewCount('4,500 views') === 4500, String(parseViewCount('4,500 views')));
+check('Text ohne Aufrufe ergibt nichts', parseViewCount('vor 3 Tagen') === null);
+
+const anchor = new Date('2026-09-10T12:00:00Z').getTime();
+check(
+  'Alter in Tagen umgerechnet',
+  parseRelativeDate('vor 3 Tagen', anchor).slice(0, 10) === '2026-09-07',
+  String(parseRelativeDate('vor 3 Tagen', anchor))
+);
+check(
+  'Alter auf Englisch umgerechnet',
+  parseRelativeDate('2 weeks ago', anchor).slice(0, 10) === '2026-08-27',
+  String(parseRelativeDate('2 weeks ago', anchor))
+);
+
+/*
+ * Nachbau der heutigen Struktur einer Kanalseite. Wichtig ist, dass je Block
+ * ausgewertet wird: Beschriftungen der Bedienoberflaeche stehen im selben
+ * Quelltext und duerfen nicht als Videotitel durchgehen.
+ */
+const VIDEO_PAGE = [
+  '{"title":{"content":"Zu Playlist hinzufügen"}}',
+  '"lockupViewModel":{"contentImage":{"thumb":1},"contentId":"aaaaaaaaaaa",',
+  '"metadata":{"lockupMetadataViewModel":{"title":{"content":"Minecraft Basis nach 100 Tagen"},',
+  '"metadata":{"rows":[{"parts":[{"text":{"content":"41.200 Aufrufe"}},{"text":{"content":"vor 5 Tagen"}}]}]}}}},',
+  '"lockupViewModel":{"contentImage":{"thumb":2},"contentId":"bbbbbbbbbbb",',
+  '"metadata":{"lockupMetadataViewModel":{"title":{"content":"Redstone einfach erklärt"},',
+  '"metadata":{"rows":[{"parts":[{"text":{"content":"1,2 Mio. Aufrufe"}},{"text":{"content":"vor 2 Monaten"}}]}]}}}}',
+].join('');
+
+const fromPage = parseChannelVideos(VIDEO_PAGE);
+check('Seite liefert beide Videos', fromPage.length === 2, `${fromPage.length} gefunden`);
+check('Kennung je Video gelesen', fromPage[0].id === 'aaaaaaaaaaa' && fromPage[1].id === 'bbbbbbbbbbb');
+check('Titel je Video gelesen', fromPage[0].title === 'Minecraft Basis nach 100 Tagen', fromPage[0].title);
+check('Bedienoberflaeche nicht als Titel verwechselt', !fromPage.some((video) => video.title.includes('Playlist')));
+check('Aufrufe je Video gelesen', fromPage[0].views === 41200 && fromPage[1].views === 1200000, `${fromPage[0].views}/${fromPage[1].views}`);
+check('Als ungefaehr gekennzeichnet', fromPage.every((video) => video.approximate === true));
+check('Leere Seite ergibt nichts', parseChannelVideos('<html></html>').length === 0);
 
 // ------------------------------------------------------------------ Twitch-Dauer
 
