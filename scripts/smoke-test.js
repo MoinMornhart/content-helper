@@ -24,7 +24,7 @@ const { Companion } = require('../src/main/companion');
 const { Connectors } = require('../src/main/connectors');
 const { registerIpc } = require('../src/main/ipc');
 
-const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'connections', 'mobile', 'settings'];
+const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'connections', 'assistant', 'mobile', 'settings'];
 
 const problems = [];
 const logs = [];
@@ -84,6 +84,43 @@ function seed(store) {
   });
 
   store.insert('media', { name: 'stream-clip-01.mp4', filePath: 'C:/Beispiel/stream-clip-01.mp4', ext: 'mp4', size: 48210000, tags: ['twitch', 'clip'] });
+
+  // Ein erkennbares Muster fuer den Assistenten: Minecraft-Videos laufen
+  // deutlich besser als der Rest, und zwar wiederholt statt einmalig.
+  const history = [
+    ['Minecraft: Meine komplette Basis nach 100 Tagen', 41200, -40, 'Case Study'],
+    ['Minecraft Redstone einfach erklaert', 33800, -33, 'Tutorial'],
+    ['Minecraft: 7 Fehler, die jeder Anfaenger macht', 28900, -26, 'Listicle'],
+    ['Minecraft Farmen, die sich wirklich lohnen', 24500, -19, 'Tutorial'],
+    ['Ich baue in Minecraft eine ganze Stadt', 21700, -12, 'Vlog'],
+    ['Mein neuer Schreibtisch im Detail', 7400, -37, 'Review'],
+    ['Wie ich meine Videos schneide', 6100, -30, 'Tutorial'],
+    ['Fragen und Antworten zum Kanal', 4800, -23, 'Q&A'],
+    ['Rueckblick auf das letzte Jahr', 5600, -16, 'Vlog'],
+  ];
+
+  for (const [videoTitle, views, offset, format] of history) {
+    const at = day(offset);
+    at.setHours(videoTitle.startsWith('Minecraft') ? 17 : 11, 0, 0, 0);
+    const post = store.insert('posts', {
+      title: videoTitle,
+      body: '',
+      platforms: ['youtube'],
+      format,
+      status: 'published',
+      publishedAt: at.toISOString(),
+      scheduledAt: at.toISOString(),
+    });
+    store.insert('analytics', {
+      platformId: 'youtube',
+      postId: post.id,
+      date: key(at),
+      title: videoTitle,
+      metrics: { views, likes: Math.round(views * 0.04) },
+      source: 'youtube',
+    });
+  }
+
   store.saveSettings({ onboardingDone: true, queueSlots: [{ days: [1, 3, 5], time: '18:00', platformId: null }] });
   store.flush();
 }
@@ -157,6 +194,51 @@ app.whenReady().then(async () => {
     } catch (error) {
       problems.push(`Ansicht "${view}" warf: ${error.message}`);
     }
+  }
+
+  // ---------------------------------------------------------------- Assistent
+  // Die Beispieldaten enthalten ein klares Muster: Minecraft-Videos laufen
+  // deutlich besser. Der Assistent muss genau das finden – und zwar als Thema,
+  // nicht nur als einzelnen Ausreisser.
+  try {
+    const advice = await win.webContents.executeJavaScript(`(async () => {
+      const advisor = await import('./js/lib/advisor.js');
+      const options = { platformId: 'youtube', days: 3650 };
+      const topics = advisor.topics(options);
+      const winners = advisor.winners(options);
+      const suggestions = advisor.suggestions(options);
+      const timing = advisor.timing(options);
+      return {
+        topWord: topics[0]?.word || null,
+        topLift: topics[0]?.lift || 0,
+        topCount: topics[0]?.count || 0,
+        winnerCount: winners.winners.length,
+        baseline: winners.baseline,
+        suggestionCount: suggestions.length,
+        firstSuggestionHasTitles: Boolean(suggestions[0]?.titles?.length),
+        firstSuggestionHasWhy: Boolean(suggestions[0]?.why),
+        bestHour: timing?.hour?.key ?? null,
+      };
+    })()`);
+
+    const checks = [
+      ['erkennt das tragende Thema', advice.topWord === 'minecraft', String(advice.topWord)],
+      ['belegt es mit mehreren Beitraegen', advice.topCount >= 4, String(advice.topCount)],
+      ['weist einen Vorsprung aus', advice.topLift >= 2, advice.topLift.toFixed(2)],
+      ['findet Ausreisser nach oben', advice.winnerCount >= 3, String(advice.winnerCount)],
+      ['bildet einen Mittelwert', advice.baseline > 0, String(advice.baseline)],
+      ['macht Vorschlaege', advice.suggestionCount >= 2, String(advice.suggestionCount)],
+      ['liefert fertige Titel', advice.firstSuggestionHasTitles, ''],
+      ['begruendet jeden Vorschlag', advice.firstSuggestionHasWhy, ''],
+      ['erkennt die beste Stunde', advice.bestHour === 17, String(advice.bestHour)],
+    ];
+
+    for (const [label, ok, detail] of checks) {
+      if (ok) process.stdout.write(`  ok   Assistent   ${label}\n`);
+      else problems.push(`Assistent: ${label} fehlgeschlagen (${detail})`);
+    }
+  } catch (error) {
+    problems.push(`Assistent-Pruefung warf: ${error.message}`);
   }
 
   // ---------------------------------------------------------------- QR-Code

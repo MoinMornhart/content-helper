@@ -17,6 +17,7 @@ const NAV = [
   ] },
   { group: 'Erstellen', items: [
     { id: 'composer', label: 'Composer', icon: '✎' },
+    { id: 'assistant', label: 'Assistent', icon: '✧' },
     { id: 'ideas', label: 'Ideen', icon: '✦' },
     { id: 'scripts', label: 'Skripte', icon: '§' },
     { id: 'media', label: 'Medien', icon: '▤' },
