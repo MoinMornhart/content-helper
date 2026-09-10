@@ -270,17 +270,33 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
     return connectors.syncAll();
   });
 
-  handle('connectors:options', ({ name, options }) => {
-    connectors.connector(name).saveConfig(options);
+  /** Einstellungen einer Verbindung – bei YouTube je Kanal. */
+  handle('connectors:options', ({ name, options, accountId }) => {
+    if (name === 'youtube' && accountId) connectors.youtube.updateChannel(accountId, options);
+    else connectors.connector(name).saveConfig(options);
     return connectors.status();
   });
 
-  handle('connectors:disconnect', ({ name }) => {
-    connectors.connector(name).disconnect();
+  /** Trennt eine Verbindung – bei YouTube einen einzelnen Kanal. */
+  handle('connectors:disconnect', ({ name, accountId }) => {
+    if (name === 'youtube') connectors.youtube.disconnect(accountId || null);
+    else connectors.connector(name).disconnect();
     return connectors.status();
   });
 
-  handle('connectors:preview', async ({ name }) => {
+  /** Gleicht nur einen einzelnen YouTube-Kanal ab. */
+  handle('youtube:syncChannel', async ({ accountId }) => {
+    const channel = connectors.youtube.channel(accountId);
+    if (!channel) throw new Error('Dieser Kanal ist nicht mehr verbunden.');
+    try {
+      return await connectors.youtube.syncChannel(channel);
+    } catch (error) {
+      connectors.youtube.updateChannel(accountId, { lastError: error.message });
+      throw error;
+    }
+  });
+
+  handle('connectors:preview', async ({ name, accountId }) => {
     if (name === 'twitch') {
       return {
         live: await connectors.twitch.currentStream(),
@@ -289,7 +305,8 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
       };
     }
     if (name === 'youtube') {
-      return { videos: (await connectors.youtube.recentVideos()).slice(0, 5) };
+      const { videos, source } = await connectors.youtube.recentVideos(accountId || undefined);
+      return { videos: videos.slice(0, 5), source };
     }
     throw new Error(`Unbekannte Verbindung: ${name}`);
   });

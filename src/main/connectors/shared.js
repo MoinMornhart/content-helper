@@ -13,7 +13,9 @@
  * Legt einen Messwert an oder frischt einen bestehenden auf.
  * @returns {'added'|'updated'}
  */
-function upsertAnalytics(store, { externalId, platformId, date, title, url, metrics, source, note }) {
+function upsertAnalytics(store, {
+  externalId, platformId, date, title, url, metrics, source, note, accountId = null, accountName = null,
+}) {
   const known = store.list('analytics').find((entry) => entry.externalId === externalId);
 
   if (known) {
@@ -22,11 +24,14 @@ function upsertAnalytics(store, { externalId, platformId, date, title, url, metr
       url: url ?? known.url,
       // Eigene Eintragungen haben Vorrang und werden nicht ueberschrieben.
       metrics: { ...metrics, ...stripAuto(known.metrics, metrics) },
+      // Die Kanalzuordnung wird nachgetragen, aber nie umgehaengt.
+      accountId: known.accountId || accountId,
+      accountName: accountName || known.accountName || null,
     });
     return 'updated';
   }
 
-  store.insert('analytics', { externalId, platformId, date, title, url, metrics, source, note });
+  store.insert('analytics', { externalId, platformId, date, title, url, metrics, source, note, accountId, accountName });
   return 'added';
 }
 
@@ -48,9 +53,15 @@ function stripAuto(existing = {}, incoming = {}) {
  * angefasst.
  * @returns {string|null} Kennung des Beitrags, null wenn bereits vorhanden
  */
-function upsertPublishedPost(store, { externalId, title, body, platforms, publishedAt, format, url }) {
+function upsertPublishedPost(store, {
+  externalId, title, body, platforms, publishedAt, format, url, accountId = null, accountName = null,
+}) {
   const known = store.list('posts').find((post) => post.externalId === externalId);
-  if (known) return null;
+  if (known) {
+    // Aeltere Beitraege ohne Kanalzuordnung bekommen sie nachgetragen.
+    if (accountId && !known.accountId) store.update('posts', known.id, { accountId, accountName });
+    return null;
+  }
 
   const created = store.insert('posts', {
     externalId,
@@ -62,6 +73,8 @@ function upsertPublishedPost(store, { externalId, title, body, platforms, publis
     publishedAt,
     scheduledAt: publishedAt,
     url: url || null,
+    accountId,
+    accountName,
     hashtags: [],
     perPlatform: {},
     mediaIds: [],

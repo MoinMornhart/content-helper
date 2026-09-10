@@ -118,6 +118,28 @@ function seed(store) {
       title: videoTitle,
       metrics: { views, likes: Math.round(views * 0.04) },
       source: 'youtube',
+      accountId: 'UChauptkanalhauptkanalha',
+      accountName: 'Hauptkanal',
+    });
+  }
+
+  // Ein zweiter, deutlich kleinerer Kanal. Er darf die Auswertung des
+  // Hauptkanals nicht verfaelschen, wenn nach Konto getrennt wird.
+  for (const [clipTitle, views, offset] of [
+    ['Kurzer Clip vom Stream', 310, -9],
+    ['Noch ein Clip', 280, -7],
+    ['Clip des Tages', 350, -3],
+  ]) {
+    const at = day(offset);
+    at.setHours(11, 0, 0, 0);
+    store.insert('analytics', {
+      platformId: 'youtube',
+      date: key(at),
+      title: clipTitle,
+      metrics: { views },
+      source: 'youtube',
+      accountId: 'UCclipkanalclipkanalclip',
+      accountName: 'Clipkanal',
     });
   }
 
@@ -218,6 +240,10 @@ app.whenReady().then(async () => {
         firstSuggestionHasTitles: Boolean(suggestions[0]?.titles?.length),
         firstSuggestionHasWhy: Boolean(suggestions[0]?.why),
         bestHour: timing?.hour?.key ?? null,
+        clipOnly: advisor.measured({ platformId: 'youtube', accountId: 'UCclipkanalclipkanalclip', days: 3650 }).length,
+        mainOnly: advisor.measured({ platformId: 'youtube', accountId: 'UChauptkanalhauptkanalha', days: 3650 }).length,
+        mainTopic: advisor.topics({ platformId: 'youtube', accountId: 'UChauptkanalhauptkanalha', days: 3650 })[0]?.word || null,
+        chipsShown: await window.__app.goto('assistant').then(() => document.querySelector('.view').textContent.includes('Alle gemischt')),
       };
     })()`);
 
@@ -231,6 +257,10 @@ app.whenReady().then(async () => {
       ['liefert fertige Titel', advice.firstSuggestionHasTitles, ''],
       ['begruendet jeden Vorschlag', advice.firstSuggestionHasWhy, ''],
       ['erkennt die beste Stunde', advice.bestHour === 17, String(advice.bestHour)],
+      ['trennt den Clipkanal ab', advice.clipOnly === 3, String(advice.clipOnly)],
+      ['trennt den Hauptkanal ab', advice.mainOnly === 9, String(advice.mainOnly)],
+      ['findet das Thema auch je Kanal', advice.mainTopic === 'minecraft', String(advice.mainTopic)],
+      ['zeigt bei mehreren Kanaelen die Auswahl', advice.chipsShown === true, String(advice.chipsShown)],
     ];
 
     for (const [label, ok, detail] of checks) {

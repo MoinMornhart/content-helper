@@ -428,3 +428,14 @@
 .cal__chip.is-missed { opacity: 0.75; border-left-color: var(--danger) !important; }
 
 .week__cell.is-now { box-shadow: inset 0 1px 0 0 var(--accent); }
+
+/* ------------------------------------------------------------------ Mehrere Kanaele */
+
+.channel-row {
+  padding: 11px 13px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  transition: border-color var(--speed);
+}
+.channel-row:hover { border-color: var(--border-strong); }

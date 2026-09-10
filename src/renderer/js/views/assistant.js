@@ -19,6 +19,8 @@ export const title = 'Assistent';
 export const lead = 'Aus deinen eigenen Zahlen: was funktioniert und was als Nächstes kommt.';
 
 let platformFilter = null;
+/** Gewähltes Konto; undefined heisst: noch keine Wahl getroffen. */
+let accountFilter;
 let range = 365;
 
 const show = (value, key) => fmt.metricValue(value, metric(key).type);
@@ -189,11 +191,56 @@ function shapesCard(list) {
             h('span', { style: { color: 'var(--ok)', marginLeft: '8px', fontWeight: '700' }, text: `${shape.lift.toFixed(1)}×` }))))));
 }
 
+/**
+ * Konten, zu denen Zahlen vorliegen – etwa mehrere YouTube-Kanäle.
+ * Sortiert nach Datenmenge, das umfangreichste zuerst.
+ */
+function accountList() {
+  const map = new Map();
+  for (const entry of store.all('analytics')) {
+    if (!entry.accountId) continue;
+    const known = map.get(entry.accountId) || { id: entry.accountId, name: entry.accountName || entry.accountId, count: 0 };
+    known.count += 1;
+    map.set(entry.accountId, known);
+  }
+  return [...map.values()].sort((a, b) => b.count - a.count);
+}
+
+/**
+ * Auswahl des Kontos. Nur sichtbar, wenn es mehr als eines gibt – dann aber
+ * wichtig: Ein kleiner und ein grosser Kanal im selben Topf verfälschen jede
+ * Empfehlung, weil der Mittelwert des grossen den kleinen erdrückt.
+ */
+function accountChips(accounts, refresh) {
+  if (accounts.length <= 1) return null;
+  return h('div.col.gap-xs', null,
+    h('div.chips', null,
+      ...accounts.map((account) =>
+        h(`span.chip${accountFilter === account.id ? '.is-active' : ''}`, {
+          onClick: () => { accountFilter = account.id; refresh(); },
+        }, glyph('youtube', 14), h('span', { text: account.name }), h('span.text-xs.faint', { text: String(account.count) }))),
+      h(`span.chip${accountFilter === null ? '.is-active' : ''}`, {
+        text: 'Alle gemischt',
+        onClick: () => { accountFilter = null; refresh(); },
+      })),
+    accountFilter === null
+      ? h('div.text-xs', { style: { color: 'var(--warn)' }, text: 'Mehrere Kanäle gemischt – die Empfehlungen sind dadurch weniger treffsicher.' })
+      : null);
+}
+
 // ------------------------------------------------------------------ Ansicht
 
 export async function render({ setActions, refresh, goto }) {
-  const state = advisor.readiness({ platformFilter, days: range });
-  const options = { platformId: platformFilter, days: range };
+  // Bei mehreren Konten ungefragt das umfangreichste wählen, statt alles zu mischen.
+  const accounts = accountList();
+  if (accounts.length <= 1) accountFilter = null;
+  else if (accountFilter === undefined || (accountFilter && !accounts.some((a) => a.id === accountFilter))) accountFilter = accounts[0].id;
+  const accountRow = accountChips(accounts, refresh);
+
+  // Vorher stand hier { platformFilter } statt { platformId } – dadurch wurde
+  // der Plattformfilter bei der Prüfung der Datenlage still ignoriert.
+  const options = { platformId: platformFilter, accountId: accountFilter, days: range };
+  const state = advisor.readiness(options);
 
   setActions(
     segmented(
@@ -207,6 +254,7 @@ export async function render({ setActions, refresh, goto }) {
   // ---------------------------------------------------------------- Zu wenig Daten
   if (!state.enough) {
     return h('div.col.gap-lg', null,
+      accountRow,
       card(null, {},
         empty(
           'Noch zu wenig Material für eine Aussage',
@@ -246,13 +294,14 @@ export async function render({ setActions, refresh, goto }) {
   return h('div.col.gap-lg', null,
     h('div.chips', null,
       h(`span.chip${platformFilter === null ? '.is-active' : ''}`, {
-        text: 'Alle Kanäle',
+        text: 'Alle Plattformen',
         onClick: () => { platformFilter = null; refresh(); },
       }),
       ...used.map((id) =>
         h(`span.chip${platformFilter === id ? '.is-active' : ''}`, {
           onClick: () => { platformFilter = platformFilter === id ? null : id; refresh(); },
         }, glyph(id, 14), h('span', { text: platformName(id) })))),
+    accountRow,
 
     h('div.grid.grid-4', null,
       card(null, {}, h('div.stat', null,

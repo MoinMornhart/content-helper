@@ -79,12 +79,12 @@ export function leadMetric(platformId) {
  *
  * @returns {Array<{entry, post, title, value, at, format}>}
  */
-export function measured({ platformId = null, days = 365 } = {}) {
+export function measured({ platformId = null, accountId = null, days = 365 } = {}) {
   const posts = new Map(store.all('posts').map((post) => [post.id, post]));
   const since = fmt.addDays(new Date(), -days);
 
   return store.all('analytics')
-    .filter((entry) => !platformId || entry.platformId === platformId)
+    .filter((entry) => (!platformId || entry.platformId === platformId) && (!accountId || entry.accountId === accountId))
     .map((entry) => {
       const post = entry.postId ? posts.get(entry.postId) : null;
       const key = leadMetric(entry.platformId);
@@ -110,8 +110,8 @@ export function measured({ platformId = null, days = 365 } = {}) {
  * Die Beiträge, die deutlich über dem eigenen Mittelmass liegen.
  * @returns {{winners: Array, baseline: number|null, total: number}}
  */
-export function winners({ platformId = null, days = 365 } = {}) {
-  const rows = measured({ platformId, days });
+export function winners({ platformId = null, accountId = null, days = 365 } = {}) {
+  const rows = measured({ platformId, accountId, days });
   const base = median(rows.map((row) => row.value));
 
   if (!base || rows.length < MIN_POSTS) return { winners: [], baseline: base, total: rows.length };
@@ -131,8 +131,8 @@ export function winners({ platformId = null, days = 365 } = {}) {
  * Beiträge ohne das Wort – nicht gegen den Gesamtdurchschnitt, weil sonst jedes
  * Wort eines starken Beitrags automatisch gut aussähe.
  */
-export function topics({ platformId = null, days = 365, minPosts = 2 } = {}) {
-  const rows = measured({ platformId, days });
+export function topics({ platformId = null, accountId = null, days = 365, minPosts = 2 } = {}) {
+  const rows = measured({ platformId, accountId, days });
   if (rows.length < MIN_POSTS) return [];
 
   const counts = new Map();
@@ -174,8 +174,8 @@ export function topics({ platformId = null, days = 365, minPosts = 2 } = {}) {
 }
 
 /** Titelbauweisen, die bei dir messbar besser laufen. */
-export function titleShapes({ platformId = null, days = 365 } = {}) {
-  const rows = measured({ platformId, days });
+export function titleShapes({ platformId = null, accountId = null, days = 365 } = {}) {
+  const rows = measured({ platformId, accountId, days });
   if (rows.length < MIN_POSTS) return [];
 
   const shapes = [
@@ -206,8 +206,8 @@ export function titleShapes({ platformId = null, days = 365 } = {}) {
 }
 
 /** Bester Wochentag und beste Stunde, sofern genug Beiträge zugeordnet sind. */
-export function timing({ platformId = null, days = 365 } = {}) {
-  const rows = measured({ platformId, days }).filter((row) => row.post);
+export function timing({ platformId = null, accountId = null, days = 365 } = {}) {
+  const rows = measured({ platformId, accountId, days }).filter((row) => row.post);
   if (rows.length < MIN_POSTS) return null;
 
   const group = (keyOf) => {
@@ -242,11 +242,11 @@ export function timing({ platformId = null, days = 365 } = {}) {
  *
  * @returns {Array<{id, kind, topic, title, why, evidence, titles, hook, platformId, format, when}>}
  */
-export function suggestions({ platformId = null, days = 365, limit = 6 } = {}) {
-  const strongTopics = topics({ platformId, days });
-  const shapes = titleShapes({ platformId, days });
-  const clock = timing({ platformId, days });
-  const { winners: best, baseline } = winners({ platformId, days });
+export function suggestions({ platformId = null, accountId = null, days = 365, limit = 6 } = {}) {
+  const strongTopics = topics({ platformId, accountId, days });
+  const shapes = titleShapes({ platformId, accountId, days });
+  const clock = timing({ platformId, accountId, days });
+  const { winners: best, baseline } = winners({ platformId, accountId, days });
 
   const out = [];
   const info = (key) => metric(key);
@@ -312,8 +312,8 @@ export function suggestions({ platformId = null, days = 365, limit = 6 } = {}) {
 /**
  * Kurzfassung für Dashboard und Kopfzeilen: reicht die Datenlage überhaupt?
  */
-export function readiness({ platformId = null, days = 365 } = {}) {
-  const rows = measured({ platformId, days });
+export function readiness({ platformId = null, accountId = null, days = 365 } = {}) {
+  const rows = measured({ platformId, accountId, days });
   const linked = rows.filter((row) => row.post).length;
   return {
     measured: rows.length,

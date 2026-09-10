@@ -74,10 +74,14 @@ contextBridge.exposeInMainWorld('ch', {
     status: () => invoke('connectors:status'),
     connect: (name, credentials) => invoke('connectors:connect', { name, credentials }),
     sync: (name) => invoke('connectors:sync', { name }),
-    options: (name, options) => invoke('connectors:options', { name, options }),
-    disconnect: (name) => invoke('connectors:disconnect', { name }),
-    preview: (name) => invoke('connectors:preview', { name }),
+    options: (name, options, accountId) => invoke('connectors:options', { name, options, accountId }),
+    disconnect: (name, accountId) => invoke('connectors:disconnect', { name, accountId }),
+    preview: (name, accountId) => invoke('connectors:preview', { name, accountId }),
     onChanged: (handler) => on('connectors:changed', handler),
+  },
+
+  youtube: {
+    syncChannel: (accountId) => invoke('youtube:syncChannel', { accountId }),
   },
 
   twitch: {

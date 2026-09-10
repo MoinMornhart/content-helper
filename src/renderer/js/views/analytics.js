@@ -20,6 +20,7 @@ export const lead = 'Zahlen aus den Studios – ohne Schlüssel, ohne Konto.';
 
 let range = 30;
 let platformFilter = null;
+let accountFilter = null;
 let metricKey = 'views';
 
 // ------------------------------------------------------------------ Erfassen
@@ -191,6 +192,24 @@ export async function render({ params, setActions, refresh, goto }) {
   if (params.capture) captureDialog(refresh);
 
   const entries = store.all('analytics');
+  // Mehrere Konten derselben Plattform getrennt halten.
+  const accountMap = new Map();
+  for (const entry of entries) {
+    if (entry.accountId) accountMap.set(entry.accountId, entry.accountName || entry.accountId);
+  }
+  if (accountMap.size <= 1 || (accountFilter && !accountMap.has(accountFilter))) accountFilter = null;
+  const accountRow = accountMap.size > 1
+    ? h('div.chips', null,
+        h(`span.chip${accountFilter === null ? '.is-active' : ''}`, {
+          text: 'Alle Konten',
+          onClick: () => { accountFilter = null; refresh(); },
+        }),
+        ...[...accountMap].map(([id, name]) =>
+          h(`span.chip${accountFilter === id ? '.is-active' : ''}`, {
+            onClick: () => { accountFilter = accountFilter === id ? null : id; refresh(); },
+          }, glyph('youtube', 14), h('span', { text: name }))))
+    : null;
+
   const availableKeys = an.availableMetrics(platformFilter);
   if (!availableKeys.includes(metricKey)) metricKey = availableKeys[0] || 'views';
 
@@ -216,12 +235,12 @@ export async function render({ params, setActions, refresh, goto }) {
 
   const info = metric(metricKey);
   const format = (value) => fmt.metricValue(value, info.type);
-  const series = an.daily(metricKey, { days: range, platformId: platformFilter });
-  const { current, previous, change } = an.compare(metricKey, { days: range, platformId: platformFilter });
+  const series = an.daily(metricKey, { days: range, platformId: platformFilter, accountId: accountFilter });
+  const { current, previous, change } = an.compare(metricKey, { days: range, platformId: platformFilter, accountId: accountFilter });
 
   const platformRow = h('div.chips', null,
     h(`span.chip${platformFilter === null ? '.is-active' : ''}`, {
-      text: 'Alle Kanäle',
+      text: 'Alle Plattformen',
       onClick: () => { platformFilter = null; refresh(); },
     }),
     ...[...new Set(entries.map((entry) => entry.platformId))].map((id) =>
@@ -236,12 +255,12 @@ export async function render({ params, setActions, refresh, goto }) {
         onClick: () => { metricKey = key; refresh(); },
       })));
 
-  const weekday = an.byWeekday(metricKey, { days: Math.max(range, 90), platformId: platformFilter })
+  const weekday = an.byWeekday(metricKey, { days: Math.max(range, 90), platformId: platformFilter, accountId: accountFilter })
     .filter((row) => row.count);
-  const hours = an.byHour(metricKey, { days: Math.max(range, 90), platformId: platformFilter });
-  const formats = an.byFormat(metricKey, { days: Math.max(range, 90), platformId: platformFilter });
+  const hours = an.byHour(metricKey, { days: Math.max(range, 90), platformId: platformFilter, accountId: accountFilter });
+  const formats = an.byFormat(metricKey, { days: Math.max(range, 90), platformId: platformFilter, accountId: accountFilter });
   const platforms = an.byPlatform(metricKey, { days: range });
-  const top = an.topEntries(metricKey, { days: range, platformId: platformFilter, limit: 8 });
+  const top = an.topEntries(metricKey, { days: range, platformId: platformFilter, accountId: accountFilter, limit: 8 });
 
   const trendClass = change === null ? 'flat' : change > 0.02 ? 'up' : change < -0.02 ? 'down' : 'flat';
   const trendText = change === null
@@ -262,6 +281,7 @@ export async function render({ params, setActions, refresh, goto }) {
         (value) => { range = value; refresh(); }
       )),
     platformRow,
+    accountRow,
 
     h('div.grid.grid-4', null,
       card(null, {}, h('div.stat', null,
@@ -274,7 +294,7 @@ export async function render({ params, setActions, refresh, goto }) {
         h('div.stat__meta', { text: `die ${range} Tage davor` }))),
       card(null, {}, h('div.stat', null,
         h('div.stat__label', { text: 'Erfasste Einträge' }),
-        h('div.stat__value', { text: String(an.inRange({ days: range, platformId: platformFilter }).length) }),
+        h('div.stat__value', { text: String(an.inRange({ days: range, platformId: platformFilter, accountId: accountFilter }).length) }),
         h('div.stat__meta', { text: `${entries.length} insgesamt` }))),
       card(null, {}, h('div.stat', null,
         h('div.stat__label', { text: 'Bester Tag' }),

@@ -290,20 +290,26 @@ async function twitchPreview() {
 
 // ------------------------------------------------------------------ YouTube
 
-function youtubeSetup(refresh) {
+/**
+ * Kanal hinzufügen. Beliebig oft aufrufbar – jeder Aufruf nimmt einen weiteren
+ * Kanal in die Liste auf.
+ */
+function youtubeSetup(refresh, { additional = false } = {}) {
   const input = h('input.input', { placeholder: '@deinkanal, youtube.com/@deinkanal oder UC…' });
 
   modal({
-    title: 'YouTube verbinden',
+    title: additional ? 'Weiteren YouTube-Kanal verbinden' : 'YouTube verbinden',
     size: 'narrow',
     body: h('div.col.gap-lg', null,
-      h('div.notice.notice--ok', null,
-        h('span.notice__icon', { text: '✓' }),
-        h('div', null,
-          h('div.strong.text-sm', { text: 'Ohne Zugangsschlüssel' }),
-          h('div.text-sm.muted', { text: 'YouTube veröffentlicht für jeden Kanal einen offenen Feed. Daraus liest die App Titel, Veröffentlichungszeitpunkt, Aufrufe und Likes der neuesten Videos – ohne Anmeldung, ohne registrierte Anwendung.' }))),
+      additional
+        ? h('p.text-sm.muted', { text: 'Zweitkanal, Clipkanal, Nebenprojekt – jeder Kanal wird für sich abgeglichen und in der Auswertung getrennt geführt.' })
+        : h('div.notice.notice--ok', null,
+            h('span.notice__icon', { text: '✓' }),
+            h('div', null,
+              h('div.strong.text-sm', { text: 'Ohne Zugangsschlüssel' }),
+              h('div.text-sm.muted', { text: 'YouTube veröffentlicht für jeden Kanal einen offenen Feed. Daraus liest die App Titel, Veröffentlichungszeitpunkt, Aufrufe und Likes der neuesten Videos – ohne Anmeldung, ohne registrierte Anwendung.' }))),
       h('label.field', null, h('span.field__label', { text: 'Kanal' }), input),
-      h('p.text-xs.faint', { text: 'Klickrate, Wiedergabedauer und Wiedergabezeit stehen nicht im Feed – die gibt YouTube nur dir im Studio. Dafür bleibt der CSV-Import der Weg.' })),
+      h('p.text-xs.faint', { text: 'Name, @Handle oder die Adresse aus der Adresszeile – alles funktioniert.' })),
     actions: [
       {
         label: 'Verbinden',
@@ -317,6 +323,13 @@ function youtubeSetup(refresh) {
           const channel = result.data.channel;
           close();
 
+          // Leerer Kanal: verbunden, nur noch nichts zu holen.
+          if (channel.note) {
+            toast(`Verbunden mit „${channel.name}“ – ${channel.note}`, 'ok', 10000);
+            refresh();
+            return true;
+          }
+
           // Der Kanal steht, aber YouTube gibt den Feed gerade nicht heraus.
           // Dann waere ein sofortiger Abgleich sinnlos – der Takt holt ihn nach.
           if (channel.warning) {
@@ -326,7 +339,7 @@ function youtubeSetup(refresh) {
           }
 
           toast(`Verbunden mit „${channel.name}“.`, 'ok');
-          await runSync('youtube', refresh);
+          await syncChannel(channel.channelId, channel.name, refresh);
           return true;
         },
       },
@@ -334,32 +347,107 @@ function youtubeSetup(refresh) {
   });
 }
 
-async function youtubePreview() {
-  const result = await window.ch.connectors.preview('youtube');
+/** Gleicht einen einzelnen Kanal ab. */
+async function syncChannel(accountId, name, refresh) {
+  toast(`Hole die neuesten Videos von „${name}“ …`, 'info', 1600);
+  const result = await window.ch.youtube.syncChannel(accountId);
+  if (!result?.ok) return toast(result?.error || 'Abgleich fehlgeschlagen.', 'danger', 7000);
+  await store.reload();
+  const outcome = result.data;
+  toast(
+    `${name}: ${describeSync(outcome)}${outcome.source === 'seite' ? ' (von der Kanalseite, Zahlen gerundet)' : ''}`,
+    'ok',
+    6000
+  );
+  refresh();
+}
+
+async function youtubePreview(accountId, name) {
+  const result = await window.ch.connectors.preview('youtube', accountId);
   if (!result?.ok) return toast(result?.error || 'Abruf fehlgeschlagen.', 'danger');
 
   modal({
-    title: 'Neueste Videos im Feed',
-    body: h('table.table', null,
-      h('thead', null, h('tr', null,
-        h('th', { text: 'Titel' }), h('th', { text: 'Veröffentlicht' }), h('th.num', { text: 'Aufrufe' }), h('th.num', { text: 'Likes' }))),
-      h('tbody', null,
-        ...result.data.videos.map((video) =>
-          h('tr', null,
-            h('td.truncate', { text: video.title }),
-            h('td.text-sm.muted.nowrap', { text: fmt.date(video.published, 'short') }),
-            h('td.num', { text: video.views === null ? '–' : fmt.num(video.views, { compact: true }) }),
-            h('td.num', { text: video.likes === null ? '–' : fmt.num(video.likes, { compact: true }) }))))),
+    title: `Neueste Videos · ${name}`,
+    body: h('div.col.gap-sm', null,
+      result.data.source === 'seite'
+        ? h('p.text-xs.faint', { text: 'Gelesen von der Kanalseite, weil YouTube den Feed gerade nicht herausgibt. Aufrufe sind gerundet, das Datum ist ungefähr.' })
+        : null,
+      h('table.table', null,
+        h('thead', null, h('tr', null,
+          h('th', { text: 'Titel' }), h('th', { text: 'Veröffentlicht' }), h('th.num', { text: 'Aufrufe' }), h('th.num', { text: 'Likes' }))),
+        h('tbody', null,
+          ...result.data.videos.map((video) =>
+            h('tr', null,
+              h('td.truncate', { text: video.title }),
+              h('td.text-sm.muted.nowrap', { text: fmt.date(video.published, 'short') }),
+              h('td.num', { text: video.views === null ? '–' : fmt.num(video.views, { compact: true }) }),
+              h('td.num', { text: video.likes === null ? '–' : fmt.num(video.likes, { compact: true }) })))))),
   });
 }
 
-function youtubeCard(state, refresh) {
-  const info = state.youtube;
+/** Eine Zeile je verbundenem Kanal. */
+function channelRow(channel, refresh) {
+  return h('div.channel-row', null,
+    h('div.row.between', null,
+      h('div.row.gap-sm', { style: { minWidth: '0' } },
+        glyph('youtube', 22),
+        h('div', { style: { minWidth: '0' } },
+          h('div.strong.truncate', { text: channel.name || 'YouTube-Kanal' }),
+          h('div.text-xs.faint', {
+            text: [
+              channel.lastSync ? `abgeglichen ${fmt.relative(channel.lastSync)}` : 'noch nicht abgeglichen',
+              `${fmt.plural(channel.entries, 'Messwert', 'Messwerte')}`,
+              channel.lastSource === 'seite' ? 'über die Kanalseite' : null,
+            ].filter(Boolean).join(' · '),
+          }))),
+      h('span', { class: `badge ${channel.lastError ? 'badge--warn' : 'badge--ok'}`, text: channel.lastError ? 'Hinweis' : 'verbunden' })),
 
-  if (!info.configured) {
+    channel.lastError ? h('div.text-xs.mt-sm', { style: { color: 'var(--warn)' }, text: channel.lastError }) : null,
+    // Ein leerer Kanal ist kein Fehler und wird deshalb auch nicht so dargestellt.
+    channel.lastNote && !channel.lastError ? h('div.text-xs.faint.mt-sm', { text: channel.lastNote }) : null,
+
+    h('div.row.wrap.between.gap-sm.mt-sm', null,
+      h('label.checkbox', null,
+        h('input', {
+          type: 'checkbox',
+          checked: channel.createPosts,
+          onChange: async (event) => {
+            await window.ch.connectors.options('youtube', { createPosts: event.target.checked }, channel.channelId);
+            toast(event.target.checked ? 'Videos werden als Beiträge übernommen.' : 'Es werden nur noch Zahlen übernommen.', 'ok');
+          },
+        }),
+        h('span.text-xs', { text: 'als Beiträge übernehmen' })),
+      h('div.row.gap-xs', null,
+        h('button.btn.btn--sm', { text: 'Abgleichen', onClick: () => syncChannel(channel.channelId, channel.name, refresh) }),
+        h('button.btn.btn--sm.btn--ghost', { text: 'Vorschau', onClick: () => youtubePreview(channel.channelId, channel.name) }),
+        h('button.btn.btn--sm.btn--ghost', {
+          text: 'Kanal öffnen',
+          onClick: () => window.ch.system.openExternal(`https://www.youtube.com/channel/${channel.channelId}`),
+        }),
+        h('button.btn.btn--sm.btn--ghost', {
+          text: '✕',
+          title: 'Diesen Kanal trennen',
+          onClick: async () => {
+            if (!(await confirm({
+              title: `„${channel.name}“ trennen?`,
+              message: 'Der Kanal wird nicht mehr abgeglichen. Bereits übernommene Zahlen und Beiträge bleiben erhalten.',
+              confirmLabel: 'Trennen',
+              tone: 'danger',
+            }))) return;
+            await window.ch.connectors.disconnect('youtube', channel.channelId);
+            toast(`„${channel.name}“ getrennt.`, 'ok');
+            refresh();
+          },
+        }))));
+}
+
+function youtubeCard(state, refresh) {
+  const channels = state.youtube.channels || [];
+
+  if (!channels.length) {
     return card(null, {},
       h('div.row.gap-sm.mb', null, glyph('youtube', 26), h('h3', { text: 'YouTube' }), h('span.badge.badge--ok', { text: 'ohne Schlüssel' })),
-      h('p.text-sm.muted.mb', { text: 'Liest die neuesten Videos deines Kanals mit Titel, Datum, Aufrufen und Likes – und legt sie als veröffentlichte Beiträge an, damit Kalender und Coach deinen tatsächlichen Rhythmus kennen. Es genügt der Kanalname.' }),
+      h('p.text-sm.muted.mb', { text: 'Liest die neuesten Videos deiner Kanäle mit Titel, Datum, Aufrufen und Likes – und legt sie als veröffentlichte Beiträge an, damit Kalender und Coach deinen tatsächlichen Rhythmus kennen. Es genügt der Kanalname, und du kannst beliebig viele Kanäle verbinden.' }),
       h('button.btn.btn--primary', { text: 'YouTube verbinden', onClick: () => youtubeSetup(refresh) }));
   }
 
@@ -368,48 +456,15 @@ function youtubeCard(state, refresh) {
       h('div.row.gap-sm', null,
         glyph('youtube', 26),
         h('div', null,
-          h('h3', { text: info.name || 'YouTube-Kanal' }),
-          h('div.text-xs.faint.mono', { text: info.channelId }))),
-      h('span.badge.badge--ok', { text: 'verbunden' })),
+          h('h3', { text: 'YouTube' }),
+          h('div.text-xs.faint', { text: `${fmt.plural(channels.length, 'Kanal', 'Kanäle')} verbunden · automatisch alle 20 Minuten` }))),
+      h('button.btn.btn--sm', { text: '＋ Weiterer Kanal', onClick: () => youtubeSetup(refresh, { additional: true }) })),
 
-    info.lastError
-      ? h('div.notice.notice--danger.mb', null,
-          h('span.notice__icon', { text: '✕' }),
-          h('div.text-sm', { text: info.lastError }))
-      : null,
+    h('div.col.gap-sm', null, ...channels.map((channel) => channelRow(channel, refresh))),
 
-    h('div.row.between.text-sm.muted.mb', null,
-      h('span', { text: info.lastSync ? `Zuletzt abgeglichen ${fmt.relative(info.lastSync)}` : 'Noch nicht abgeglichen' }),
-      h('span', { text: 'automatisch alle 20 Minuten' })),
-
-    h('label.checkbox.mb', null,
-      h('input', {
-        type: 'checkbox',
-        checked: info.createPosts,
-        onChange: async (event) => {
-          await window.ch.connectors.options('youtube', { createPosts: event.target.checked });
-          toast(event.target.checked ? 'Videos werden als Beiträge übernommen.' : 'Es werden nur noch Zahlen übernommen.', 'ok');
-        },
-      }),
-      h('span.text-sm', { text: 'Videos als veröffentlichte Beiträge übernehmen' })),
-
-    h('div.row.wrap.gap-sm', null,
-      h('button.btn.btn--sm.btn--primary', { text: 'Jetzt abgleichen', onClick: () => runSync('youtube', refresh) }),
-      h('button.btn.btn--sm', { text: 'Vorschau', onClick: youtubePreview }),
-      h('button.btn.btn--sm.btn--danger', {
-        text: 'Trennen',
-        onClick: async () => {
-          if (!(await confirm({
-            title: 'YouTube trennen?',
-            message: 'Die Kanalzuordnung wird gelöscht. Bereits übernommene Zahlen und Beiträge bleiben erhalten.',
-            confirmLabel: 'Trennen',
-            tone: 'danger',
-          }))) return;
-          await window.ch.connectors.disconnect('youtube');
-          toast('YouTube getrennt.', 'ok');
-          refresh();
-        },
-      })));
+    channels.length > 1
+      ? h('p.text-xs.faint.mt', { text: 'Die Kanäle werden in Analytics und im Assistenten getrennt ausgewertet. Ein kleiner und ein grosser Kanal im selben Topf würden jede Empfehlung verfälschen.' })
+      : null);
 }
 
 // ------------------------------------------------------------------ Ansicht

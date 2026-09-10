@@ -19,13 +19,15 @@ import { metric as metricInfo } from './platforms.js';
 export const entries = () => store.all('analytics');
 
 /** Eintraege eines Zeitraums, optional auf eine Plattform begrenzt. */
-export function inRange({ days = 30, platformId = null, from = null, to = null } = {}) {
+export function inRange({ days = 30, platformId = null, accountId = null, from = null, to = null } = {}) {
   const end = to ? new Date(to) : new Date();
   const start = from ? new Date(from) : fmt.addDays(end, -days);
   const startKey = fmt.dayKey(start);
   const endKey = fmt.dayKey(end);
   return entries().filter((entry) => {
     if (platformId && entry.platformId !== platformId) return false;
+    // Mehrere Konten derselben Plattform werden getrennt ausgewertet.
+    if (accountId && entry.accountId !== accountId) return false;
     return entry.date >= startKey && entry.date <= endKey;
   });
 }
@@ -57,12 +59,12 @@ export const average = (list, key) => {
  * @returns {{current: number|null, previous: number|null, change: number|null}}
  *          change ist die relative Veraenderung (0.25 = plus 25 Prozent).
  */
-export function compare(key, { days = 30, platformId = null } = {}) {
+export function compare(key, { days = 30, platformId = null, accountId = null } = {}) {
   const now = new Date();
-  const current = aggregate(inRange({ days, platformId, to: now }), key);
+  const current = aggregate(inRange({ days, platformId, accountId, to: now }), key);
   const previousEnd = fmt.addDays(now, -days);
   const previous = aggregate(
-    inRange({ days, platformId, from: fmt.addDays(previousEnd, -days), to: previousEnd }),
+    inRange({ days, platformId, accountId, from: fmt.addDays(previousEnd, -days), to: previousEnd }),
     key
   );
   const change = current !== null && previous ? (current - previous) / Math.abs(previous) : null;
@@ -70,8 +72,8 @@ export function compare(key, { days = 30, platformId = null } = {}) {
 }
 
 /** Tagesreihe fuer ein Diagramm: lueckenlos, fehlende Tage mit 0. */
-export function daily(key, { days = 30, platformId = null } = {}) {
-  const list = inRange({ days, platformId });
+export function daily(key, { days = 30, platformId = null, accountId = null } = {}) {
+  const list = inRange({ days, platformId, accountId });
   const buckets = new Map();
   for (const entry of list) {
     const n = value(entry, key);
@@ -113,9 +115,9 @@ export function byPlatform(key, { days = 30 } = {}) {
  * Verbindet Messwerte mit den zugehoerigen Beitraegen.
  * Nur damit lassen sich Aussagen ueber Zeitfenster und Formate treffen.
  */
-export function joined({ days = 90, platformId = null } = {}) {
+export function joined({ days = 90, platformId = null, accountId = null } = {}) {
   const posts = new Map(store.all('posts').map((post) => [post.id, post]));
-  return inRange({ days, platformId })
+  return inRange({ days, platformId, accountId })
     .map((entry) => ({ entry, post: entry.postId ? posts.get(entry.postId) : null }))
     .filter((row) => row.post);
 }
@@ -182,8 +184,8 @@ export function byFormat(key = 'views', options = {}) {
 }
 
 /** Die staerksten Einzelbeitraege eines Zeitraums. */
-export function topEntries(key = 'views', { days = 90, platformId = null, limit = 5 } = {}) {
-  return inRange({ days, platformId })
+export function topEntries(key = 'views', { days = 90, platformId = null, accountId = null, limit = 5 } = {}) {
+  return inRange({ days, platformId, accountId })
     .map((entry) => ({ entry, value: value(entry, key) }))
     .filter((row) => row.value !== null)
     .sort((a, b) => b.value - a.value)

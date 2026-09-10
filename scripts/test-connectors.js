@@ -18,7 +18,7 @@ const path = require('path');
 
 const { Store } = require('../src/main/store');
 const {
-  parseFeed, decode, extractChannelId, channelTitle,
+  YouTubeConnector, parseFeed, decode, extractChannelId, channelTitle,
   parseChannelVideos, parseViewCount, parseRelativeDate,
 } = require('../src/main/connectors/youtube');
 const { TwitchConnector, parseDuration } = require('../src/main/connectors/twitch');
@@ -287,6 +287,68 @@ check('Abonnenten getrennt gefuehrt', snapshot?.metrics.subsTotal === 43 && snap
 await auth.signOut();
 check('Abmelden entfernt das Merkmal', auth.isSignedIn() === false);
 check('Client-ID bleibt nach dem Abmelden erhalten', auth.clientId() === 'abcdef123456');
+
+// ------------------------------------------------------------------ Mehrere YouTube-Kanaele
+
+const multiDir = fs.mkdtempSync(path.join(os.tmpdir(), 'content-helper-multi-'));
+const multiStore = new Store(multiDir);
+
+// Ausgangslage aus der Zeit, als nur ein Kanal moeglich war.
+multiStore.saveSettings({ connections: { youtube: { channelId: 'UCaltaltaltaltaltaltaltal', name: 'Hauptkanal', createPosts: true } } });
+multiStore.insert('analytics', { externalId: 'youtube:video:alt00000001', platformId: 'youtube', date: '2026-09-01', title: 'Altes Video', metrics: { views: 900 }, source: 'youtube' });
+multiStore.insert('posts', { externalId: 'youtube:video:alt00000001', title: 'Altes Video', platforms: ['youtube'], status: 'published' });
+
+const yt = new YouTubeConnector(multiStore);
+const migrated = yt.channels();
+check('Alte Einzelverbindung wird übernommen', migrated.length === 1 && migrated[0].name === 'Hauptkanal', JSON.stringify(migrated));
+check('Alte Verbindung wird dabei aufgelöst', !multiStore.settings().connections.youtube);
+check('Bestehende Zahlen dem Kanal zugeordnet', multiStore.list('analytics')[0].accountId === 'UCaltaltaltaltaltaltaltal');
+check('Bestehende Beiträge dem Kanal zugeordnet', multiStore.list('posts')[0].accountId === 'UCaltaltaltaltaltaltaltal');
+check('Übernahme läuft nur einmal', yt.channels().length === 1);
+
+// Zweiter Kanal, ohne Netz direkt in die Liste gesetzt.
+yt.saveChannels([...yt.channels(), { channelId: 'UCzweitzweitzweitzweitzw', name: 'Clipkanal', createPosts: true }]);
+check('Zwei Kanäle gleichzeitig verbunden', yt.channels().length === 2);
+
+upsertAnalytics(multiStore, { externalId: 'youtube:video:clip0000001', platformId: 'youtube', date: '2026-09-05', title: 'Clip', metrics: { views: 120 }, source: 'youtube', accountId: 'UCzweitzweitzweitzweitzw', accountName: 'Clipkanal' });
+check('Neue Zahlen tragen ihren Kanal', multiStore.list('analytics').find((e) => e.externalId === 'youtube:video:clip0000001').accountName === 'Clipkanal');
+
+upsertAnalytics(multiStore, { externalId: 'youtube:video:clip0000001', platformId: 'youtube', date: '2026-09-05', title: 'Clip', metrics: { views: 140 }, source: 'youtube', accountId: 'UCfalschfalschfalschfals', accountName: 'Falsch' });
+check('Zuordnung wird nie umgehängt', multiStore.list('analytics').find((e) => e.externalId === 'youtube:video:clip0000001').accountId === 'UCzweitzweitzweitzweitzw');
+
+const multiStatus = yt.status();
+check('Status zählt Messwerte je Kanal', multiStatus.channels.find((c) => c.name === 'Hauptkanal').entries === 1 && multiStatus.channels.find((c) => c.name === 'Clipkanal').entries === 1, JSON.stringify(multiStatus.channels.map((c) => c.entries)));
+
+yt.updateChannel('UCzweitzweitzweitzweitzw', { createPosts: false });
+check('Einstellung gilt je Kanal', yt.channel('UCzweitzweitzweitzweitzw').createPosts === false && yt.channel('UCaltaltaltaltaltaltaltal').createPosts === true);
+
+// Leerer Kanal: kein Fehler, sondern ein Hinweis.
+yt.fetchFeed = async () => { throw new Error('Die Gegenstelle antwortete mit Status 404.'); };
+yt.readChannelPage = async () => ({ videos: [], genuine: true });
+const emptyRun = await yt.syncChannel(yt.channel('UCaltaltaltaltaltaltaltal')).catch((error) => ({ error: error.message }));
+check('Leerer Kanal ist kein Fehler', !emptyRun.error && emptyRun.empty === true, JSON.stringify(emptyRun));
+check('Leerer Kanal bekommt einen Hinweis', /keine öffentlichen Videos/.test(yt.channel('UCaltaltaltaltaltaltaltal').lastNote || ''));
+check('Leerer Kanal hat keinen Fehlereintrag', !yt.channel('UCaltaltaltaltaltaltaltal').lastError);
+
+// Gesperrte Seite dagegen ist ein echter Fehler und darf nicht als "leer" gelten.
+yt.readChannelPage = async () => ({ videos: [], genuine: false });
+const blockedRun = await yt.syncChannel(yt.channel('UCaltaltaltaltaltaltaltal')).catch((error) => ({ error: error.message }));
+check('Gesperrte Seite wird als Fehler gemeldet', Boolean(blockedRun.error), JSON.stringify(blockedRun));
+
+// Ein gestoerter Kanal haelt den anderen nicht auf.
+yt.recentVideos = async (channelId) => {
+  if (channelId === 'UCaltaltaltaltaltaltaltal') throw new Error('gestört');
+  return { videos: [], source: 'feed', empty: true };
+};
+const mixed = await yt.sync().catch((error) => ({ error: error.message }));
+check('Ein gestörter Kanal hält den anderen nicht auf', !mixed.error && mixed.errors.length === 1 && mixed.channels.length === 1, JSON.stringify(mixed));
+
+yt.disconnect('UCzweitzweitzweitzweitzw');
+check('Einzelnen Kanal trennen', yt.channels().length === 1 && yt.channels()[0].name === 'Hauptkanal');
+check('Zahlen des getrennten Kanals bleiben', multiStore.list('analytics').some((e) => e.accountId === 'UCzweitzweitzweitzweitzw'));
+
+multiStore.flush();
+try { fs.rmSync(multiDir, { recursive: true, force: true, maxRetries: 3 }); } catch { /* egal */ }
 
 // ------------------------------------------------------------------ Zugangsdaten
 

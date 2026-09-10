@@ -19,27 +19,93 @@ const { upsertAnalytics, upsertPublishedPost, linkAnalyticsToPost } = require('.
 
 const FEED = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 
+/**
+ * Mehrere Kanäle je Nutzer.
+ *
+ * Wer einen Hauptkanal, einen Zweitkanal für Clips und einen Kanal für ein
+ * Nebenprojekt betreibt, verbindet alle drei. Jeder Kanal wird für sich
+ * abgeglichen, und jede Zahl trägt die Kennung ihres Kanals. Das ist nicht nur
+ * Ordnung: Ein Kanal mit 200 Aufrufen je Video und einer mit 200 000 dürfen in
+ * der Auswertung nicht in denselben Topf – sonst gilt beim kleinen Kanal
+ * alles als Misserfolg und beim grossen alles als Treffer.
+ */
 class YouTubeConnector {
   constructor(store) {
     this.store = store;
   }
 
+  // ---------------------------------------------------------------- Einstellungen
+
+  /** Kanalübergreifende Angaben, etwa der letzte Gesamtfehler. */
   config() {
-    return this.store.settings().connections?.youtube || {};
+    return this.store.settings().connections?.youtubeShared || {};
   }
 
   saveConfig(patch) {
     const connections = { ...(this.store.settings().connections || {}) };
-    connections.youtube = { ...(connections.youtube || {}), ...patch };
+    connections.youtubeShared = { ...(connections.youtubeShared || {}), ...patch };
     this.store.saveSettings({ connections });
-    return connections.youtube;
+    return connections.youtubeShared;
+  }
+
+  /**
+   * Übernimmt eine Verbindung aus der Zeit, als nur ein Kanal möglich war.
+   * Bestehende Zahlen und Beiträge werden dabei diesem Kanal zugeordnet, damit
+   * nach der Umstellung nichts heimatlos in der Auswertung steht.
+   */
+  migrate() {
+    const connections = this.store.settings().connections || {};
+    const legacy = connections.youtube;
+    if (!legacy?.channelId || Array.isArray(connections.youtubeChannels)) return;
+
+    const channel = {
+      channelId: legacy.channelId,
+      name: legacy.name || legacy.channelId,
+      createPosts: legacy.createPosts !== false,
+      lastSync: legacy.lastSync || null,
+      lastError: legacy.lastError || null,
+      lastSource: legacy.lastSource || null,
+      addedAt: legacy.verifiedAt || new Date().toISOString(),
+    };
+
+    const next = { ...connections, youtubeChannels: [channel] };
+    delete next.youtube;
+    this.store.saveSettings({ connections: next });
+
+    const tag = { accountId: channel.channelId, accountName: channel.name };
+    for (const entry of this.store.list('analytics')) {
+      if (entry.source === 'youtube' && !entry.accountId) this.store.update('analytics', entry.id, tag);
+    }
+    for (const post of this.store.list('posts')) {
+      if (post.externalId?.startsWith('youtube:video:') && !post.accountId) this.store.update('posts', post.id, tag);
+    }
+  }
+
+  channels() {
+    this.migrate();
+    return [...(this.store.settings().connections?.youtubeChannels || [])];
+  }
+
+  channel(channelId) {
+    return this.channels().find((entry) => entry.channelId === channelId) || null;
+  }
+
+  saveChannels(list) {
+    const connections = { ...(this.store.settings().connections || {}) };
+    connections.youtubeChannels = list;
+    this.store.saveSettings({ connections });
+  }
+
+  updateChannel(channelId, patch) {
+    this.saveChannels(this.channels().map((entry) =>
+      entry.channelId === channelId ? { ...entry, ...patch } : entry));
   }
 
   isConfigured() {
-    return Boolean(this.config().channelId);
+    return this.channels().length > 0;
   }
 
-  // ---------------------------------------------------------------- Kanal finden
+  // ---------------------------------------------------------------- Kanal hinzufügen
 
   /**
    * Nimmt entgegen, was Nutzer üblicherweise zur Hand haben: eine Kanal-Kennung,
@@ -56,7 +122,7 @@ class YouTubeConnector {
 
     // Eine vollständige Kanal-Kennung braucht keine Suche.
     const direct = /(UC[\w-]{22})/.exec(value);
-    if (direct) return this.verifyChannelId(direct[1]);
+    if (direct) return this.addChannel(direct[1]);
 
     const name = value.replace(/^@/, '').trim();
     const candidates = /^https?:\/\//i.test(value)
@@ -77,7 +143,7 @@ class YouTubeConnector {
         continue;
       }
       const channelId = extractChannelId(page);
-      if (channelId) return this.verifyChannelId(channelId, { name: channelTitle(page) });
+      if (channelId) return this.addChannel(channelId, { name: channelTitle(page) });
       lastError = new Error('Auf dieser Seite war keine Kanal-Kennung zu finden.');
     }
 
@@ -89,35 +155,54 @@ class YouTubeConnector {
   }
 
   /**
-   * Merkt sich den Kanal und holt zur Bestätigung den Feed.
+   * Nimmt einen Kanal in die Liste auf und holt zur Bestätigung den Feed.
    *
-   * Wichtig: Ist die Kennung einmal gefunden, existiert der Kanal auch. Wenn
-   * der Feed dann nicht antwortet, liegt das an YouTube – etwa weil von dieser
-   * Leitung kurz zuvor viele Abfragen kamen und vorübergehend mit 404 geantwortet
-   * wird. Das darf nicht als „Kanal gibt es nicht“ ausgegeben werden, und die
-   * Verbindung darf daran auch nicht scheitern: Der Abgleich versucht es später
-   * ohnehin erneut.
+   * Ist die Kennung einmal gefunden, existiert der Kanal auch. Antwortet der
+   * Feed dann nicht, liegt das an YouTube – die Verbindung steht trotzdem, und
+   * der nächste Abgleich holt die Videos nach.
    */
-  async verifyChannelId(channelId, { name = null } = {}) {
+  async addChannel(channelId, { name = null } = {}) {
+    const existing = this.channel(channelId);
+    if (existing) throw new Error(`„${existing.name}“ ist bereits verbunden.`);
+
     let xml = null;
     let warning = null;
+    let note = null;
+    let pageVideos = 0;
 
     try {
       xml = await this.fetchFeed(channelId);
     } catch (error) {
-      warning = `Der Kanal wurde gefunden, aber YouTube gibt den Feed gerade nicht heraus (${error.message}). Die Verbindung steht trotzdem – der nächste Abgleich holt die Videos nach.`;
+      // Ohne Feed klaert die Kanalseite, ob der Kanal leer ist oder YouTube blockt.
+      const page = await this.readChannelPage(channelId).catch(() => null);
+      if (page?.videos.length) {
+        pageVideos = page.videos.length;
+      } else if (page?.genuine) {
+        note = 'Der Kanal hat noch keine öffentlichen Videos. Sobald du etwas hochlädst, holt der Abgleich es automatisch.';
+      } else {
+        warning = `Der Kanal wurde gefunden, aber YouTube gibt die Videoliste gerade nicht heraus (${error.message}). Die Verbindung steht trotzdem – der nächste Abgleich holt die Videos nach.`;
+      }
     }
 
     const title = (xml && tagText(xml, 'title')) || name || channelId;
-    this.saveConfig({ channelId, name: title, verifiedAt: new Date().toISOString(), lastError: warning });
+    this.saveChannels([
+      ...this.channels(),
+      {
+        channelId,
+        name: title,
+        createPosts: true,
+        lastSync: null,
+        lastError: warning,
+        lastNote: note,
+        lastSource: null,
+        addedAt: new Date().toISOString(),
+      },
+    ]);
 
-    return {
-      channelId,
-      name: title,
-      videos: xml ? parseFeed(xml).length : 0,
-      warning,
-    };
+    return { channelId, name: title, videos: xml ? parseFeed(xml).length : pageVideos, warning, note };
   }
+
+  // ---------------------------------------------------------------- Abfragen
 
   /**
    * Holt den Feed und versucht es bei Ablehnung noch zweimal.
@@ -139,29 +224,33 @@ class YouTubeConnector {
     throw lastError;
   }
 
-  // ---------------------------------------------------------------- Abfragen
-
   /**
-   * Die neuesten Videos des Kanals.
+   * Die neuesten Videos eines Kanals.
    *
-   * Erste Wahl ist der Feed: er ist knapp, stabil aufgebaut und enthält genaue
-   * Zeitpunkte. Gibt YouTube ihn nicht heraus – das kommt vor, wenn von einer
-   * Leitung viele Abfragen kamen –, wird die Kanalseite selbst gelesen. Die
-   * liefert dieselben Videos, allerdings mit gerundeten Aufrufen und nur
-   * ungefährem Datum („vor drei Tagen“). Besser ungefähr als gar nicht.
+   * Erste Wahl ist der Feed: knapp, stabil aufgebaut, mit genauen Zeitpunkten.
+   * Gibt YouTube ihn nicht heraus, wird die Kanalseite selbst gelesen – mit
+   * gerundeten Aufrufen und nur ungefährem Datum. Besser ungefähr als gar nicht.
+   *
+   * @returns {Promise<{videos: object[], source: 'feed'|'seite'}>}
    */
-  async recentVideos() {
-    const { channelId } = this.config();
+  async recentVideos(channelId = this.channels()[0]?.channelId) {
     if (!channelId) throw new Error('Es ist kein YouTube-Kanal verbunden.');
 
     try {
-      return parseFeed(await this.fetchFeed(channelId));
+      return { videos: parseFeed(await this.fetchFeed(channelId)), source: 'feed', empty: false };
     } catch (feedError) {
-      const videos = await this.videosFromChannelPage(channelId).catch(() => []);
-      if (videos.length) {
-        this.saveConfig({ lastSource: 'seite' });
-        return videos;
-      }
+      let page = null;
+      try {
+        page = await this.readChannelPage(channelId);
+      } catch { /* wird unten gemeldet */ }
+
+      if (page?.videos.length) return { videos: page.videos, source: 'seite', empty: false };
+
+      // Die Seite ist echt erreichbar und zeigt einfach keine Videos – ein
+      // neuer oder leerer Kanal. Das ist kein Fehler: YouTube liefert für solche
+      // Kanäle auch keinen Feed, deshalb kam hier vorher eine falsche Meldung.
+      if (page?.genuine) return { videos: [], source: 'seite', empty: true };
+
       throw new Error(
         /Status 404/.test(feedError.message)
           ? 'YouTube gibt gerade weder den Feed noch die Kanalseite heraus. Das passiert bei vielen Abfragen kurz hintereinander und legt sich nach einigen Minuten von selbst.'
@@ -170,23 +259,60 @@ class YouTubeConnector {
     }
   }
 
-  /** Rückfallebene: die Videoliste direkt von der Kanalseite lesen. */
-  async videosFromChannelPage(channelId) {
+  /**
+   * Rückfallebene: die Videoliste direkt von der Kanalseite lesen.
+   *
+   * `genuine` sagt, ob tatsächlich die Seite dieses Kanals kam – und nicht etwa
+   * eine Zustimmungs- oder Sperrseite. Nur dann darf „keine Videos“ als
+   * „der Kanal ist leer“ gelesen werden.
+   */
+  async readChannelPage(channelId) {
     const html = await http.text(`https://www.youtube.com/channel/${channelId}/videos`);
-    return parseChannelVideos(html);
+    return { videos: parseChannelVideos(html), genuine: extractChannelId(html) === channelId };
   }
 
   // ---------------------------------------------------------------- Abgleich
 
   /**
-   * Holt die neuesten Videos und schreibt daraus Messwerte und – auf Wunsch –
-   * veröffentlichte Beiträge, damit Kalender und Coach den echten Rhythmus
-   * kennen.
+   * Gleicht alle Kanäle ab – jeden für sich. Ein gestörter Kanal hält die
+   * anderen nicht auf; gemeldet wird ein Fehler nur, wenn gar keiner durchkam.
    */
   async sync() {
-    const result = { added: 0, updated: 0, posts: 0, newest: null };
-    const videos = await this.recentVideos();
-    const createPosts = this.config().createPosts !== false;
+    const channels = this.channels();
+    const result = { added: 0, updated: 0, posts: 0, channels: [], errors: [] };
+
+    for (const channel of channels) {
+      try {
+        const outcome = await this.syncChannel(channel);
+        result.added += outcome.added;
+        result.updated += outcome.updated;
+        result.posts += outcome.posts;
+        result.channels.push({ channelId: channel.channelId, name: channel.name, ...outcome });
+      } catch (error) {
+        this.updateChannel(channel.channelId, { lastError: error.message });
+        result.errors.push({ channelId: channel.channelId, name: channel.name, message: error.message });
+      }
+    }
+
+    if (channels.length && result.errors.length === channels.length) {
+      throw new Error(result.errors.map((entry) => `${entry.name}: ${entry.message}`).join(' · '));
+    }
+
+    this.saveConfig({ lastSync: new Date().toISOString(), lastError: null });
+    return result;
+  }
+
+  /**
+   * Holt die neuesten Videos eines Kanals und schreibt daraus Messwerte und –
+   * auf Wunsch – veröffentlichte Beiträge, jeweils mit der Kennung des Kanals.
+   */
+  async syncChannel(channel) {
+    const outcome = { added: 0, updated: 0, posts: 0, source: null, empty: false };
+    const { videos, source, empty } = await this.recentVideos(channel.channelId);
+    outcome.source = source;
+    outcome.empty = Boolean(empty);
+
+    const account = { accountId: channel.channelId, accountName: channel.name };
 
     for (const video of videos) {
       const externalId = `youtube:video:${video.id}`;
@@ -194,7 +320,7 @@ class YouTubeConnector {
       if (video.views !== null) metrics.views = video.views;
       if (video.likes !== null) metrics.likes = video.likes;
 
-      const outcome = upsertAnalytics(this.store, {
+      const result = upsertAnalytics(this.store, {
         externalId,
         platformId: 'youtube',
         date: video.published.slice(0, 10),
@@ -202,10 +328,11 @@ class YouTubeConnector {
         url: video.url,
         metrics,
         source: 'youtube',
+        ...account,
       });
-      result[outcome === 'added' ? 'added' : 'updated'] += 1;
+      outcome[result === 'added' ? 'added' : 'updated'] += 1;
 
-      if (createPosts) {
+      if (channel.createPosts !== false) {
         const postId = upsertPublishedPost(this.store, {
           externalId,
           title: video.title,
@@ -213,35 +340,56 @@ class YouTubeConnector {
           platforms: ['youtube'],
           publishedAt: video.published,
           url: video.url,
+          ...account,
         });
         if (postId) {
           linkAnalyticsToPost(this.store, externalId, postId);
-          result.posts += 1;
+          outcome.posts += 1;
         }
       }
     }
 
-    result.newest = videos[0] || null;
-    this.saveConfig({ lastSync: new Date().toISOString(), lastError: null });
-    return result;
+    this.updateChannel(channel.channelId, {
+      lastSync: new Date().toISOString(),
+      lastError: null,
+      lastNote: empty ? 'Noch keine öffentlichen Videos – sobald du etwas hochlädst, erscheint es hier.' : null,
+      lastSource: source,
+    });
+    return outcome;
   }
 
+  // ---------------------------------------------------------------- Stand
+
   status() {
-    const config = this.config();
+    const channels = this.channels();
+    const counts = new Map();
+    for (const entry of this.store.list('analytics')) {
+      if (entry.accountId) counts.set(entry.accountId, (counts.get(entry.accountId) || 0) + 1);
+    }
+
     return {
-      configured: this.isConfigured(),
-      channelId: config.channelId || null,
-      name: config.name || null,
-      lastSync: config.lastSync || null,
-      lastError: config.lastError || null,
-      createPosts: config.createPosts !== false,
+      configured: channels.length > 0,
+      channels: channels.map((channel) => ({
+        channelId: channel.channelId,
+        name: channel.name,
+        createPosts: channel.createPosts !== false,
+        lastSync: channel.lastSync || null,
+        lastError: channel.lastError || null,
+        lastNote: channel.lastNote || null,
+        lastSource: channel.lastSource || null,
+        addedAt: channel.addedAt || null,
+        entries: counts.get(channel.channelId) || 0,
+      })),
     };
   }
 
-  disconnect() {
-    const connections = { ...(this.store.settings().connections || {}) };
-    delete connections.youtube;
-    this.store.saveSettings({ connections });
+  /**
+   * Trennt einen Kanal – oder alle, wenn keiner genannt ist. Übernommene Zahlen
+   * und Beiträge bleiben erhalten; sie gehören zur Geschichte des Kanals.
+   */
+  disconnect(channelId = null) {
+    if (!channelId) return this.saveChannels([]);
+    this.saveChannels(this.channels().filter((entry) => entry.channelId !== channelId));
   }
 }
 
