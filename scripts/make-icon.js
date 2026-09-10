@@ -135,6 +135,45 @@ function drawIcon(size, { transparentBackground = false } = {}) {
   return rgba;
 }
 
+// ------------------------------------------------------------------ ICO-Datei
+
+/**
+ * Packt mehrere PNG-Groessen in eine Windows-Symboldatei.
+ *
+ * Seit Windows Vista duerfen die einzelnen Bilder einer .ico-Datei als PNG
+ * abgelegt werden – damit reicht der vorhandene Encoder und es braucht kein
+ * weiteres Werkzeug. Genau daran scheiterte bisher der Bau: das von
+ * electron-builder nachgeladene Umwandlungsprogramm konnte auf diesem Rechner
+ * keinen WebAssembly-Speicher belegen. Eine fertig mitgelieferte .ico umgeht
+ * diesen Schritt vollstaendig.
+ */
+function encodeIco(sizes) {
+  const images = sizes.map((size) => ({ size, data: encodePng(size, size, drawIcon(size)) }));
+
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0);              // reserviert
+  header.writeUInt16LE(1, 2);              // Typ 1 = Symbol
+  header.writeUInt16LE(images.length, 4);  // Anzahl der Bilder
+
+  const directory = Buffer.alloc(16 * images.length);
+  let offset = header.length + directory.length;
+
+  images.forEach((image, index) => {
+    const at = index * 16;
+    directory[at] = image.size >= 256 ? 0 : image.size;      // 0 bedeutet 256
+    directory[at + 1] = image.size >= 256 ? 0 : image.size;
+    directory[at + 2] = 0;                                    // Farbanzahl
+    directory[at + 3] = 0;                                    // reserviert
+    directory.writeUInt16LE(1, at + 4);                       // Ebenen
+    directory.writeUInt16LE(32, at + 6);                      // Bit je Bildpunkt
+    directory.writeUInt32LE(image.data.length, at + 8);
+    directory.writeUInt32LE(offset, at + 12);
+    offset += image.data.length;
+  });
+
+  return Buffer.concat([header, directory, ...images.map((image) => image.data)]);
+}
+
 // ------------------------------------------------------------------ Ausgabe
 
 const targets = [
@@ -150,3 +189,8 @@ for (const target of targets) {
   fs.writeFileSync(target.file, encodePng(target.size, target.size, drawIcon(target.size)));
   process.stdout.write(`geschrieben: ${path.relative(process.cwd(), target.file)} (${target.size}px)\n`);
 }
+
+// Windows-Symboldatei mit allen üblichen Größen.
+const icoPath = path.join(__dirname, '..', 'build', 'icon.ico');
+fs.writeFileSync(icoPath, encodeIco([16, 24, 32, 48, 64, 128, 256]));
+process.stdout.write(`geschrieben: ${path.relative(process.cwd(), icoPath)} (7 Größen)\n`);
