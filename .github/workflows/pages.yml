@@ -1,0 +1,51 @@
+# Webseite: baut site/ (Startseite + Doku, de/en) und veröffentlicht sie auf
+# GitHub Pages – https://moinmornhart.github.io/content-helper/
+# Läuft bei Änderungen an der Seite und nach jeder Veröffentlichung, damit der
+# Download-Knopf immer auf die neueste Version zeigt.
+name: Webseite
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "docs/screenshots/**", "docs/assets/**", ".github/workflows/pages.yml"]
+  workflow_run:
+    workflows: ["Veröffentlichung"]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Seite bauen
+        run: node site/build.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

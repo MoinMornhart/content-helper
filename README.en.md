@@ -22,6 +22,7 @@
 
 <p align="center">
   <a href="https://github.com/MoinMornhart/content-helper/releases/latest"><b>⬇&nbsp; Download for Windows</b></a>
+  &nbsp;·&nbsp; <a href="https://moinmornhart.github.io/content-helper/en/">Website</a>
   &nbsp;·&nbsp; <a href="#features">Features</a>
   &nbsp;·&nbsp; <a href="#how-it-works">How it works</a>
   &nbsp;·&nbsp; <a href="#what-runs-automatically">What runs automatically</a>

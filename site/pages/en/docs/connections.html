@@ -1,0 +1,31 @@
+<!-- {"lang":"en","path":"en/docs/connections.html","title":"Connections – Content Helper docs","description":"Connect YouTube channels and Twitch so your numbers come in by themselves.","alt":"docs/verbindungen.html"} -->
+<article class="doc">
+  <p class="crumbs"><a href="./">Docs</a> / Connections</p>
+  <h1>Connections</h1>
+  <p>So the Assistant and the Coach can work with your real numbers, the app fetches them by itself – every 20 minutes, without you typing anything.</p>
+  <figure><img src="{{base}}screenshots/en/connections.png" alt="Connections with Twitch and two YouTube channels" loading="lazy"></figure>
+
+  <h2>YouTube</h2>
+  <p>Under <b>Connections → YouTube</b>, your channel name, your <code>@handle</code> or a link to the channel is enough. No key and no sign-in needed – the app reads the public channel feed.</p>
+  <ul>
+    <li><b>Several channels</b> work the same way: main channel, clips channel, second channel. They are analyzed separately in Analytics and in the Assistant.</li>
+    <li><b>"Add as posts"</b> creates a post for each new video, so your calendar stays complete.</li>
+    <li>If YouTube doesn't hand out the feed, the app reads the channel page instead. If a channel has no public videos yet, it tells you so instead of reporting an error.</li>
+  </ul>
+
+  <h2>Twitch</h2>
+  <p>Connect Twitch with <b>Sign in</b> – just your normal Twitch account. After that, broadcasts, clips, followers and subscribers come in by themselves. While you are live, the app records the viewer count every two minutes, giving you the average and peak for each stream.</p>
+  <p>Twitch only serves registered apps. If no client ID is built in, the app asks for one once: <b>Set up</b> opens the Twitch developer page, and as soon as you copy the client ID there, the app fills it in and starts the sign-in.</p>
+
+  <h2>All other channels</h2>
+  <p>TikTok, Instagram, Facebook and X don't hand out their numbers without a business account and a review process. Under <b>Analytics → Import CSV</b> the app reads the exports from each studio in two clicks; single values can also be entered by hand.</p>
+  <table>
+    <tr><th>Channel</th><th>Numbers</th></tr>
+    <tr><td>YouTube</td><td class="yes">automatic, no key</td></tr>
+    <tr><td>Twitch</td><td class="yes">automatic, via sign-in</td></tr>
+    <tr><td>TikTok, Instagram, Facebook</td><td>CSV export from the studio</td></tr>
+    <tr><td>X</td><td>CSV with X Premium – read access to the API costs several hundred dollars a month at X</td></tr>
+  </table>
+
+  <p class="note">Several PCs linked? Then only one of them fetches the numbers; the others get them through the sync – you can change this under <b>Link PCs</b>.</p>
+</article>

@@ -1,0 +1,32 @@
+<!-- {"lang":"de","path":"docs/installation.html","title":"Installation – Content Helper Doku","description":"Content Helper herunterladen, installieren, aktualisieren und sichern.","alt":"en/docs/installation.html"} -->
+<article class="doc">
+  <p class="crumbs"><a href="./">Doku</a> / Installation</p>
+  <h1>Installation</h1>
+  <p>Content Helper ist eine Windows-App für Windows 10 und 11. Es gibt kein Konto und keinen Server – alles läuft auf deinem PC.</p>
+
+  <h2>Herunterladen</h2>
+  <table>
+    <tr><th>Fassung</th><th>Für wen</th></tr>
+    <tr><td><a href="{{download}}">Installer</a> <code>Content-Helper-Setup-{{version}}.exe</code></td><td>Der Normalfall: Startmenü-Eintrag, Aktualisierung von selbst.</td></tr>
+    <tr><td><a href="{{portable}}">Portable Fassung</a> <code>Content-Helper-{{version}}.exe</code></td><td>Ohne Installation, etwa vom USB-Stick.</td></tr>
+  </table>
+  <p>Ältere Versionen und die Änderungen je Version stehen unter <a href="{{releases}}">Releases auf GitHub</a>.</p>
+
+  <h2>Erster Start</h2>
+  <p>Windows SmartScreen meldet sich, weil die Datei nicht signiert ist. Klicke auf <b>Weitere Informationen</b> und dann <b>Trotzdem ausführen</b>. Das passiert nur beim ersten Mal.</p>
+  <p>Danach lohnt sich als Erstes: unter <b>Verbindungen</b> deinen YouTube-Kanal eintragen und dich bei Twitch anmelden – die App holt dann deine bisherigen Videos und Streams und der Assistent hat etwas zum Auswerten.</p>
+
+  <h2>Updates</h2>
+  <p>Beim Start schaut die App nach einer neuen Version, lädt sie im Hintergrund und spielt sie beim nächsten Neustart ein. Wer nicht warten will, klickt in der Seitenleiste auf <b>Neu starten und einspielen</b>. Von Hand prüfen geht über <b>Update prüfen</b> unten in der Seitenleiste.</p>
+
+  <h2>Im Hintergrund weiterlaufen</h2>
+  <p>Beim Schließen des Fensters bleibt Content Helper im Infobereich neben der Uhr aktiv – sonst könnten Termine nicht rausgehen. Unter <b>Veröffentlichen</b> lässt sich außerdem <b>Mit Windows starten</b> einschalten. Ganz beenden geht über das Symbol im Infobereich → <b>Beenden</b>.</p>
+
+  <h2>Deine Daten</h2>
+  <p>Alles liegt als lesbares JSON unter <code>%APPDATA%\Content Helper\data</code>. Jeden Tag entsteht automatisch ein Schnappschuss, und unter <b>Einstellungen → Daten</b> kannst du jederzeit eine vollständige Sicherung exportieren und wieder einlesen.</p>
+
+  <h2>Deinstallieren</h2>
+  <p>Über <b>Windows-Einstellungen → Apps</b>. Deine Daten bleiben dabei unter <code>%APPDATA%\Content Helper</code> liegen – wer sie auch loswerden will, löscht diesen Ordner.</p>
+
+  <p class="note">Probleme? <a href="https://github.com/MoinMornhart/content-helper/issues">Issue auf GitHub öffnen</a>.</p>
+</article>

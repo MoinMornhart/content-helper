@@ -1,0 +1,31 @@
+<!-- {"lang":"de","path":"docs/verbindungen.html","title":"Verbindungen – Content Helper Doku","description":"YouTube-Kanäle und Twitch verbinden, damit deine Zahlen von selbst hereinkommen.","alt":"en/docs/connections.html"} -->
+<article class="doc">
+  <p class="crumbs"><a href="./">Doku</a> / Verbindungen</p>
+  <h1>Verbindungen</h1>
+  <p>Damit der Assistent und der Coach mit deinen echten Zahlen arbeiten, holt die App sie selbst – alle 20 Minuten, ohne dass du etwas abtippst.</p>
+  <figure><img src="{{base}}screenshots/connections.png" alt="Verbindungen mit Twitch und zwei YouTube-Kanälen" loading="lazy"></figure>
+
+  <h2>YouTube</h2>
+  <p>Unter <b>Verbindungen → YouTube</b> genügt dein Kanalname, dein <code>@handle</code> oder ein Link zum Kanal. Einen Schlüssel oder eine Anmeldung braucht es dafür nicht – die App liest den öffentlichen Kanal-Feed.</p>
+  <ul>
+    <li><b>Mehrere Kanäle</b> gehen genauso: Hauptkanal, Clip-Kanal, Zweitkanal. Sie werden in Analytics und im Assistenten getrennt ausgewertet.</li>
+    <li><b>„Als Beiträge übernehmen“</b> legt für neue Videos gleich einen Beitrag an, damit der Kalender vollständig ist.</li>
+    <li>Gibt YouTube den Feed einmal nicht heraus, liest die App die Kanalseite. Hat ein Kanal noch keine öffentlichen Videos, sagt sie das, statt einen Fehler zu melden.</li>
+  </ul>
+
+  <h2>Twitch</h2>
+  <p>Twitch verbindest du mit <b>Anmelden</b> – ganz normal mit deinem Twitch-Konto. Danach kommen Übertragungen, Clips, Follower und Abonnenten von selbst. Während du live bist, hält die App alle zwei Minuten die Zuschauerzahl fest; daraus entstehen Durchschnitt und Spitzenwert je Stream.</p>
+  <p>Twitch gibt Daten nur an registrierte Anwendungen heraus. Ist keine Client-ID eingebaut, fragt die App einmalig danach: <b>Einrichten</b> öffnet die Twitch-Entwicklerseite, und sobald du dort die Client-ID kopierst, trägt die App sie selbst ein und startet die Anmeldung.</p>
+
+  <h2>Alle anderen Kanäle</h2>
+  <p>TikTok, Instagram, Facebook und X geben ihre Zahlen ohne geschäftliches Konto und Prüfverfahren nicht heraus. Unter <b>Analytics → CSV importieren</b> liest die App die Exporte aus den jeweiligen Studios in zwei Klicks ein; einzelne Werte lassen sich auch von Hand eintragen.</p>
+  <table>
+    <tr><th>Kanal</th><th>Zahlen</th></tr>
+    <tr><td>YouTube</td><td class="yes">automatisch, ohne Schlüssel</td></tr>
+    <tr><td>Twitch</td><td class="yes">automatisch, per Anmeldung</td></tr>
+    <tr><td>TikTok, Instagram, Facebook</td><td>CSV-Export aus dem Studio</td></tr>
+    <tr><td>X</td><td>CSV mit X Premium – lesender API-Zugriff kostet bei X mehrere hundert Dollar im Monat</td></tr>
+  </table>
+
+  <p class="note">Mehrere PCs verbunden? Dann holt nur einer die Zahlen ab, die anderen bekommen sie über den Abgleich – umstellbar unter <b>PCs verbinden</b>.</p>
+</article>

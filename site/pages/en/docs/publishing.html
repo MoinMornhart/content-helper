@@ -1,0 +1,40 @@
+<!-- {"lang":"en","path":"en/docs/publishing.html","title":"Publishing – Content Helper docs","description":"Publish posts automatically at the scheduled time on YouTube, TikTok, Instagram, Facebook, LinkedIn and X.","alt":"docs/veroeffentlichen.html"} -->
+<article class="doc">
+  <p class="crumbs"><a href="./">Docs</a> / Publishing</p>
+  <h1>Publishing</h1>
+  <p>Sign in once, then pick a video in the Composer, tick the channels, set a time – the post goes out by itself.</p>
+  <figure><img src="{{base}}screenshots/en/publishing.png" alt="Sign-ins for YouTube, TikTok, Instagram and Facebook, LinkedIn and X" loading="lazy"></figure>
+
+  <h2>How it works</h2>
+  <ol class="steps">
+    <li><b>Sign in</b> – under <b>Setup → Publish</b>, for the platforms you use. The app never sees your password; the platform only gives it a revocable token that stays on your PC.</li>
+    <li><b>Pick a video</b> – in the Composer under <b>Video</b>, optionally with a custom thumbnail for YouTube.</li>
+    <li><b>Channels and options</b> – each channel shows whether it goes out automatically. YouTube asks for visibility and "made for kids", TikTok for visibility, comments, duets, stitches and commercial content.</li>
+    <li><b>Schedule</b> – the app does the rest. You see the status live in the Composer: uploading, scheduled, published – with a link.</li>
+  </ol>
+
+  <h2>What the platforms allow</h2>
+  <table>
+    <tr><th>Platform</th><th>When the upload happens</th><th>PC must be running at the scheduled time?</th></tr>
+    <tr><td>YouTube, Shorts</td><td>right after scheduling, YouTube releases it at the scheduled time</td><td class="yes">no</td></tr>
+    <tr><td>Facebook Page</td><td>right away, if the time is 15 minutes to 28 days ahead</td><td class="yes">no</td></tr>
+    <tr><td>TikTok</td><td>at the scheduled time</td><td>yes</td></tr>
+    <tr><td>Instagram Reels</td><td>at the scheduled time (professional account linked to a Facebook Page)</td><td>yes</td></tr>
+    <tr><td>LinkedIn</td><td>at the scheduled time</td><td>yes</td></tr>
+    <tr><td>X</td><td>at the scheduled time</td><td>yes</td></tr>
+  </table>
+  <p>Channels without a sign-in – Threads, Bluesky, Discord and others – still get a reminder, and the text is on your clipboard at the scheduled time.</p>
+
+  <h2>When something goes wrong</h2>
+  <ul>
+    <li><b>Interrupted upload:</b> the app resumes at the same spot, even after a restart.</li>
+    <li><b>No connection, platform overloaded:</b> new attempts after 1, 5, 15, 30 and 60 minutes. If YouTube's daily quota is used up, it waits until the next day.</li>
+    <li><b>Permanent errors</b> such as a missing video file or a revoked sign-in are reported right away with the reason – "Try again" in the Composer.</li>
+    <li><b>PC was off:</b> missed posts are caught up on the next start, up to one day late. After that the app asks you first.</li>
+    <li><b>Several PCs:</b> only the PC that also fetches publishes – nothing goes out twice.</li>
+  </ul>
+
+  <h2>To be honest</h2>
+  <p>Every platform only accepts uploads from an app that it has registered and reviewed. Until YouTube and TikTok have reviewed the Content Helper app, uploads land there as "private". X bills every post made through its API individually.</p>
+  <p class="note">For the publisher: how to create the apps at Google, TikTok, Meta, LinkedIn and X is described step by step in <a href="https://github.com/MoinMornhart/content-helper/blob/main/docs/PUBLISHING.md">docs/PUBLISHING.md</a>. In the app, <b>Set up</b> opens the right page and fills in whatever you copy there.</p>
+</article>
