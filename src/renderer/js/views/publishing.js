@@ -66,52 +66,160 @@ const unwrap = (result) => {
 // ------------------------------------------------------------------ Einrichten
 
 /**
+ * Wo es die Kennungen gibt – je Plattform die direkten Links, in der
+ * Reihenfolge, in der man sie braucht. `copy` legt eine Adresse gleich in die
+ * Zwischenablage, weil sie dort eingetragen werden muss.
+ */
+const STEPS = {
+  google: [
+    { text: 'Projekt anlegen – Name z. B. „Content Helper“.', url: 'https://console.cloud.google.com/projectcreate', label: 'Projekt anlegen' },
+    { text: 'YouTube Data API v3 aktivieren.', url: 'https://console.cloud.google.com/apis/library/youtube.googleapis.com', label: 'API aktivieren' },
+    { text: 'Zustimmungsbildschirm: Zielgruppe „Extern“, danach auf „In Produktion“ stellen – im Testmodus läuft die Anmeldung nach 7 Tagen ab.', url: 'https://console.cloud.google.com/auth/overview', label: 'Zustimmungsbildschirm' },
+    { text: 'Client erstellen, Typ „Desktop-App“. Dann Client-ID und Secret kopieren – oder die JSON-Datei herunterladen und hier einlesen.', url: 'https://console.cloud.google.com/auth/clients/create', label: 'Client erstellen' },
+  ],
+  tiktok: [
+    { text: 'App anlegen, Plattform „Desktop“.', url: 'https://developers.tiktok.com/apps/', label: 'TikTok-Apps öffnen' },
+    { text: 'Produkte „Login Kit“ und „Content Posting API“ hinzufügen, „Direct Post“ einschalten, Bereiche user.info.basic, video.publish und video.upload.' },
+    { text: 'Diese Rückleitungsadresse eintragen:', copy: 'http://127.0.0.1:51789/callback/' },
+    { text: 'Client Key und Client Secret kopieren.' },
+  ],
+  meta: [
+    { text: 'App anlegen, Typ „Business“.', url: 'https://developers.facebook.com/apps/creation/', label: 'Meta-App anlegen' },
+    { text: 'Produkte „Facebook Login“ und „Instagram“ hinzufügen, bei Facebook Login „Embedded Browser OAuth Login“ einschalten.' },
+    { text: 'Diese Rückleitungsadresse eintragen:', copy: 'https://www.facebook.com/connect/login_success.html' },
+    { text: 'Unter „App-Einstellungen → Allgemein“ App-ID und App-Geheimcode kopieren.', url: 'https://developers.facebook.com/apps/', label: 'Meine Apps' },
+  ],
+  linkedin: [
+    { text: 'App anlegen (braucht eine LinkedIn-Unternehmensseite).', url: 'https://www.linkedin.com/developers/apps/new', label: 'LinkedIn-App anlegen' },
+    { text: 'Unter „Products“: „Share on LinkedIn“ und „Sign In with LinkedIn using OpenID Connect“.' },
+    { text: 'Unter „Auth“ diese Rückleitungsadresse eintragen:', copy: APP_REDIRECT },
+    { text: 'Client ID und Primary Client Secret kopieren.' },
+  ],
+  x: [
+    { text: 'Projekt und App anlegen.', url: 'https://developer.x.com/en/portal/projects-and-apps', label: 'X-Entwicklerportal' },
+    { text: '„User authentication settings“: OAuth 2.0, Typ „Native App“, Berechtigung „Read and write“.' },
+    { text: 'Als Callback diese Adresse eintragen:', copy: APP_REDIRECT },
+    { text: 'Die OAuth-2.0-Client-ID kopieren.' },
+  ],
+};
+
+/**
+ * Einrichten in so wenig Schritten wie möglich: Die richtige Seite öffnet sich,
+ * und was dort kopiert wird, landet von selbst im richtigen Feld. Sobald alles
+ * da ist, speichert die App und startet die Anmeldung.
+ *
  * Einmaliger Schritt für den Herausgeber, solange die Kennungen nicht fest im
  * Installationspaket stecken. Nutzer der fertigen App sehen das nie.
  */
 function setupDialog(account, refresh) {
-  const inputs = Object.fromEntries(account.fields.map(([key]) => [key, h('input.input', { placeholder: key === 'configId' ? 'optional' : '' })]));
+  const steps = STEPS[account.setup] || [];
+  const inputs = {};
+  const marks = {};
+  for (const [key] of account.fields) {
+    inputs[key] = h('input.input', { placeholder: key === 'configId' ? 'optional' : 'wird erkannt, sobald du es kopierst' });
+    marks[key] = h('span.text-xs.faint', { text: key === 'configId' ? '' : 'wartet …' });
+    inputs[key].addEventListener('input', () => {
+      marks[key].textContent = inputs[key].value.trim() ? '✓ eingetragen' : 'wartet …';
+    });
+  }
+  const required = account.fields.map(([key]) => key).filter((key) => key !== 'configId');
+  const complete = () => required.every((key) => inputs[key].value.trim());
+  let done = false;
+  let timer = null;
 
-  modal({
-    title: `${account.name}: Anwendung hinterlegen`,
+  const finish = async () => {
+    if (done) return;
+    done = true;
+    clearInterval(timer);
+    const values = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value.trim()]));
+    await window.ch.publish.setup(account.setup, values);
+    instance.close(true);
+    toast(`${account.name} ist eingerichtet – jetzt noch anmelden.`, 'ok');
+    refresh();
+    // Direkt weiter zur Anmeldung, damit nichts mehr zu klicken bleibt.
+    setTimeout(() => signIn(account, refresh), 400);
+  };
+
+  /** Erkanntes eintragen; ist dann alles da, geht es von selbst weiter. */
+  const apply = (found, source) => {
+    let changed = false;
+    for (const [key, value] of Object.entries(found || {})) {
+      if (!inputs[key] || inputs[key].value.trim() === value) continue;
+      inputs[key].value = value;
+      marks[key].textContent = `✓ ${source}`;
+      marks[key].style.color = 'var(--ok)';
+      changed = true;
+    }
+    if (changed && complete()) setTimeout(finish, 700);
+  };
+
+  const stepRows = steps.map((step, index) => h('div.row.gap-sm', { style: { alignItems: 'flex-start' } },
+    h('span.badge.badge--accent', { text: String(index + 1) }),
+    h('div.grow.col.gap-xs', null,
+      h('div.text-sm', { text: step.text }),
+      step.copy
+        ? h('div.row.gap-sm', null,
+            h('code.mono.text-xs.grow', { text: step.copy, style: { padding: '6px 9px', background: 'var(--surface-2)', borderRadius: '8px', wordBreak: 'break-all' } }),
+            h('button.btn.btn--sm', { text: 'Kopieren', onClick: () => copy(step.copy, 'Adresse kopiert – jetzt dort einfügen.') }))
+        : null),
+    step.url ? h('button.btn.btn--sm', { text: `${step.label} ↗`, onClick: () => window.ch.system.openExternal(step.url) }) : null));
+
+  const instance = modal({
+    title: `${account.name} einrichten`,
     body: h('div.col.gap-lg', null,
       h('div.notice.notice--accent', null,
-        h('span.notice__icon', { text: 'ℹ' }),
-        h('div.text-sm.muted', { text: `${account.name} gibt Uploads nur an registrierte Anwendungen frei. Diese Anwendung legt der Herausgeber des Content Helpers einmal an und trägt die Werte hier ein – oder sie stecken schon im Installationspaket, dann entfällt dieser Schritt. Wer die App nur benutzt, meldet sich einfach an.` })),
-      account.redirect
-        ? h('div.col.gap-sm', null,
-            h('div.field__label', { text: 'Diese Rückleitungsadresse in der Anwendung eintragen' }),
-            h('div.row.gap-sm', null,
-              h('code.mono.text-xs.grow', { text: account.redirect, style: { padding: '8px 10px', background: 'var(--surface-2)', borderRadius: '8px', wordBreak: 'break-all' } }),
-              h('button.btn.btn--sm', { text: 'Kopieren', onClick: () => copy(account.redirect, 'Adresse kopiert.') })))
-        : h('p.text-sm.muted', { text: 'Bei Google als Anwendungstyp „Desktop-App“ wählen – eine Rückleitungsadresse ist dann nicht nötig.' }),
-      ...account.fields.map(([key, label]) => h('label.field', null, h('span.field__label', { text: label }), inputs[key])),
-      h('button.btn.btn--ghost.btn--sm', { text: 'Schritt-für-Schritt-Anleitung öffnen', onClick: () => window.ch.system.openExternal(GUIDE) })),
+        h('span.notice__icon', { text: '✦' }),
+        h('div.text-sm.muted', { text: `Die Seite von ${account.name} hat sich im Browser geöffnet. Was du dort kopierst, trägt die App von selbst ein – sobald alles da ist, geht es direkt weiter zur Anmeldung.` })),
+      h('div.col.gap-sm', null, ...stepRows),
+      h('div.col.gap-sm', null,
+        ...account.fields.map(([key, label]) => h('label.field', null,
+          h('div.row.between', null, h('span.field__label', { text: label }), marks[key]),
+          inputs[key]))),
+      h('div.row.wrap.gap-sm', null,
+        h('button.btn.btn--sm.btn--ghost', {
+          text: account.setup === 'google' ? 'Heruntergeladene JSON-Datei einlesen' : 'Datei mit den Zugangsdaten einlesen',
+          onClick: async () => {
+            const result = unwrap(await window.ch.publish.importFile(account.setup));
+            if (result.canceled) return;
+            if (!Object.keys(result.found || {}).length) return toast('In der Datei war nichts, das nach Zugangsdaten aussieht.', 'warn');
+            apply(result.found, 'aus der Datei');
+          },
+        }),
+        h('button.btn.btn--sm.btn--ghost', { text: 'Ausführliche Anleitung', onClick: () => window.ch.system.openExternal(GUIDE) })),
+      h('p.text-xs.faint', { text: 'Die Zwischenablage wird nur gelesen, solange dieses Fenster offen ist, und nur übernommen, was wie eine Kennung von dieser Plattform aussieht.' })),
+    onClose: () => clearInterval(timer),
     actions: [
       { label: 'Abbrechen' },
       {
-        label: 'Speichern',
+        label: 'Speichern und anmelden',
         primary: true,
         action: async () => {
-          const values = Object.fromEntries(Object.entries(inputs).map(([key, input]) => [key, input.value.trim()]));
-          const missing = account.fields.filter(([key]) => key !== 'configId' && !values[key]);
-          if (missing.length) {
-            toast(`Bitte ${missing.map(([, label]) => label).join(' und ')} eintragen.`, 'warn');
+          if (!complete()) {
+            const missing = account.fields.filter(([key]) => required.includes(key) && !inputs[key].value.trim());
+            toast(`Es fehlt noch: ${missing.map(([, label]) => label).join(', ')}.`, 'warn');
             return false;
           }
-          await window.ch.publish.setup(account.setup, values);
-          toast('Gespeichert. Jetzt kannst du dich anmelden.', 'ok');
-          refresh();
-          return true;
+          await finish();
+          return false;
         },
       },
     ],
   });
+
+  // Die erste Seite gleich öffnen und ab jetzt auf Kopiertes achten.
+  if (steps[0]?.url) window.ch.system.openExternal(steps[0].url);
+  timer = setInterval(async () => {
+    if (done) return;
+    const result = await window.ch.publish.detectClipboard(account.setup);
+    if (result?.ok) apply(result.data, 'aus der Zwischenablage');
+  }, 900);
 }
 
-async function signIn(account, refresh, button) {
-  button.disabled = true;
-  button.textContent = 'Warte auf Anmeldung …';
+async function signIn(account, refresh, button = null) {
+  if (button) {
+    button.disabled = true;
+    button.textContent = 'Warte auf Anmeldung …';
+  }
   const close = toast(`Die Anmeldung läuft ${account.where}. Bestätige dort den Zugriff.`, 'info', 300000);
   try {
     unwrap(await window.ch.publish.signIn(account.signIn));
@@ -121,8 +229,10 @@ async function signIn(account, refresh, button) {
   } catch (error) {
     close();
     toast(error.message, 'danger', 9000);
-    button.disabled = false;
-    button.textContent = 'Anmelden';
+    if (button) {
+      button.disabled = false;
+      button.textContent = 'Anmelden';
+    }
   }
 }
 

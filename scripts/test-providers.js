@@ -25,6 +25,7 @@ const { MetaAuth, InstagramPublisher, FacebookPublisher, metaError } = require('
 const { LinkedInPublisher, littleText } = require('../src/main/publish/providers/linkedin');
 const { XPublisher, SEGMENT } = require('../src/main/publish/providers/x');
 const { pkcePair } = require('../src/main/publish/oauth');
+const { detectKeys } = require('../src/main/publish/key-detect');
 
 const results = [];
 const check = (name, condition, detail = '') => {
@@ -394,6 +395,29 @@ const job = (overrides = {}) => {
   error = await xLimited.publish(job({ text: 'Hallo' })).catch((e) => e);
   check('Ratenlimit: warten bis X wieder zulässt', error.retryable && Boolean(error.retryAt));
   check('Über 280 Zeichen wird vorher erkannt', xp.check({ text: 'x'.repeat(281) }).some((line) => /280/.test(line)));
+
+  // ---------------------------------------------------------------- Einrichten
+  section('Kennungen beim Einrichten erkennen');
+
+  const googleId = '123456789012-abcdefghijklmnopqrstuvwxyz012345.apps.googleusercontent.com';
+  const googleSecret = 'GOCSPX-abcdefghijklmnopqrstuvwx12';
+  let keys = detectKeys('google', `Client-ID ${googleId}\nClientschlüssel ${googleSecret}`);
+  check('Google: ID und Secret aus kopiertem Text', keys.clientId === googleId && keys.clientSecret === googleSecret, JSON.stringify(keys));
+  keys = detectKeys('google', JSON.stringify({ installed: { client_id: googleId, client_secret: googleSecret, redirect_uris: ['http://localhost'] } }));
+  check('Google: heruntergeladene JSON-Datei', keys.clientId === googleId && keys.clientSecret === googleSecret);
+  check('TikTok: Client Key an der Form erkannt', detectKeys('tiktok', 'awabcdef1234567890').clientKey === 'awabcdef1234567890');
+  check('TikTok: Secret als alleiniger Wert', detectKeys('tiktok', 'AbCdEfGhIjKlMnOpQrStUvWxYz123456').clientSecret === 'AbCdEfGhIjKlMnOpQrStUvWxYz123456');
+  check('Mehrdeutiges nicht aus längerem Text', !detectKeys('tiktok', 'Hallo AbCdEfGhIjKlMnOpQrStUvWxYz123456 Welt').clientSecret);
+  check('Meta: App-ID als alleiniger Wert', detectKeys('meta', '1234567890123456').appId === '1234567890123456');
+  check('Meta: Geheimcode als alleiniger Wert', detectKeys('meta', '0123456789abcdef0123456789abcdef').appSecret === '0123456789abcdef0123456789abcdef');
+  check('Meta: Telefonnummer im Text wird nicht übernommen', !detectKeys('meta', 'Ruf an: 0123456789012345 bitte').appId);
+  check('LinkedIn: neues Secret-Format', detectKeys('linkedin', 'WPL_AP1.abcDEF123.xyz==').clientSecret === 'WPL_AP1.abcDEF123.xyz==');
+  check('LinkedIn: Client ID', detectKeys('linkedin', '77abcd1234efgh').clientId === '77abcd1234efgh');
+  check('LinkedIn: gewöhnliches Wort ist keine ID', !detectKeys('linkedin', 'contenthelpers').clientId);
+  check('X: Client ID an der Endung erkannt', detectKeys('x', 'aBcDeFgHiJkLmNoPqRsT1234MTpjaQ').clientId === 'aBcDeFgHiJkLmNoPqRsT1234MTpjaQ');
+  check('Twitch: Client ID', detectKeys('twitch', 'gp762nuuoqcoxypju8c569th9wz7q5').clientId === 'gp762nuuoqcoxypju8c569th9wz7q5');
+  check('Kennung einer anderen Plattform wird nicht übernommen', !Object.keys(detectKeys('meta', googleSecret)).length);
+  check('Leere Zwischenablage: nichts', !Object.keys(detectKeys('google', '')).length && !Object.keys(detectKeys('unbekannt', googleId)).length);
 
   // ---------------------------------------------------------------- Abschluss
 

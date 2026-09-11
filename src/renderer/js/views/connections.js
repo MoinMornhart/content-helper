@@ -55,9 +55,29 @@ async function runSync(name, refresh) {
  * Geheimnis. Ein Client-Secret ist für diesen Anmeldeweg nicht nötig.
  */
 function clientIdDialog(refresh) {
-  const input = h('input.input', { placeholder: 'z. B. gp762nuuoqcoxypju8c569th9wz7q5' });
+  const input = h('input.input', { placeholder: 'wird erkannt, sobald du sie kopierst' });
+  const mark = h('span.text-xs.faint', { text: 'wartet …' });
+  let timer = null;
+  let done = false;
 
-  modal({
+  const saveAndSignIn = async () => {
+    if (done) return;
+    if (!input.value.trim()) {
+      toast('Bitte die Client-ID einfügen.', 'warn');
+      return;
+    }
+    const result = await window.ch.twitch.setClientId(input.value.trim());
+    if (!result?.ok) {
+      toast(result?.error || 'Speichern fehlgeschlagen.', 'danger');
+      return;
+    }
+    done = true;
+    clearInterval(timer);
+    instance.close();
+    signIn(refresh);
+  };
+
+  const instance = modal({
     title: 'Einmalig: Twitch-Client-ID',
     body: h('div.col.gap-lg', null,
       h('div.notice.notice--accent', null,
@@ -88,23 +108,34 @@ function clientIdDialog(refresh) {
         onClick: () => window.ch.system.openExternal('https://dev.twitch.tv/console/apps/create'),
       }),
 
-      h('label.field', null, h('span.field__label', { text: 'Client-ID' }), input)),
+      h('label.field', null, h('div.row.between', null, h('span.field__label', { text: 'Client-ID' }), mark), input),
+      h('p.text-xs.faint', { text: 'Kopierst du die Client-ID auf der Twitch-Seite, trägt die App sie von selbst ein und startet die Anmeldung. Die Zwischenablage wird nur gelesen, solange dieses Fenster offen ist.' })),
 
+    onClose: () => clearInterval(timer),
     actions: [
       {
         label: 'Speichern und anmelden',
         primary: true,
-        action: async ({ close }) => {
-          if (!input.value.trim()) { toast('Bitte die Client-ID einfügen.', 'warn'); return false; }
-          const result = await window.ch.twitch.setClientId(input.value.trim());
-          if (!result?.ok) { toast(result?.error || 'Speichern fehlgeschlagen.', 'danger'); return false; }
-          close();
-          signIn(refresh);
-          return true;
+        action: async () => {
+          await saveAndSignIn();
+          return false;
         },
       },
     ],
   });
+
+  // Die Twitch-Seite gleich öffnen und auf die kopierte Client-ID achten.
+  window.ch.system.openExternal('https://dev.twitch.tv/console/apps/create');
+  timer = setInterval(async () => {
+    if (done) return;
+    const result = await window.ch.publish.detectClipboard('twitch');
+    const value = result?.ok ? result.data.clientId : null;
+    if (!value || input.value.trim() === value) return;
+    input.value = value;
+    mark.textContent = '✓ aus der Zwischenablage';
+    mark.style.color = 'var(--ok)';
+    setTimeout(saveAndSignIn, 700);
+  }, 900);
 }
 
 /**

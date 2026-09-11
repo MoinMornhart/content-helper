@@ -13,6 +13,7 @@ const { COLLECTIONS } = require('./store');
 const { saveManual } = require('./publish/credentials');
 const oauth = require('./publish/oauth');
 const { probe } = require('./publish/media-info');
+const { detectKeys } = require('./publish/key-detect');
 
 const MEDIA_FILTERS = [
   { name: 'Medien', extensions: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp3', 'wav', 'm4a'] },
@@ -358,6 +359,26 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   handle('publish:now', ({ postId }) => needPublisher().publishNow(postId));
   handle('publish:retry', ({ postId, platformId }) => needPublisher().retry(postId, platformId || null));
   handle('media:probe', ({ filePath }) => probe(filePath));
+
+  /**
+   * Einrichten: Kennungen in der Zwischenablage erkennen. Die Oberfläche
+   * bekommt nur, was wie eine Kennung dieser Plattform aussieht – nie den
+   * übrigen Inhalt der Zwischenablage.
+   */
+  handle('publish:detectClipboard', ({ provider }) => detectKeys(provider, clipboard.readText()));
+
+  /** Einrichten: heruntergeladene Datei mit den Kennungen einlesen (etwa Googles JSON). */
+  handle('publish:importFile', async ({ provider }) => {
+    const result = await dialog.showOpenDialog(getWindow(), {
+      title: 'Datei mit den Zugangsdaten wählen',
+      properties: ['openFile'],
+      filters: [{ name: 'JSON oder Text', extensions: ['json', 'txt'] }, { name: 'Alle Dateien', extensions: ['*'] }],
+    });
+    if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+    const file = result.filePaths[0];
+    if (fs.statSync(file).size > 1024 * 1024) throw new Error('Die Datei ist zu groß für Zugangsdaten.');
+    return { canceled: false, found: detectKeys(provider, fs.readFileSync(file, 'utf8')) };
+  });
 
   // ------------------------------------------------------------- Mehrere PCs
   handle('sync:status', () => sync.status());

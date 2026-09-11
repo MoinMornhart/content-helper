@@ -122,8 +122,10 @@ LinkedIn-Anmeldungen gelten 60 Tage. Die App erinnert eine Woche vorher; neu anm
 
 ## Kennungen in die App bringen
 
-**Zum Ausprobieren:** In der App unter *Einrichten → Veröffentlichen → Einrichten* eintragen. Die
-Werte bleiben auf diesem PC.
+**Zum Ausprobieren:** In der App unter *Einrichten → Veröffentlichen* auf **Einrichten** klicken. Die
+richtige Seite der Plattform öffnet sich, und was du dort kopierst, erkennt die App an seiner Form
+und trägt es selbst ein – bei Google geht auch die heruntergeladene JSON-Datei. Sobald alles da ist,
+startet direkt die Anmeldung. Die Werte bleiben auf diesem PC.
 
 **Für alle Nutzer:** Als Repository-Geheimnisse hinterlegen. Die Veröffentlichung auf GitHub schreibt
 sie ins Installationspaket (`scripts/write-credentials.js`); im öffentlichen Quelltext stehen sie nicht.

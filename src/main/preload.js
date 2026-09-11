@@ -65,6 +65,8 @@ contextBridge.exposeInMainWorld('ch', {
     tiktokInfo: () => invoke('publish:tiktokInfo'),
     now: (postId) => invoke('publish:now', { postId }),
     retry: (postId, platformId) => invoke('publish:retry', { postId, platformId }),
+    detectClipboard: (provider) => invoke('publish:detectClipboard', { provider }),
+    importFile: (provider) => invoke('publish:importFile', { provider }),
     onProgress: (handler) => on('publish:progress', handler),
     onChanged: (handler) => on('publish:changed', handler),
   },
