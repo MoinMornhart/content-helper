@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="360" viewBox="0 0 1280 360" role="img" aria-labelledby="t d">
+  <title id="t">Content Helper</title>
+  <desc id="d">Planen, veröffentlichen, verstehen – der Werkzeugkasten für Creator, komplett lokal auf dem eigenen PC.</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#14102a"/>
+      <stop offset="1" stop-color="#07050f"/>
+    </linearGradient>
+    <radialGradient id="glowA" cx="0.18" cy="0.15" r="0.55">
+      <stop offset="0" stop-color="#7c3aed" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowB" cx="0.86" cy="0.3" r="0.5">
+      <stop offset="0" stop-color="#ec4899" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="glowC" cx="0.55" cy="1.1" r="0.6">
+      <stop offset="0" stop-color="#2563eb" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#2563eb" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="logo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#ec4899"/>
+    </linearGradient>
+    <pattern id="grid" width="36" height="36" patternUnits="userSpaceOnUse">
+      <path d="M36 0H0V36" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <!-- Hintergrund -->
+  <rect width="1280" height="360" rx="22" fill="url(#bg)"/>
+  <rect width="1280" height="360" rx="22" fill="url(#glowA)"/>
+  <rect width="1280" height="360" rx="22" fill="url(#glowB)"/>
+  <rect width="1280" height="360" rx="22" fill="url(#glowC)"/>
+  <rect width="1280" height="360" rx="22" fill="url(#grid)"/>
+
+  <!-- App-Symbol: wie das echte Icon, abgerundetes Quadrat mit Wiedergabe-Dreieck -->
+  <g transform="translate(96 104)">
+    <rect width="152" height="152" rx="36" fill="url(#logo)"/>
+    <rect width="152" height="152" rx="36" fill="none" stroke="#ffffff" stroke-opacity="0.18"/>
+    <path d="M50 42 L112 76 L50 110 Z" fill="#ffffff" fill-opacity="0.97"/>
+    <circle cx="112" cy="46" r="11.5" fill="#ffffff" fill-opacity="0.95"/>
+  </g>
+
+  <!-- Titel -->
+  <text x="292" y="168" fill="#ffffff" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="68" font-weight="700" letter-spacing="-1.5">Content Helper</text>
+  <text x="294" y="214" fill="#d7cff0" font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="25" font-weight="400">Planen · Veröffentlichen · Verstehen – der Werkzeugkasten für Creator</text>
+
+  <!-- Merkmale als Kacheln -->
+  <g font-family="Segoe UI, -apple-system, Helvetica, Arial, sans-serif" font-size="16" font-weight="600">
+    <g transform="translate(294 246)">
+      <rect width="176" height="38" rx="19" fill="#ffffff" fill-opacity="0.09" stroke="#ffffff" stroke-opacity="0.14"/>
+      <text x="88" y="25" text-anchor="middle" fill="#f1eefb">🔒 komplett lokal</text>
+    </g>
+    <g transform="translate(482 246)">
+      <rect width="196" height="38" rx="19" fill="#ffffff" fill-opacity="0.09" stroke="#ffffff" stroke-opacity="0.14"/>
+      <text x="98" y="25" text-anchor="middle" fill="#f1eefb">🔑 ohne API-Schlüssel</text>
+    </g>
+    <g transform="translate(690 246)">
+      <rect width="162" height="38" rx="19" fill="#ffffff" fill-opacity="0.09" stroke="#ffffff" stroke-opacity="0.14"/>
+      <text x="81" y="25" text-anchor="middle" fill="#f1eefb">📺 20 Kanäle</text>
+    </g>
+    <g transform="translate(864 246)">
+      <rect width="208" height="38" rx="19" fill="#ffffff" fill-opacity="0.09" stroke="#ffffff" stroke-opacity="0.14"/>
+      <text x="104" y="25" text-anchor="middle" fill="#f1eefb">✨ Assistent inklusive</text>
+    </g>
+  </g>
+
+  <!-- Plattform-Punkte am Rand -->
+  <g transform="translate(1110 70)">
+    <circle cx="0" cy="0" r="9" fill="#ff0033"/>
+    <circle cx="30" cy="0" r="9" fill="#9146ff"/>
+    <circle cx="60" cy="0" r="9" fill="#25f4ee"/>
+    <circle cx="90" cy="0" r="9" fill="#e1306c"/>
+    <circle cx="0" cy="30" r="9" fill="#1d9bf0"/>
+    <circle cx="30" cy="30" r="9" fill="#0a66c2"/>
+    <circle cx="60" cy="30" r="9" fill="#0085ff"/>
+    <circle cx="90" cy="30" r="9" fill="#f59e0b"/>
+  </g>
+</svg>
