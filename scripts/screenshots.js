@@ -25,6 +25,7 @@ const { Updater } = require('../src/main/updater');
 const { Companion } = require('../src/main/companion');
 const { Connectors } = require('../src/main/connectors');
 const { CloudSync } = require('../src/main/sync/cloud-sync');
+const { createPublisher } = require('../src/main/publish');
 const { registerIpc } = require('../src/main/ipc');
 
 const OUT = path.join(__dirname, '..', 'docs', 'screenshots');
@@ -119,7 +120,16 @@ function seed(store) {
         { text: 'Beschreibung mit Links gefüllt', done: true },
       ],
     });
-    if (!composerId) composerId = post.id;
+    if (!composerId) {
+      composerId = post.id;
+      // Der Composer zeigt ein gewähltes Video und den Stand bei YouTube.
+      const video = store.insert('media', { name: 'basis-teil-2-keller.mp4', filePath: 'C:/Beispiel/basis-teil-2-keller.mp4', ext: 'mp4', size: 1843200000, tags: ['minecraft'] });
+      store.update('posts', post.id, {
+        mediaIds: [video.id],
+        publishOptions: { youtube: { privacy: 'public', madeForKids: false } },
+        delivery: { youtube: { state: 'scheduled', progress: 1, url: 'https://youtu.be/beispiel', scheduledFor: when.toISOString(), finishedAt: at(0, 9).toISOString() } },
+      });
+    }
   }
 
   // --- Ideen in allen Spalten
@@ -153,6 +163,18 @@ function seed(store) {
       ],
     },
   });
+  // Erfundene Anmeldungen zum Veröffentlichen – in diesem Lauf wird nichts hochgeladen.
+  store.saveSettings({
+    connections: {
+      ...store.settings().connections,
+      publishCredentials: {
+        google: { clientId: 'beispiel', clientSecret: 'beispiel' },
+        tiktok: { clientKey: 'beispiel', clientSecret: 'beispiel' },
+      },
+      youtubeUpload: { refreshToken: 'beispiel', channelTitle: 'Beispielkanal', connectedAt: at(-3, 10).toISOString() },
+      tiktokPublish: { refreshToken: 'beispiel', displayName: 'Beispielkanal', username: 'beispielkanal', connectedAt: at(-3, 10).toISOString() },
+    },
+  });
   store.flush();
 
   return { composerId };
@@ -176,7 +198,9 @@ app.whenReady().then(async () => {
   const companion = new Companion(store, scheduler, () => win);
   const connectors = new Connectors(store, () => win);
   const cloudSync = new CloudSync(store, () => win);
-  registerIpc(store, scheduler, updater, companion, connectors, cloudSync, () => win);
+  const publisher = createPublisher(store, { getWindow: () => win });
+  scheduler.setPublisher(publisher);
+  registerIpc(store, scheduler, updater, companion, connectors, cloudSync, () => win, publisher);
 
   // Aus scripts/ gestartet meldet Electron seine eigene Versionsnummer, weil dort
   // keine package.json liegt. Auf dem Bild soll die Nummer der App stehen.
@@ -245,6 +269,7 @@ app.whenReady().then(async () => {
   await shot('assistant', 'assistant');
   await shot('analytics', 'analytics');
   await shot('connections', 'connections');
+  await shot('publishing', 'publishing');
   await shot('ideas', 'ideas');
   await shot('settings', 'settings');
   await shot('devices', 'devices');

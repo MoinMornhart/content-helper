@@ -91,6 +91,92 @@ function request(url, options = {}) {
   });
 }
 
+/**
+ * Schickt einen Ausschnitt einer Datei als Anfragekörper – für Video-Uploads.
+ *
+ * Die Datei wird gestreamt statt geladen, damit auch mehrere Gigabyte kein
+ * Problem sind. Die Zeitgrenze gilt für Stillstand, nicht für die Gesamtdauer:
+ * Ein langer Upload über eine langsame Leitung ist in Ordnung, eine hängende
+ * Verbindung nicht.
+ *
+ * @param {string} url
+ * @param {{method?: string, headers?: object, filePath: string, start?: number, end?: number,
+ *          onProgress?: (sent: number) => void, idleTimeoutMs?: number}} options
+ *        `end` ist exklusiv; ohne Angabe bis zum Dateiende.
+ * @returns {Promise<{status: number, headers: object, text: string}>}
+ */
+function uploadFile(url, options) {
+  const fs = require('fs');
+  const { method = 'PUT', headers = {}, filePath, onProgress = () => {}, idleTimeoutMs = 60_000 } = options;
+  const size = fs.statSync(filePath).size;
+  const start = options.start ?? 0;
+  const end = Math.min(options.end ?? size, size);
+  // Für Formular-Uploads (multipart): Text vor und nach dem Dateiausschnitt.
+  const prefix = options.prefix ? Buffer.from(options.prefix) : Buffer.alloc(0);
+  const suffix = options.suffix ? Buffer.from(options.suffix) : Buffer.alloc(0);
+
+  return new Promise((resolve, reject) => {
+    let target;
+    try {
+      target = new URL(url);
+    } catch {
+      return reject(new Error(`Ungültige Adresse: ${url}`));
+    }
+    if (target.protocol !== 'https:') return reject(new Error('Nur verschlüsselte Verbindungen sind erlaubt.'));
+
+    const req = https.request({
+      method,
+      hostname: target.hostname,
+      path: `${target.pathname}${target.search}`,
+      headers: {
+        'User-Agent': 'ContentHelper (lokale Desktop-App)',
+        ...headers,
+        'Content-Length': prefix.length + Math.max(0, end - start) + suffix.length,
+      },
+      timeout: idleTimeoutMs,
+    }, (response) => {
+      let text = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk) => {
+        if (text.length < MAX_BYTES) text += chunk;
+      });
+      response.on('end', () => resolve({ status: response.statusCode, headers: response.headers, text }));
+    });
+
+    req.on('timeout', () => {
+      req.destroy();
+      reject(Object.assign(new Error('Die Verbindung ist beim Hochladen stehen geblieben.'), { retryable: true }));
+    });
+    req.on('error', (error) => {
+      reject(Object.assign(new Error(
+        error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN' ? 'Keine Verbindung zum Internet.' : error.message
+      ), { retryable: true }));
+    });
+
+    if (prefix.length) req.write(prefix);
+    if (end <= start) {
+      if (suffix.length) req.write(suffix);
+      return req.end();
+    }
+
+    let sent = 0;
+    const stream = fs.createReadStream(filePath, { start, end: end - 1, highWaterMark: 1024 * 1024 });
+    stream.on('data', (chunk) => {
+      sent += chunk.length;
+      onProgress(sent);
+    });
+    stream.on('error', (error) => {
+      req.destroy();
+      reject(new Error(`Die Videodatei ließ sich nicht lesen: ${error.message}`));
+    });
+    stream.on('end', () => {
+      if (suffix.length) req.write(suffix);
+      req.end();
+    });
+    stream.pipe(req, { end: false });
+  });
+}
+
 /** Anfrage mit JSON-Antwort. Wirft mit lesbarem Text, wenn etwas schiefgeht. */
 async function json(url, options = {}) {
   const response = await request(url, {
@@ -120,4 +206,4 @@ async function text(url, options = {}) {
   return response.text;
 }
 
-module.exports = { request, json, text };
+module.exports = { request, json, text, uploadFile };

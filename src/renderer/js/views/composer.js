@@ -11,7 +11,7 @@ import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
 import * as writing from '../lib/writing.js';
 import { active, platform, glyph, limitState, suggestedSlots, KIND_LABEL } from '../lib/platforms.js';
-import { toast, confirm, prompt, modal } from '../lib/ui.js';
+import { toast, confirm, prompt, modal, toggle } from '../lib/ui.js';
 
 export const title = 'Composer';
 export const lead = 'Einmal schreiben, überall passend ausspielen.';
@@ -23,11 +23,21 @@ let activeVariant = null;
 
 // ------------------------------------------------------------------ Speichern
 
+/**
+ * Was der Composer speichern darf. Zustand und Veröffentlichungsstand führt
+ * der Hauptprozess – ein veralteter Stand aus dem Editor darf ihn nie
+ * überschreiben, sonst ginge ein schon veröffentlichter Beitrag erneut raus.
+ */
+function editable(post) {
+  const { delivery, status, publishedAt, preNotifiedAt, dueNotifiedAt, ...rest } = post;
+  return rest;
+}
+
 function markDirty(rerender) {
   clearTimeout(saveTimer);
   saveTimer = setTimeout(async () => {
     if (draft.id) {
-      await store.patch('posts', draft.id, draft);
+      await store.patch('posts', draft.id, editable(draft));
     } else if (draft.title || draft.body) {
       const created = await store.add('posts', draft);
       draft = { ...created };
@@ -180,8 +190,346 @@ function openVariantEditor(post, platformId) {
 
 let previewHost = null;
 function rerenderPreviews() {
+  renderPublishRows?.();
   if (!previewHost) return;
   fill(previewHost, ...(draft.platforms || []).map((id) => preview(draft, id)));
+}
+
+// ------------------------------------------------------------------ Veröffentlichen
+
+let renderPublishRows = null;
+let publishListener = null;
+let progressListener = null;
+
+const VIDEO_EXT = ['mp4', 'mov', 'm4v', 'webm', 'mkv', 'avi'];
+const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp'];
+
+async function loadPublishInfo() {
+  try {
+    const result = await window.ch.publish.status();
+    return result?.ok ? result.data : { providers: [], primary: true };
+  } catch {
+    return { providers: [], primary: true };
+  }
+}
+
+/** Die Anbindung, die diese Plattform automatisch bedient – falls angemeldet. */
+function providerFor(info, platformId) {
+  return (info.providers || []).find((provider) => provider.connected && provider.platformIds.includes(platformId)) || null;
+}
+
+function scheduleNote(post, info) {
+  const auto = (post.platforms || []).filter((id) => providerFor(info, id));
+  const manual = (post.platforms || []).filter((id) => !providerFor(info, id));
+  const names = (ids) => ids.map((id) => platform(id)?.name || id).join(', ');
+  if (auto.length && !manual.length) return `Zum Termin geht der Beitrag auf ${names(auto)} von selbst raus.`;
+  if (auto.length) return `${names(auto)}: geht von selbst raus. ${names(manual)}: Zum Termin meldet sich die App und legt den Text in die Zwischenablage.`;
+  return 'Für diese Kanäle besteht keine Anmeldung zum Veröffentlichen – zum Termin meldet sich die App und legt den Text in die Zwischenablage. Anmelden kannst du dich unter „Veröffentlichen“.';
+}
+
+const extOf = (entry) => String(entry?.ext || entry?.filePath?.split('.').pop() || '').toLowerCase();
+const megabytes = (bytes) => `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 100 ? 0 : 1).replace('.', ',')} MB`;
+
+function currentVideo() {
+  return (draft.mediaIds || []).map((id) => store.byId('media', id)).find((entry) => entry && VIDEO_EXT.includes(extOf(entry))) || null;
+}
+
+function currentThumbnail() {
+  return (draft.thumbnailId && store.byId('media', draft.thumbnailId)) || null;
+}
+
+/** Datei auswählen und in die Mediathek aufnehmen (oder den vorhandenen Eintrag nehmen). */
+async function pickFile(kinds) {
+  const result = await window.ch.media.pick();
+  const files = result?.ok ? result.data : [];
+  const fileInfo = files.find((entry) => kinds.includes(entry.ext));
+  if (!fileInfo) {
+    if (files.length) toast(kinds === VIDEO_EXT ? 'Das ist keine Videodatei.' : 'Das ist kein Bild (JPG, PNG oder WebP).', 'warn');
+    return null;
+  }
+  const existing = store.all('media').find((entry) => entry.filePath === fileInfo.filePath);
+  return existing || store.add('media', { ...fileInfo, tags: [] });
+}
+
+function mediaCard(refresh) {
+  const host = h('div.col.gap-sm');
+
+  const render = () => {
+    const video = currentVideo();
+    const thumb = currentThumbnail();
+    const meta = h('span.text-xs.faint', { text: video ? megabytes(video.size || 0) : '' });
+
+    if (video) {
+      window.ch.media.probe(video.filePath).then((result) => {
+        const info = result?.ok ? result.data : null;
+        if (!info?.durationSec) return;
+        const parts = [megabytes(video.size || 0), fmt.duration(info.durationSec)];
+        if (info.width && info.height) parts.push(`${info.width}×${info.height}${info.height > info.width ? ' · hochkant' : ''}`);
+        meta.textContent = parts.join(' · ');
+      });
+    }
+
+    fill(host,
+      h('div.video-pick', null,
+        h('div.video-pick__icon', { text: video ? '▶' : '＋' }),
+        h('div.grow', null,
+          h('div.strong.truncate', { text: video ? video.name : 'Noch kein Video gewählt' }),
+          video ? meta : h('span.text-xs.faint', { text: 'Wird zum Termin automatisch hochgeladen, wo du angemeldet bist.' })),
+        h('button.btn.btn--sm', {
+          text: video ? 'Anderes Video' : 'Video wählen',
+          onClick: async () => {
+            const entry = await pickFile(VIDEO_EXT);
+            if (!entry) return;
+            const others = (draft.mediaIds || []).filter((id) => !VIDEO_EXT.includes(extOf(store.byId('media', id))));
+            draft.mediaIds = [entry.id, ...others];
+            render();
+            markDirty(refresh);
+          },
+        }),
+        video
+          ? h('button.btn.btn--sm.btn--ghost', {
+              text: '✕',
+              title: 'Video entfernen',
+              onClick: () => {
+                draft.mediaIds = (draft.mediaIds || []).filter((id) => id !== video.id);
+                render();
+                markDirty(refresh);
+              },
+            })
+          : null),
+      h('div.row.gap-sm', null,
+        h('span.text-sm.muted.grow', { text: thumb ? `Thumbnail: ${thumb.name}` : 'Eigenes Thumbnail (für YouTube, optional)' }),
+        h('button.btn.btn--sm.btn--ghost', {
+          text: thumb ? 'Ändern' : 'Bild wählen',
+          onClick: async () => {
+            const entry = await pickFile(IMAGE_EXT);
+            if (!entry) return;
+            draft.thumbnailId = entry.id;
+            render();
+            markDirty(refresh);
+          },
+        }),
+        thumb
+          ? h('button.btn.btn--sm.btn--ghost', { text: '✕', onClick: () => { draft.thumbnailId = null; render(); markDirty(refresh); } })
+          : null));
+  };
+  render();
+
+  return card('Video', { hint: 'wird automatisch hochgeladen' }, host);
+}
+
+// Beschriftungen der TikTok-Sichtbarkeiten – TikTok liefert nur die Kennungen.
+const TIKTOK_PRIVACY = {
+  PUBLIC_TO_EVERYONE: 'Alle',
+  MUTUAL_FOLLOW_FRIENDS: 'Freunde (gegenseitig folgen)',
+  FOLLOWER_OF_CREATOR: 'Follower',
+  SELF_ONLY: 'Nur ich',
+};
+
+function optionsOf(platformId) {
+  return draft.publishOptions?.[platformId] || {};
+}
+
+function setOption(platformId, patch, refresh) {
+  draft.publishOptions = { ...(draft.publishOptions || {}), [platformId]: { ...optionsOf(platformId), ...patch } };
+  markDirty(refresh);
+}
+
+function youtubeOptions(platformId, refresh) {
+  const options = optionsOf(platformId);
+  return h('div.grid.grid-2', { style: { gap: '10px' } },
+    h('label.field', null,
+      h('span.field__label', { text: 'Sichtbarkeit' }),
+      h('select.select', { onChange: (event) => setOption(platformId, { privacy: event.target.value }, refresh) },
+        ...[['public', 'Öffentlich (zum Termin)'], ['unlisted', 'Nicht gelistet'], ['private', 'Privat']].map(([value, label]) =>
+          h('option', { value, text: label, selected: (options.privacy || 'public') === value })))),
+    h('label.field', null,
+      h('span.field__label', { text: 'Für Kinder gemacht?' }),
+      h('select.select', { onChange: (event) => setOption(platformId, { madeForKids: event.target.value === 'yes' }, refresh) },
+        h('option', { value: 'no', text: 'Nein', selected: !options.madeForKids }),
+        h('option', { value: 'yes', text: 'Ja', selected: Boolean(options.madeForKids) }))));
+}
+
+/**
+ * TikTok schreibt vor, was vor dem Posten zu sehen sein muss: Konto,
+ * Sichtbarkeit ohne Vorauswahl, Interaktionen, werbliche Kennzeichnung und den
+ * Zustimmungstext.
+ */
+function tiktokOptions(refresh) {
+  const host = h('div.col.gap-sm', null, h('div.text-xs.faint', { text: 'Lade die Einstellungen deines TikTok-Kontos …' }));
+
+  window.ch.publish.tiktokInfo().then((result) => {
+    if (!result?.ok) {
+      fill(host, h('div.text-xs', { style: { color: 'var(--danger)' }, text: `TikTok antwortet nicht: ${result?.error || 'unbekannt'}` }));
+      return;
+    }
+    const info = result.data || {};
+    const options = optionsOf('tiktok');
+    const commercialHost = h('div.col.gap-xs');
+
+    const renderCommercial = () => {
+      const current = optionsOf('tiktok');
+      fill(commercialHost,
+        current.commercial
+          ? h('div.col.gap-xs', { style: { paddingLeft: '8px' } },
+              toggle('Eigene Marke (wird als „Werbeinhalt“ gekennzeichnet)', Boolean(current.yourBrand), (value) => { setOption('tiktok', { yourBrand: value }, refresh); renderCommercial(); }),
+              toggle('Bezahlte Partnerschaft (wird als „Bezahlte Partnerschaft“ gekennzeichnet)', Boolean(current.brandedContent), (value) => { setOption('tiktok', { brandedContent: value }, refresh); renderCommercial(); }))
+          : null,
+        h('p.text-xs.faint', {
+          text: `Mit dem Posten stimmst du TikToks Music Usage Confirmation${current.commercial && current.brandedContent ? ' und der Branded Content Policy' : ''} zu.`,
+        }));
+    };
+    renderCommercial();
+
+    fill(host,
+      h('div.text-sm', null, h('span.muted', { text: 'Wird gepostet als ' }), h('span.strong', { text: info.creator_nickname || info.creator_username || 'dein Konto' })),
+      h('label.field', null,
+        h('span.field__label', { text: 'Wer darf das Video sehen?' }),
+        h('select.select', { onChange: (event) => setOption('tiktok', { privacy: event.target.value || null }, refresh) },
+          h('option', { value: '', text: 'Bitte wählen', selected: !options.privacy }),
+          ...(info.privacy_level_options || []).map((value) =>
+            h('option', { value, text: TIKTOK_PRIVACY[value] || value, selected: options.privacy === value })))),
+      toggle(info.comment_disabled ? 'Kommentare (im Konto abgeschaltet)' : 'Kommentare erlauben', Boolean(options.allowComments) && !info.comment_disabled, (value) => setOption('tiktok', { allowComments: value }, refresh)),
+      toggle(info.duet_disabled ? 'Duette (im Konto abgeschaltet)' : 'Duette erlauben', Boolean(options.allowDuet) && !info.duet_disabled, (value) => setOption('tiktok', { allowDuet: value }, refresh)),
+      toggle(info.stitch_disabled ? 'Stitches (im Konto abgeschaltet)' : 'Stitches erlauben', Boolean(options.allowStitch) && !info.stitch_disabled, (value) => setOption('tiktok', { allowStitch: value }, refresh)),
+      toggle('Werblicher Inhalt', Boolean(options.commercial), (value) => { setOption('tiktok', { commercial: value }, refresh); renderCommercial(); }),
+      commercialHost,
+      info.max_video_post_duration_sec
+        ? h('p.text-xs.faint', { text: `Dein Konto erlaubt Videos bis ${fmt.duration(info.max_video_post_duration_sec)}.` })
+        : null);
+
+    // Abgeschaltete Schalter sperren, wie TikTok es verlangt.
+    host.querySelectorAll('label.switch').forEach((label, index) => {
+      const disabled = [info.comment_disabled, info.duet_disabled, info.stitch_disabled][index];
+      if (disabled) {
+        label.querySelector('input').disabled = true;
+        label.style.opacity = '0.5';
+      }
+    });
+  });
+
+  return host;
+}
+
+const STATE_LABEL = {
+  waiting: 'wartet auf den Termin',
+  uploading: 'wird hochgeladen',
+  processing: 'wird von der Plattform verarbeitet',
+  scheduled: 'hochgeladen – geht zum Termin von selbst live',
+  published: 'veröffentlicht',
+  retry: 'neuer Versuch folgt',
+  failed: 'fehlgeschlagen',
+  cancelled: 'bei der Plattform zurückgezogen',
+};
+
+function deliveryLine(post, platformId, refresh) {
+  const delivery = post?.delivery?.[platformId];
+  if (!delivery) return null;
+  const share = Math.round((delivery.progress || 0) * 100);
+  const bar = h('span', { style: { width: `${['published', 'scheduled'].includes(delivery.state) ? 100 : share}%` } });
+
+  return h(`div.delivery.is-${delivery.state}`, { dataset: { delivery: `${post.id}:${platformId}` } },
+    h('div.row.between', null,
+      h('span.strong', { text: STATE_LABEL[delivery.state] || delivery.state }),
+      delivery.state === 'uploading' ? h('span.text-xs.faint.delivery__share', { text: `${share} %` }) : null),
+    ['uploading', 'processing', 'published', 'scheduled', 'failed'].includes(delivery.state) ? h('div.delivery__bar', null, bar) : null,
+    delivery.message ? h('div.text-xs', { style: { color: delivery.state === 'failed' ? 'var(--danger)' : 'var(--text-muted, inherit)' }, text: delivery.message }) : null,
+    delivery.state === 'retry' && delivery.nextTryAt ? h('div.text-xs.faint', { text: `Nächster Versuch ${fmt.relative(delivery.nextTryAt)}.` }) : null,
+    h('div.row.gap-sm', null,
+      delivery.url ? h('button.btn.btn--sm.btn--ghost', { text: 'Ansehen', onClick: () => window.ch.system.openExternal(delivery.url) }) : null,
+      ['failed', 'retry'].includes(delivery.state)
+        ? h('button.btn.btn--sm', {
+            text: 'Erneut versuchen',
+            onClick: async () => {
+              const result = await window.ch.publish.retry(post.id, platformId);
+              if (!result?.ok) return toast(result?.error || 'Das ging nicht.', 'danger');
+              await store.reload('posts');
+              toast('Wird erneut versucht.', 'ok');
+              refresh();
+            },
+          })
+        : null));
+}
+
+function publishCard(info, { refresh, goto }) {
+  const host = h('div.col.gap-sm');
+
+  renderPublishRows = () => {
+    const post = draft.id ? store.byId('posts', draft.id) : null;
+    const targets = draft.platforms || [];
+    const automatic = targets.filter((id) => providerFor(info, id));
+
+    fill(host,
+      targets.length
+        ? null
+        : h('p.text-sm.muted', { text: 'Wähle links mindestens einen Kanal.' }),
+      ...targets.map((platformId) => {
+        const provider = providerFor(info, platformId);
+        const p = platform(platformId);
+        return h('div.publish-row', null,
+          h('div.publish-row__head', null,
+            glyph(platformId, 18),
+            h('span.strong.grow', { text: p?.name || platformId }),
+            provider
+              ? h('span.badge.badge--ok', { text: provider.nativeSchedule ? 'automatisch · plant selbst' : 'automatisch' })
+              : h('span.badge', { text: 'selbst posten' })),
+          provider && platformId.startsWith('youtube') ? youtubeOptions(platformId, refresh) : null,
+          provider && platformId === 'tiktok' ? tiktokOptions(refresh) : null,
+          provider && platformId === 'instagram_reels'
+            ? toggle('Reel auch im Profil-Raster zeigen', optionsOf(platformId).shareToFeed !== false, (value) => setOption(platformId, { shareToFeed: value }, refresh))
+            : null,
+          !provider && info.providers?.some((entry) => entry.platformIds.includes(platformId))
+            ? h('button.btn.btn--sm.btn--ghost', { text: `Bei ${p?.name || platformId} anmelden`, onClick: () => goto('publishing') })
+            : null,
+          deliveryLine(post, platformId, refresh));
+      }),
+      // Nur anbieten, solange noch etwas offen ist – nicht, wenn alles schon oben liegt.
+      automatic.some((id) => !['scheduled', 'published', 'uploading', 'processing'].includes(post?.delivery?.[id]?.state))
+        && draft.id && !['published', 'publishing'].includes(post?.status)
+        ? h('button.btn.btn--sm', {
+            text: 'Jetzt veröffentlichen',
+            onClick: async () => {
+              if (!(await confirm({
+                title: 'Jetzt veröffentlichen?',
+                message: `Der Beitrag geht sofort auf ${automatic.map((id) => platform(id)?.name || id).join(', ')} raus – ohne auf den Termin zu warten.`,
+                confirmLabel: 'Jetzt veröffentlichen',
+              }))) return;
+              clearTimeout(saveTimer);
+              await store.patch('posts', draft.id, editable(draft));
+              const result = await window.ch.publish.now(draft.id);
+              if (!result?.ok) return toast(result?.error || 'Das ging nicht.', 'danger', 7000);
+              await store.reload('posts');
+              toast('Geht jetzt raus.', 'ok');
+              refresh();
+            },
+          })
+        : null,
+      info.primary === false
+        ? h('p.text-xs.faint', { text: 'Veröffentlicht wird auf deinem anderen PC – dem, der auch YouTube und Twitch abholt.' })
+        : null);
+  };
+  renderPublishRows();
+
+  // Live-Stand vom Hauptprozess, ohne den ganzen Editor neu zu zeichnen.
+  if (publishListener) window.removeEventListener('ch:publish-changed', publishListener);
+  if (progressListener) window.removeEventListener('ch:publish-progress', progressListener);
+  publishListener = (event) => {
+    if (!host.isConnected) return;
+    if (event.detail?.postId === draft?.id) renderPublishRows();
+  };
+  progressListener = (event) => {
+    const { postId, platformId, progress } = event.detail || {};
+    const node = host.querySelector(`[data-delivery="${postId}:${platformId}"]`);
+    if (!node) return;
+    const bar = node.querySelector('.delivery__bar > span');
+    if (bar) bar.style.width = `${Math.round(progress * 100)}%`;
+    const label = node.querySelector('.delivery__share');
+    if (label) label.textContent = `${Math.round(progress * 100)} %`;
+  };
+  window.addEventListener('ch:publish-changed', publishListener);
+  window.addEventListener('ch:publish-progress', progressListener);
+
+  return card('Veröffentlichen', { hint: 'je Kanal' }, host);
 }
 
 // ------------------------------------------------------------------ Ansicht
@@ -197,6 +545,7 @@ export async function render({ params, goto, setActions, refresh }) {
   activeVariant = null;
 
   const isNew = !draft.id;
+  const publishInfo = await loadPublishInfo();
 
   // ---------------------------------------------------------------- Kopfzeile
   setActions(
@@ -205,7 +554,7 @@ export async function render({ params, goto, setActions, refresh }) {
       text: 'Speichern',
       onClick: async () => {
         clearTimeout(saveTimer);
-        if (draft.id) await store.patch('posts', draft.id, draft);
+        if (draft.id) await store.patch('posts', draft.id, editable(draft));
         else draft = await store.add('posts', draft);
         toast('Gespeichert.', 'ok');
         refresh();
@@ -331,7 +680,7 @@ export async function render({ params, goto, setActions, refresh }) {
                     glyph(slot.id, 14),
                     h('span', { text: `${fmt.date(slot.when, 'day')} ${fmt.time(slot.when)}` })))))
           : null,
-        h('p.text-xs.faint', { text: 'Zum Termin meldet sich die App, legt den Text in die Zwischenablage und öffnet auf Wunsch die Upload-Seite. Veröffentlicht wird nichts ohne dich.' })),
+        h('p.text-xs.faint', { text: scheduleNote(draft, publishInfo) })),
       actions: [
         {
           label: 'Termin entfernen',
@@ -351,8 +700,17 @@ export async function render({ params, goto, setActions, refresh }) {
             draft.scheduledAt = new Date(input.value).toISOString();
             draft.status = 'scheduled';
             draft.preNotifiedAt = null;
-            if (draft.id) await store.patch('posts', draft.id, draft);
-            else draft = await store.add('posts', draft);
+            if (draft.id) {
+              // Fehlgeschlagenes oder Zurückgezogenes darf zum neuen Termin erneut rausgehen.
+              const current = store.byId('posts', draft.id)?.delivery || {};
+              const delivery = Object.fromEntries(Object.entries(current).map(([id, entry]) => [
+                id,
+                ['failed', 'retry', 'cancelled'].includes(entry.state) ? { ...entry, state: 'waiting', attempts: 0, nextTryAt: null, message: null } : entry,
+              ]));
+              await store.patch('posts', draft.id, { ...editable(draft), status: 'scheduled', preNotifiedAt: null, delivery });
+            } else {
+              draft = await store.add('posts', draft);
+            }
             toast(`Eingeplant für ${fmt.dateTime(draft.scheduledAt)}.`, 'ok');
             refresh();
           },
@@ -444,6 +802,8 @@ export async function render({ params, goto, setActions, refresh }) {
             })),
           h('label.field', null, h('span.field__label', { text: 'Hashtags' }), tagsInput))),
 
+      mediaCard(refresh),
+
       card('Prüfung', { hint: 'aktualisiert sich beim Tippen' }, checksHost),
 
       card('Kanäle', { hint: `${(draft.platforms || []).length} ausgewählt` },
@@ -463,7 +823,7 @@ export async function render({ params, goto, setActions, refresh }) {
                   onClick: async () => {
                     draft.status = 'published';
                     draft.publishedAt = new Date().toISOString();
-                    if (draft.id) await store.patch('posts', draft.id, draft);
+                    if (draft.id) await store.patch('posts', draft.id, { status: 'published', publishedAt: draft.publishedAt });
                     toast('Abgehakt. Trag später die Zahlen nach, dann lernt der Coach mit.', 'ok');
                     refresh();
                   },
@@ -472,6 +832,8 @@ export async function render({ params, goto, setActions, refresh }) {
               h('p.text-sm.muted', { text: 'Noch kein Termin gesetzt.' }),
               h('button.btn.btn--primary.btn--block', { text: 'Termin festlegen', onClick: openScheduler })))
       ,
+      publishCard(publishInfo, { refresh, goto }),
+
       card('Format', { hint: 'für die Auswertung' },
         h('select.select', {
           onChange: (event) => { draft.format = event.target.value; markDirty(refresh); },

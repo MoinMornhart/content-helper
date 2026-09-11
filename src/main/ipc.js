@@ -10,6 +10,9 @@ const fs = require('fs');
 const path = require('path');
 const { ipcMain, dialog, shell, clipboard, Notification, app, nativeImage } = require('electron');
 const { COLLECTIONS } = require('./store');
+const { saveManual } = require('./publish/credentials');
+const oauth = require('./publish/oauth');
+const { probe } = require('./publish/media-info');
 
 const MEDIA_FILTERS = [
   { name: 'Medien', extensions: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp3', 'wav', 'm4a'] },
@@ -33,8 +36,9 @@ function assertCollection(name) {
  * @param {import('./connectors').Connectors} connectors
  * @param {import('./sync/cloud-sync').CloudSync} sync
  * @param {() => Electron.BrowserWindow|null} getWindow
+ * @param {import('./publish/publisher').Publisher|null} publisher
  */
-function registerIpc(store, scheduler, updater, companion, connectors, sync, getWindow) {
+function registerIpc(store, scheduler, updater, companion, connectors, sync, getWindow, publisher = null) {
   const handle = (channel, fn) => {
     ipcMain.handle(channel, async (_event, payload = {}) => {
       try {
@@ -313,6 +317,47 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
     }
     throw new Error(`Unbekannte Verbindung: ${name}`);
   });
+
+  // ------------------------------------------------------------- Veröffentlichen
+  const needPublisher = () => {
+    if (!publisher) throw new Error('Das Veröffentlichen ist nicht gestartet.');
+    return publisher;
+  };
+  const publishStatus = () => (publisher
+    ? { ...publisher.status(), meta: publisher.meta.status() }
+    : { primary: true, busy: null, providers: [], meta: null });
+  /** Instagram und Facebook teilen sich die Meta-Anmeldung. */
+  const signInTarget = (id) => {
+    const target = id === 'meta' ? needPublisher().meta : needPublisher().byId[id];
+    if (!target) throw new Error(`Unbekannte Plattform: ${id}`);
+    return target;
+  };
+
+  handle('publish:status', () => publishStatus());
+  handle('publish:setup', ({ provider, values }) => {
+    saveManual(store, provider, values || {});
+    return publishStatus();
+  });
+  handle('publish:signIn', async ({ id }) => {
+    await signInTarget(id).signIn();
+    return publishStatus();
+  });
+  handle('publish:cancelSignIn', ({ id }) => {
+    oauth.cancel(id);
+    return true;
+  });
+  handle('publish:signOut', async ({ id }) => {
+    await signInTarget(id).signOut();
+    return publishStatus();
+  });
+  handle('publish:selectPage', ({ pageId }) => {
+    needPublisher().meta.selectPage(pageId);
+    return publishStatus();
+  });
+  handle('publish:tiktokInfo', () => needPublisher().byId.tiktok.creatorInfo());
+  handle('publish:now', ({ postId }) => needPublisher().publishNow(postId));
+  handle('publish:retry', ({ postId, platformId }) => needPublisher().retry(postId, platformId || null));
+  handle('media:probe', ({ filePath }) => probe(filePath));
 
   // ------------------------------------------------------------- Mehrere PCs
   handle('sync:status', () => sync.status());

@@ -33,6 +33,7 @@ const NAV = [
   ] },
   { group: 'Einrichten', items: [
     { id: 'connections', label: 'Verbindungen', icon: '⇄' },
+    { id: 'publishing', label: 'Veröffentlichen', icon: '➚' },
     { id: 'channels', label: 'Kanäle', icon: '⬡' },
     { id: 'mobile', label: 'Handy', icon: '▯' },
     { id: 'devices', label: 'PCs verbinden', icon: '⧉' },
@@ -325,6 +326,19 @@ async function main() {
   window.ch.sync.onChanged(async () => {
     await store.reload();
     if (!['composer', 'scripts'].includes(state.view)) goto(state.view, state.params);
+  });
+
+  // Automatisches Veröffentlichen: Zustandswechsel neu zeichnen, Fortschritt nur
+  // an die offene Ansicht weiterreichen (sonst flackerte alles bei jedem Prozent).
+  window.ch.publish.onChanged(async (payload) => {
+    await store.reload('posts');
+    window.dispatchEvent(new CustomEvent('ch:publish-changed', { detail: payload }));
+    if (payload?.delivery?.state !== 'uploading' && ['dashboard', 'queue', 'calendar', 'publishing'].includes(state.view)) {
+      goto(state.view, state.params);
+    }
+  });
+  window.ch.publish.onProgress((payload) => {
+    window.dispatchEvent(new CustomEvent('ch:publish-progress', { detail: payload }));
   });
 
   // Neue Zahlen aus einer Verbindung sollen sofort erscheinen.

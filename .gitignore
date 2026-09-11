@@ -27,3 +27,6 @@ Desktop.ini
 .env.*
 !.env.example
 secrets.json
+
+# Kennungen der Plattform-Anwendungen – kommen in CI aus den Repository-Geheimnissen
+src/main/publish/credentials.local.json

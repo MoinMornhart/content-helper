@@ -17,6 +17,7 @@ const { Updater } = require('./updater');
 const { Companion } = require('./companion');
 const { Connectors } = require('./connectors');
 const { CloudSync } = require('./sync/cloud-sync');
+const { createPublisher } = require('./publish');
 
 const isDev = process.argv.includes('--dev');
 const startHidden = process.argv.includes('--hidden');
@@ -29,6 +30,7 @@ let updater = null;
 let companion = null;
 let connectors = null;
 let cloudSync = null;
+let publisher = null;
 let quitting = false;
 
 const getWindow = () => mainWindow;
@@ -209,7 +211,16 @@ app.whenReady().then(() => {
   connectors = new Connectors(store, getWindow);
   cloudSync = new CloudSync(store, getWindow);
 
-  registerIpc(store, scheduler, updater, companion, connectors, cloudSync, getWindow);
+  // Veröffentlicht nur der PC, der auch abholt – sonst ginge bei mehreren
+  // verbundenen PCs jeder Beitrag doppelt raus.
+  publisher = createPublisher(store, {
+    getWindow,
+    isPrimary: () => connectors.fetchesHere(),
+    notify: (title, body) => scheduler.notify(title, body),
+  });
+  scheduler.setPublisher(publisher);
+
+  registerIpc(store, scheduler, updater, companion, connectors, cloudSync, getWindow, publisher);
   createWindow();
   buildMenu();
   buildTray();
@@ -217,6 +228,7 @@ app.whenReady().then(() => {
   updater.start();
   connectors.start();
   cloudSync.start();
+  publisher.start();
 
   // Der Handy-Begleiter startet nur, wenn er zuletzt aktiv war.
   if (store.settings().companionEnabled) {
@@ -235,6 +247,7 @@ app.on('before-quit', () => {
   companion?.stop();
   connectors?.stop();
   cloudSync?.stop();
+  publisher?.stop();
   store?.flush();
 });
 

@@ -52,6 +52,21 @@ contextBridge.exposeInMainWorld('ch', {
     reveal: (filePath) => invoke('media:reveal', { filePath }),
     open: (filePath) => invoke('media:open', { filePath }),
     thumbnail: (filePath) => invoke('media:thumbnail', { filePath }),
+    probe: (filePath) => invoke('media:probe', { filePath }),
+  },
+
+  publish: {
+    status: () => invoke('publish:status'),
+    setup: (provider, values) => invoke('publish:setup', { provider, values }),
+    signIn: (id) => invoke('publish:signIn', { id }),
+    cancelSignIn: (id) => invoke('publish:cancelSignIn', { id }),
+    signOut: (id) => invoke('publish:signOut', { id }),
+    selectPage: (pageId) => invoke('publish:selectPage', { pageId }),
+    tiktokInfo: () => invoke('publish:tiktokInfo'),
+    now: (postId) => invoke('publish:now', { postId }),
+    retry: (postId, platformId) => invoke('publish:retry', { postId, platformId }),
+    onProgress: (handler) => on('publish:progress', handler),
+    onChanged: (handler) => on('publish:changed', handler),
   },
 
   files: {

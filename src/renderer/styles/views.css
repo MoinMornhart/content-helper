@@ -70,6 +70,8 @@
 .status-dot.is-due       { background: var(--danger); animation: pulse 1.6s infinite; }
 .status-dot.is-published { background: var(--ok); }
 .status-dot.is-missed    { background: var(--danger); }
+.status-dot.is-publishing { background: var(--accent); animation: pulse 1.6s infinite; }
+.status-dot.is-failed     { background: var(--danger); }
 
 @keyframes pulse { 50% { opacity: 0.35; } }
 
@@ -439,3 +441,56 @@
   transition: border-color var(--speed);
 }
 .channel-row:hover { border-color: var(--border-strong); }
+
+/* ------------------------------------------------------------------ Veröffentlichen */
+
+.publish-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.publish-row__head { display: flex; align-items: center; gap: 10px; }
+
+.delivery { display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; padding-top: 4px; border-top: 1px solid var(--border); }
+.delivery__bar { height: 6px; border-radius: 999px; background: var(--surface-3); overflow: hidden; }
+.delivery__bar > span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.4s ease; }
+.delivery.is-published .delivery__bar > span,
+.delivery.is-scheduled .delivery__bar > span { background: var(--ok); }
+.delivery.is-failed .delivery__bar > span { background: var(--danger); }
+.delivery.is-published .strong,
+.delivery.is-scheduled .strong { color: var(--ok); }
+.delivery.is-failed .strong { color: var(--danger); }
+
+.provider-card__account { display: flex; align-items: center; gap: 10px; }
+.provider-card__avatar {
+  width: 34px;
+  height: 34px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--surface-3);
+}
+
+.video-pick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius);
+}
+.video-pick__icon {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 18px;
+}

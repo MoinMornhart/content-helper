@@ -9,8 +9,9 @@
  * Desktop-Benachrichtigung gemeldet; auf Wunsch landet der fertige Text direkt
  * in der Zwischenablage und die Upload-Seite oeffnet sich.
  *
- * Bewusst ohne Plattform-API: der Scheduler erinnert und bereitet vor,
- * veroeffentlicht aber nichts hinter dem Ruecken des Nutzers.
+ * Kanäle mit Anmeldung zum Veröffentlichen übernimmt der Publisher – dort
+ * geht der Beitrag von selbst raus. Der Scheduler kümmert sich nur noch um die
+ * Kanäle, bei denen die Plattform kein automatisches Posten zulässt.
  */
 
 const { Notification, clipboard, shell } = require('electron');
@@ -27,9 +28,24 @@ class Scheduler {
     this.store = store;
     this.getWindow = getWindow;
     this.timer = null;
+    this.publisher = null;
     this.platforms = new Map(
       require('../shared/platforms.json').map((platform) => [platform.id, platform])
     );
+  }
+
+  /** @param {import('./publish/publisher').Publisher} publisher */
+  setPublisher(publisher) {
+    this.publisher = publisher;
+  }
+
+  /** Kanäle, bei denen der Nutzer selbst posten muss. */
+  manualTargets(post) {
+    return this.publisher ? this.publisher.manualTargets(post) : (post.platforms || []);
+  }
+
+  automaticTargets(post) {
+    return this.publisher ? this.publisher.automaticTargets(post) : [];
   }
 
   start() {
@@ -54,6 +70,20 @@ class Scheduler {
       if (!post.scheduledAt) continue;
       const due = new Date(post.scheduledAt).getTime();
       if (Number.isNaN(due)) continue;
+
+      // Geht komplett von selbst raus: nur vorwarnen, den Rest macht der Publisher.
+      if (this.automaticTargets(post).length && !this.manualTargets(post).length) {
+        if (post.status === 'scheduled' && due > now && due - now <= lead && !post.preNotifiedAt) {
+          this.store.update('posts', post.id, { preNotifiedAt: new Date().toISOString() });
+          this.notify(
+            `Geht gleich raus: ${this.titleOf(post)}`,
+            `In ${Math.max(1, Math.round((due - now) / 60000))} Minuten automatisch auf ${this.platformNames(post)}.`,
+            settings
+          );
+          changed.push(post.id);
+        }
+        continue;
+      }
 
       if (post.status === 'scheduled') {
         if (due <= now) {
@@ -81,19 +111,26 @@ class Scheduler {
 
   /** Faelliger Beitrag: benachrichtigen, vorbereiten, Fenster nach vorn holen. */
   onDue(post, settings) {
-    const platform = this.platforms.get(post.platforms?.[0]);
+    // Nur für die Kanäle, die nicht ohnehin von selbst rausgehen.
+    const manual = this.manualTargets(post);
+    const automatic = this.automaticTargets(post);
+    const platform = this.platforms.get(manual[0]);
 
     if (settings.copyToClipboardOnDue) {
-      const text = this.renderForClipboard(post, post.platforms?.[0]);
+      const text = this.renderForClipboard(post, manual[0]);
       if (text) clipboard.writeText(text);
     }
     if (settings.autoOpenUploadPage && platform?.uploadUrl) {
       shell.openExternal(platform.uploadUrl).catch(() => {});
     }
 
+    const names = (ids) => ids.map((id) => this.platforms.get(id)?.name || id).join(', ');
     this.notify(
       `Jetzt faellig: ${this.titleOf(post)}`,
-      `${this.platformNames(post)}${settings.copyToClipboardOnDue ? ' – Text liegt in der Zwischenablage.' : ''}`,
+      [
+        automatic.length ? `${names(automatic)} geht automatisch raus.` : null,
+        manual.length ? `Selbst posten: ${names(manual)}${settings.copyToClipboardOnDue ? ' – Text liegt in der Zwischenablage.' : ''}` : null,
+      ].filter(Boolean).join(' '),
       settings
     );
 

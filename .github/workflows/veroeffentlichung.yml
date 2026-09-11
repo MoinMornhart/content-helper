@@ -55,6 +55,25 @@ jobs:
       - name: Abgleich zwischen PCs prüfen
         run: node scripts/test-sync.js
 
+      - name: Veröffentlichen prüfen
+        run: |
+          node scripts/test-publish.js
+          node scripts/test-providers.js
+
+      - name: Kennungen der Plattform-Anwendungen einsetzen
+        env:
+          CH_GOOGLE_CLIENT_ID: ${{ secrets.CH_GOOGLE_CLIENT_ID }}
+          CH_GOOGLE_CLIENT_SECRET: ${{ secrets.CH_GOOGLE_CLIENT_SECRET }}
+          CH_TIKTOK_CLIENT_KEY: ${{ secrets.CH_TIKTOK_CLIENT_KEY }}
+          CH_TIKTOK_CLIENT_SECRET: ${{ secrets.CH_TIKTOK_CLIENT_SECRET }}
+          CH_META_APP_ID: ${{ secrets.CH_META_APP_ID }}
+          CH_META_APP_SECRET: ${{ secrets.CH_META_APP_SECRET }}
+          CH_META_CONFIG_ID: ${{ secrets.CH_META_CONFIG_ID }}
+          CH_LINKEDIN_CLIENT_ID: ${{ secrets.CH_LINKEDIN_CLIENT_ID }}
+          CH_LINKEDIN_CLIENT_SECRET: ${{ secrets.CH_LINKEDIN_CLIENT_SECRET }}
+          CH_X_CLIENT_ID: ${{ secrets.CH_X_CLIENT_ID }}
+        run: node scripts/write-credentials.js
+
       - name: App-Symbole erzeugen
         run: node scripts/make-icon.js
 

@@ -14,14 +14,16 @@ export const STATUS = {
   draft:     { label: 'Entwurf',        tone: 'draft',     hint: 'In Arbeit' },
   ready:     { label: 'Fertig',         tone: 'ready',     hint: 'Bereit zum Einplanen' },
   scheduled: { label: 'Geplant',        tone: 'scheduled', hint: 'Termin steht' },
+  publishing:{ label: 'Wird veröffentlicht', tone: 'publishing', hint: 'Geht gerade automatisch raus' },
   due:       { label: 'Jetzt fällig',   tone: 'due',       hint: 'Sollte jetzt raus' },
   published: { label: 'Veröffentlicht', tone: 'published', hint: 'Erledigt' },
+  failed:    { label: 'Fehlgeschlagen', tone: 'failed',    hint: 'Automatisches Veröffentlichen hat nicht geklappt' },
   missed:    { label: 'Verpasst',       tone: 'missed',    hint: 'Termin verstrichen' },
 };
 
 export const statusLabel = (status) => STATUS[status]?.label || status;
 
-export const OPEN_STATUSES = ['idea', 'draft', 'ready', 'scheduled', 'due', 'missed'];
+export const OPEN_STATUSES = ['idea', 'draft', 'ready', 'scheduled', 'publishing', 'due', 'failed', 'missed'];
 
 /** Ein leerer Beitrag mit sinnvollen Vorgaben. */
 export function blankPost(overrides = {}) {
