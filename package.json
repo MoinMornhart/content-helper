@@ -1,7 +1,7 @@
 {
   "name": "content-helper",
   "productName": "Content Helper",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "XXL Desktop-Werkzeugkasten für Creator: Multi-Plattform-Planung, Scheduling, Ideenmaschine, Analytics und Coaching – komplett lokal.",
   "main": "src/main/main.js",
   "author": "MoinMornhart",
@@ -19,7 +19,7 @@
     "test:sync": "node scripts/test-sync.js",
     "test:publish": "node scripts/test-publish.js && node scripts/test-providers.js",
     "pretest": "node scripts/check-syntax.js && node scripts/test-companion.js && node scripts/test-connectors.js && node scripts/test-calendar.js && node scripts/test-sync.js && node scripts/test-publish.js && node scripts/test-providers.js",
-    "test":"electron scripts/smoke-test.js",
+    "test": "electron scripts/smoke-test.js",
     "icons": "node scripts/make-icon.js",
     "screenshots": "electron scripts/screenshots.js"
   },
