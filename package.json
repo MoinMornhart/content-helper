@@ -1,7 +1,7 @@
 {
   "name": "content-helper",
   "productName": "Content Helper",
-  "version": "0.8.1",
+  "version": "0.9.0",
   "description": "XXL Desktop-Werkzeugkasten für Creator: Multi-Plattform-Planung, Scheduling, Ideenmaschine, Analytics und Coaching – komplett lokal.",
   "main": "src/main/main.js",
   "author": "MoinMornhart",
