@@ -35,6 +35,7 @@ const NAV = [
     { id: 'connections', label: 'Verbindungen', icon: '⇄' },
     { id: 'channels', label: 'Kanäle', icon: '⬡' },
     { id: 'mobile', label: 'Handy', icon: '▯' },
+    { id: 'devices', label: 'PCs verbinden', icon: '⧉' },
     { id: 'settings', label: 'Einstellungen', icon: '⚙' },
   ] },
 ];
@@ -317,6 +318,13 @@ async function main() {
   window.ch.scheduler.onChanged(() => {
     refreshBadges();
     if (['dashboard', 'queue', 'calendar'].includes(state.view)) goto(state.view, state.params);
+  });
+
+  // Was ein anderer PC geändert hat, soll hier sofort sichtbar werden.
+  // Editoren bleiben stehen, sonst ginge halb Getipptes verloren.
+  window.ch.sync.onChanged(async () => {
+    await store.reload();
+    if (!['composer', 'scripts'].includes(state.view)) goto(state.view, state.params);
   });
 
   // Neue Zahlen aus einer Verbindung sollen sofort erscheinen.

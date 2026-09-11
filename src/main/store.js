@@ -60,6 +60,17 @@ const DEFAULT_SETTINGS = {
   updateNotifiedFor: null,
 };
 
+/**
+ * Nächster Änderungszeitpunkt – garantiert später als der vorige. Zwei
+ * Änderungen in derselben Millisekunde bekämen sonst denselben Zeitstempel, und
+ * beim Abgleich zwischen PCs wäre nicht mehr klar, welche die neuere ist.
+ */
+function nextStamp(previous) {
+  const now = new Date().toISOString();
+  if (!previous || now > previous) return now;
+  return new Date(Date.parse(previous) + 1).toISOString();
+}
+
 class Store {
   /**
    * @param {string} rootDir Verzeichnis fuer die Daten (z. B. %APPDATA%/Content Helper).
@@ -72,6 +83,9 @@ class Store {
     this.cache = new Map();
     this.writeTimers = new Map();
     this.writeDelay = 250;
+    /** Wer über Änderungen Bescheid wissen will – derzeit der Abgleich zwischen PCs. */
+    this.listeners = new Set();
+    this.silent = 0;
     this._ensureDirs();
     this._load();
     this._migrate();
@@ -202,6 +216,7 @@ class Store {
     };
     this.list(collection).unshift(record);
     this._scheduleWrite(collection);
+    this._emit({ type: 'put', collection, record, at: record.updatedAt });
     return record;
   }
 
@@ -209,8 +224,9 @@ class Store {
     const items = this.list(collection);
     const index = items.findIndex((entry) => entry.id === id);
     if (index === -1) return null;
-    items[index] = { ...items[index], ...patch, id, updatedAt: new Date().toISOString() };
+    items[index] = { ...items[index], ...patch, id, updatedAt: nextStamp(items[index].updatedAt) };
     this._scheduleWrite(collection);
+    this._emit({ type: 'put', collection, record: items[index], at: items[index].updatedAt });
     return items[index];
   }
 
@@ -220,15 +236,84 @@ class Store {
     if (index === -1) return false;
     items.splice(index, 1);
     this._scheduleWrite(collection);
+    this._emit({ type: 'delete', collection, id, at: new Date().toISOString() });
     return true;
   }
 
   /** Ersetzt eine ganze Sammlung (Import, Sortierung, Massenbearbeitung). */
   replace(collection, items) {
     if (!this.cache.has(collection)) throw new Error(`Unbekannte Sammlung: ${collection}`);
+    const before = new Map(this.cache.get(collection).map((entry) => [entry.id, entry]));
     this.cache.set(collection, items);
     this._scheduleWrite(collection);
+
+    // Nur tatsächlich Geändertes melden – und dabei den Zeitpunkt fortschreiben,
+    // sonst hielte ein anderer PC seine ältere Fassung für gleich neu.
+    if (this.listeners.size && !this.silent) {
+      const now = new Date().toISOString();
+      const kept = new Set();
+      for (const entry of items) {
+        kept.add(entry.id);
+        const old = before.get(entry.id);
+        if (old && JSON.stringify(old) === JSON.stringify(entry)) continue;
+        entry.updatedAt = nextStamp(old?.updatedAt || entry.updatedAt);
+        this._emit({ type: 'put', collection, record: entry, at: entry.updatedAt });
+      }
+      for (const id of before.keys()) {
+        if (!kept.has(id)) this._emit({ type: 'delete', collection, id, at: now });
+      }
+    }
     return items;
+  }
+
+  // ---------------------------------------------------------------- Änderungen melden
+
+  /**
+   * Meldet jede Änderung an Zuhörer. Änderungen, die selbst aus dem Abgleich
+   * stammen, laufen über putRaw/deleteRaw oder silently() und werden nicht
+   * erneut gemeldet – sonst liefen sie endlos zwischen den PCs hin und her.
+   */
+  onChange(listener) {
+    this.listeners.add(listener);
+    return () => this.listeners.delete(listener);
+  }
+
+  _emit(change) {
+    if (this.silent > 0) return;
+    for (const listener of this.listeners) {
+      try {
+        listener(change);
+      } catch { /* ein Zuhörer darf den Speicher nicht stören */ }
+    }
+  }
+
+  /** Führt etwas aus, ohne dass es als eigene Änderung gemeldet wird. */
+  silently(fn) {
+    this.silent += 1;
+    try {
+      return fn();
+    } finally {
+      this.silent -= 1;
+    }
+  }
+
+  /** Übernimmt einen Datensatz unverändert – samt seinem Änderungszeitpunkt. */
+  putRaw(collection, record) {
+    const items = this.list(collection);
+    const index = items.findIndex((entry) => entry.id === record.id);
+    if (index === -1) items.unshift(record);
+    else items[index] = record;
+    this._scheduleWrite(collection);
+    return record;
+  }
+
+  deleteRaw(collection, id) {
+    const items = this.list(collection);
+    const index = items.findIndex((entry) => entry.id === id);
+    if (index === -1) return false;
+    items.splice(index, 1);
+    this._scheduleWrite(collection);
+    return true;
   }
 
   // ---------------------------------------------------------------- Einstellungen
@@ -241,6 +326,7 @@ class Store {
     const merged = { ...this.cache.get('settings'), ...patch };
     this.cache.set('settings', merged);
     this._scheduleWrite('settings');
+    this._emit({ type: 'settings', patch, at: new Date().toISOString() });
     return merged;
   }
 
@@ -276,6 +362,8 @@ class Store {
       this._scheduleWrite(name);
     }
     if (bundle.settings) this.saveSettings(bundle.settings);
+    // Eine eingelesene Sicherung soll auch auf den anderen PCs ankommen.
+    this._emit({ type: 'bulk', at: new Date().toISOString() });
     this.flush();
     return true;
   }

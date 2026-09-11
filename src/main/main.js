@@ -16,6 +16,7 @@ const { registerIpc } = require('./ipc');
 const { Updater } = require('./updater');
 const { Companion } = require('./companion');
 const { Connectors } = require('./connectors');
+const { CloudSync } = require('./sync/cloud-sync');
 
 const isDev = process.argv.includes('--dev');
 const startHidden = process.argv.includes('--hidden');
@@ -27,6 +28,7 @@ let scheduler = null;
 let updater = null;
 let companion = null;
 let connectors = null;
+let cloudSync = null;
 let quitting = false;
 
 const getWindow = () => mainWindow;
@@ -205,14 +207,16 @@ app.whenReady().then(() => {
   companion = new Companion(store, scheduler, getWindow);
 
   connectors = new Connectors(store, getWindow);
+  cloudSync = new CloudSync(store, getWindow);
 
-  registerIpc(store, scheduler, updater, companion, connectors, getWindow);
+  registerIpc(store, scheduler, updater, companion, connectors, cloudSync, getWindow);
   createWindow();
   buildMenu();
   buildTray();
   scheduler.start();
   updater.start();
   connectors.start();
+  cloudSync.start();
 
   // Der Handy-Begleiter startet nur, wenn er zuletzt aktiv war.
   if (store.settings().companionEnabled) {
@@ -230,6 +234,7 @@ app.on('before-quit', () => {
   updater?.stop();
   companion?.stop();
   connectors?.stop();
+  cloudSync?.stop();
   store?.flush();
 });
 

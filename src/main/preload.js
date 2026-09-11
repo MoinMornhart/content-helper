@@ -93,6 +93,19 @@ contextBridge.exposeInMainWorld('ch', {
     onAuth: (handler) => on('twitch:auth', handler),
   },
 
+  sync: {
+    status: () => invoke('sync:status'),
+    folders: () => invoke('sync:folders'),
+    pickFolder: () => invoke('sync:pickFolder'),
+    create: (folder) => invoke('sync:create', { folder }),
+    join: (folder, code) => invoke('sync:join', { folder, code }),
+    code: () => invoke('sync:code'),
+    leave: () => invoke('sync:leave'),
+    fetchHere: (value) => invoke('sync:fetchHere', { value }),
+    now: () => invoke('sync:now'),
+    onChanged: (handler) => on('sync:changed', handler),
+  },
+
   companion: {
     status: () => invoke('companion:status'),
     start: (port) => invoke('companion:start', { port }),

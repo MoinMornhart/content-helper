@@ -22,9 +22,10 @@ const { Scheduler } = require('../src/main/scheduler');
 const { Updater } = require('../src/main/updater');
 const { Companion } = require('../src/main/companion');
 const { Connectors } = require('../src/main/connectors');
+const { CloudSync } = require('../src/main/sync/cloud-sync');
 const { registerIpc } = require('../src/main/ipc');
 
-const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'connections', 'assistant', 'mobile', 'settings'];
+const VIEWS = ['dashboard', 'calendar', 'queue', 'composer', 'ideas', 'scripts', 'media', 'analytics', 'coach', 'channels', 'connections', 'assistant', 'mobile', 'devices', 'settings'];
 
 const problems = [];
 const logs = [];
@@ -161,7 +162,8 @@ app.whenReady().then(async () => {
   const connectors = new Connectors(store, () => win);
   // Bewusst ohne start(): der Test soll weder ins Netz gehen noch einen
   // Anschluss belegen – geprueft wird, dass die Ansichten damit umgehen.
-  registerIpc(store, scheduler, updater, companion, connectors, () => win);
+  const cloudSync = new CloudSync(store, () => win);
+  registerIpc(store, scheduler, updater, companion, connectors, cloudSync, () => win);
 
   win = new BrowserWindow({
     width: 1440,

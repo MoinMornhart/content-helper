@@ -31,9 +31,10 @@ function assertCollection(name) {
  * @param {import('./updater').Updater} updater
  * @param {import('./companion').Companion} companion
  * @param {import('./connectors').Connectors} connectors
+ * @param {import('./sync/cloud-sync').CloudSync} sync
  * @param {() => Electron.BrowserWindow|null} getWindow
  */
-function registerIpc(store, scheduler, updater, companion, connectors, getWindow) {
+function registerIpc(store, scheduler, updater, companion, connectors, sync, getWindow) {
   const handle = (channel, fn) => {
     ipcMain.handle(channel, async (_event, payload = {}) => {
       try {
@@ -258,6 +259,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
   });
 
   handle('connectors:sync', async ({ name }) => {
+    connectors.assertFetchesHere();
     if (name) {
       const connector = connectors.connector(name);
       try {
@@ -286,6 +288,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
 
   /** Gleicht nur einen einzelnen YouTube-Kanal ab. */
   handle('youtube:syncChannel', async ({ accountId }) => {
+    connectors.assertFetchesHere();
     const channel = connectors.youtube.channel(accountId);
     if (!channel) throw new Error('Dieser Kanal ist nicht mehr verbunden.');
     try {
@@ -310,6 +313,26 @@ function registerIpc(store, scheduler, updater, companion, connectors, getWindow
     }
     throw new Error(`Unbekannte Verbindung: ${name}`);
   });
+
+  // ------------------------------------------------------------- Mehrere PCs
+  handle('sync:status', () => sync.status());
+  handle('sync:folders', () => sync.detectFolders());
+
+  handle('sync:pickFolder', async () => {
+    const result = await dialog.showOpenDialog(getWindow(), {
+      title: 'Cloud-Ordner wählen',
+      properties: ['openDirectory', 'createDirectory'],
+    });
+    if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
+    return { canceled: false, path: result.filePaths[0] };
+  });
+
+  handle('sync:create', ({ folder }) => sync.create({ folder }));
+  handle('sync:join', ({ folder, code }) => sync.join({ folder, code }));
+  handle('sync:code', () => sync.showCode());
+  handle('sync:leave', () => { sync.leave(); return sync.status(); });
+  handle('sync:fetchHere', ({ value }) => { sync.setFetchHere(Boolean(value)); return sync.status(); });
+  handle('sync:now', () => sync.syncNow());
 
   // ------------------------------------------------------------- Handy-Begleiter
   handle('companion:status', () => companion.status());

@@ -24,6 +24,7 @@ const { Scheduler } = require('../src/main/scheduler');
 const { Updater } = require('../src/main/updater');
 const { Companion } = require('../src/main/companion');
 const { Connectors } = require('../src/main/connectors');
+const { CloudSync } = require('../src/main/sync/cloud-sync');
 const { registerIpc } = require('../src/main/ipc');
 
 const OUT = path.join(__dirname, '..', 'docs', 'screenshots');
@@ -174,7 +175,8 @@ app.whenReady().then(async () => {
   const updater = new Updater(store, () => win);
   const companion = new Companion(store, scheduler, () => win);
   const connectors = new Connectors(store, () => win);
-  registerIpc(store, scheduler, updater, companion, connectors, () => win);
+  const cloudSync = new CloudSync(store, () => win);
+  registerIpc(store, scheduler, updater, companion, connectors, cloudSync, () => win);
 
   // Aus scripts/ gestartet meldet Electron seine eigene Versionsnummer, weil dort
   // keine package.json liegt. Auf dem Bild soll die Nummer der App stehen.
@@ -189,6 +191,17 @@ app.whenReady().then(async () => {
       node: process.versions.node,
       platform: process.platform,
     },
+  }));
+
+  // Die echten Cloud-Ordner dieses PCs verraten den Benutzernamen – aufs
+  // öffentliche Bild gehört ein Beispielpfad.
+  ipcMain.removeHandler('sync:folders');
+  ipcMain.handle('sync:folders', () => ({
+    ok: true,
+    data: [
+      { provider: 'onedrive', label: 'OneDrive', path: 'C:\\Users\\Creator\\OneDrive' },
+      { provider: 'dropbox', label: 'Dropbox', path: 'C:\\Users\\Creator\\Dropbox' },
+    ],
   }));
 
   win = new BrowserWindow({
@@ -234,6 +247,7 @@ app.whenReady().then(async () => {
   await shot('connections', 'connections');
   await shot('ideas', 'ideas');
   await shot('settings', 'settings');
+  await shot('devices', 'devices');
 
   // Helles Farbschema als Gegenstück.
   await look({ theme: 'light', accent: 'blue' });

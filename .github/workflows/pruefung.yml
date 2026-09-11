@@ -44,3 +44,6 @@ jobs:
 
       - name: Kalender-Ausgabe prüfen
         run: node scripts/test-calendar.js
+
+      - name: Abgleich zwischen PCs prüfen
+        run: node scripts/test-sync.js

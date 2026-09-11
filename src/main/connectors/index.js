@@ -64,8 +64,25 @@ class Connectors {
    * Gleicht alle eingerichteten Verbindungen ab.
    * @returns {Promise<Record<string, object>>} Ergebnis je Verbindung
    */
+  /**
+   * Holt dieser PC die Zahlen ab? Sind mehrere PCs gekoppelt, übernimmt das nur
+   * einer – sonst machten sich die Twitch-Anmeldungen gegenseitig ungültig, und
+   * jedes Video käme von jedem PC einmal an. Die anderen bekommen die Zahlen
+   * über den Abgleich.
+   */
+  fetchesHere() {
+    const sync = this.store.settings().sync;
+    return !(sync?.enabled && sync.fetchHere === false);
+  }
+
+  assertFetchesHere() {
+    if (this.fetchesHere()) return;
+    throw new Error('YouTube und Twitch werden auf einem anderen deiner PCs abgeholt. Umstellen kannst du das unter „PCs verbinden“.');
+  }
+
   async syncAll() {
     if (this.running) return { skipped: true };
+    if (!this.fetchesHere()) return { skipped: true, reason: 'Abgeholt wird auf einem anderen PC.' };
     this.running = true;
     const results = {};
 
@@ -86,7 +103,7 @@ class Connectors {
 
   /** Nur den laufenden Stream abtasten – günstig genug für zwei Minuten Takt. */
   async sampleLive() {
-    if (!this.twitch.isConfigured()) return null;
+    if (!this.twitch.isConfigured() || !this.fetchesHere()) return null;
     try {
       const live = await this.twitch.sampleLive();
       // Ein beendeter Stream erzeugt einen neuen Messwert, das gehört gemeldet.
