@@ -14,7 +14,10 @@ Der Ausbau erfolgt in Stufen. Jede Stufe ist für sich benutzbar – die App ist
 - [x] Termine im Hintergrund: Vorwarnung, Fälligkeit, Tray, Text in der Zwischenablage
 - [x] Kalender-Abo für Apple Kalender und Outlook, Export als .ics-Datei
 - [ ] Wiederkehrende Beiträge und Serien
-- [ ] Echtes Hochladen zu YouTube (Anmeldung vorhanden, Upload in Arbeit)
+- [x] Automatisch veröffentlichen wie bei Buffer: YouTube, TikTok, Instagram, Facebook, LinkedIn, X
+- [x] Fortsetzbare Uploads, Wiederholen nach Fehlern, nie doppelt – auch mit mehreren PCs
+- [ ] Prüfung der Anwendungen durch YouTube, TikTok und Meta (bis dahin landen Uploads auf „privat“)
+- [ ] Threads, Bluesky und Mastodon automatisch
 
 ## Stufe 3 – Material und Ideen
 - [x] Medienbibliothek mit Schlagwörtern und Verwendungsnachweis

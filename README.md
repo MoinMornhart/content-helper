@@ -42,6 +42,7 @@ und schaut dabei auf **deine** Zahlen, nicht auf allgemeine Ratschläge.
 | **Wo liegen deine Daten?** | als lesbare Dateien auf deinem PC |
 | **API-Schlüssel oder Developer-Apps** | für YouTube keine; für Twitch meldest du dich mit deinem Konto an – dazu einmalig eine Client-ID, weil Twitch nur registrierte Anwendungen bedient |
 | **Mehrere PCs** | per Code verbunden, verschlüsselt über deinen OneDrive-, Dropbox- oder Google-Drive-Ordner |
+| **Veröffentlichen** | automatisch zum Termin auf YouTube, TikTok, Instagram, Facebook, LinkedIn und X – wie bei Buffer |
 | **Aktualisierung** | lädt sich selbst im Hintergrund und spielt sich beim Neustart ein |
 
 ---
@@ -158,9 +159,8 @@ flowchart LR
     end
 
     subgraph raus ["Zum Termin"]
-        MELD["Erinnerung"]
-        TEXT["Text in der<br/>Zwischenablage"]
-        UP["Upload-Seite<br/>öffnet sich"]
+        AUTO["Automatisch hochgeladen<br/>YouTube · TikTok · Instagram<br/>Facebook · LinkedIn · X"]
+        MELD["Erinnerung und Text in der<br/>Zwischenablage für den Rest"]
     end
 
     YT --> DATEN
@@ -168,8 +168,8 @@ flowchart LR
     CSV --> DATEN
     HANDY --> DATEN
     DATEN --> ASSI --> IDEE --> PLAN
-    PLAN --> MELD & TEXT & UP
-    UP -.->|neue Zahlen| YT
+    PLAN --> AUTO & MELD
+    AUTO -.->|neue Zahlen| YT
 ```
 
 Der Kreislauf ist das Entscheidende: Was du veröffentlichst, kommt als Zahl zurück, der Assistent
@@ -188,13 +188,36 @@ Nicht alles, was man sich wünscht, lassen die Plattformen zu. Hier steht ehrlic
 | **TikTok, Instagram, Facebook …** | 📄 per Datei | CSV-Export aus dem jeweiligen Studio, in zwei Klicks eingelesen |
 | **X (Twitter)** | 📄 per Datei | lesender Zugriff kostet bei X seit 2023 mehrere hundert Dollar im Monat |
 
-**Veröffentlichen:** Zum Termin meldet sich die App, legt Text und Hashtags in die Zwischenablage und
-öffnet auf Wunsch die Upload-Seite. Das echte Hochladen zu YouTube ist in Arbeit – es setzt eine
-eigene Google-Anwendung voraus, und bis Google sie prüft, landen Uploads auf „privat“.
+### Veröffentlichen
 
-**Dein PC muss laufen:** Anders als bei Buffer gibt es keinen Server, der um drei Uhr nachts für dich
-postet. Termine, Abgleich und Kalender-Abo funktionieren, solange die App läuft – beim Schließen
-bleibt sie deshalb im Infobereich aktiv.
+Einmal unter *Einrichten → Veröffentlichen* anmelden, dann im Composer Video wählen, Kanäle ankreuzen,
+Termin setzen – der Beitrag geht von selbst raus.
+
+| Kanal | Veröffentlichen | Wann |
+| --- | :---: | --- |
+| **YouTube, Shorts** | ✅ automatisch | sofort hochgeladen, YouTube schaltet zum Termin frei – **PC darf dann aus sein** |
+| **Facebook-Seite** | ✅ automatisch | vorab hochgeladen, Facebook veröffentlicht zum Termin – **PC darf dann aus sein** |
+| **TikTok** | ✅ automatisch | zum Termin, PC muss laufen |
+| **Instagram-Reels** | ✅ automatisch | zum Termin, PC muss laufen (Profikonto mit Facebook-Seite nötig) |
+| **LinkedIn** | ✅ automatisch | zum Termin, PC muss laufen |
+| **X** | ✅ automatisch | zum Termin, PC muss laufen |
+| **Threads, Bluesky, Discord …** | 🔔 Erinnerung | zum Termin liegt der Text in der Zwischenablage |
+
+Bricht ein Upload ab, macht die App an derselben Stelle weiter – auch nach einem Neustart. Nach
+Fehlern versucht sie es erneut, mit wachsendem Abstand; was dauerhaft scheitert, meldet sie mit Grund.
+
+<p align="center">
+  <img src="docs/screenshots/publishing.png" alt="Veröffentlichen: Anmeldungen bei YouTube, TikTok, Instagram und Facebook, LinkedIn und X" width="100%">
+</p>
+
+**Ehrlich gesagt:** Jede Plattform gibt Uploads nur an eine bei ihr registrierte und geprüfte Anwendung
+frei – so wie bei Buffer auch. Bis YouTube und TikTok die Content-Helper-Anwendung geprüft haben,
+landen Uploads dort auf „privat“. Wie die Anwendungen eingerichtet werden, steht in
+[docs/VEROEFFENTLICHEN.md](docs/VEROEFFENTLICHEN.md).
+
+**Kein Server:** Anders als bei Buffer postet dein eigener PC. Wo die Plattform nicht selbst planen
+kann, muss er zum Termin laufen – beim Schließen bleibt die App im Infobereich aktiv und startet auf
+Wunsch mit Windows.
 
 ---
 
@@ -244,7 +267,8 @@ zur Laufzeit wird nur `electron-updater` für die Selbstaktualisierung gebraucht
 | `npm run test:calendar` | Kalenderdateien nach RFC 5545: Faltung, Maskierung, stabile Kennungen |
 | `npm run test:companion` | den WLAN-Server des Handy-Begleiters von außen, inklusive Zugriffsschutz |
 | `npm run test:sync` | drei simulierte PCs an einem Cloud-Ordner: Konflikte, Löschen, Verschlüsselung, Ausfälle |
-| `npm test` | alles davor, dazu einen Rauchtest über alle 15 Ansichten und den Assistenten |
+| `npm run test:publish` | Veröffentlichen ohne Netz: Termine, Wiederholen, Fortsetzen, nie doppelt – und jede Plattform Schritt für Schritt |
+| `npm test` | alles davor, dazu einen Rauchtest über alle 16 Ansichten und den Assistenten |
 
 **Neue Version veröffentlichen:**
 
