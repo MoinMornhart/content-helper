@@ -115,7 +115,7 @@ export async function render({ goto, setActions }) {
           text: dueNow.length
             ? `${fmt.plural(dueNow.length, 'Beitrag ist', 'Beiträge sind')} jetzt fällig.`
             : today.length
-              ? `Heute stehen ${fmt.plural(today.length, 'Beitrag', 'Beiträge')} an.`
+              ? `Heute ${today.length === 1 ? 'steht' : 'stehen'} ${fmt.plural(today.length, 'Beitrag', 'Beiträge')} an.`
               : 'Heute steht nichts an – guter Moment, um vorzuarbeiten.',
         })),
       h('div.col.gap-xs', { style: { alignItems: 'flex-end' } },

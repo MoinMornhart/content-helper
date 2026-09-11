@@ -193,7 +193,7 @@ function twitchCard(state, auth, refresh) {
         glyph('twitch', 26),
         h('div', null,
           h('h3', { text: auth.displayName || auth.login }),
-          h('div.text-xs.faint', { text: `angemeldet${auth.signedInAt ? ` seit ${fmt.relative(auth.signedInAt)}` : ''}` }))),
+          h('div.text-xs.faint', { text: `angemeldet${auth.signedInAt ? ` ${fmt.relative(auth.signedInAt)}` : ''}` }))),
       h('span.badge.badge--ok', { text: 'angemeldet' })),
 
     info.liveSession
@@ -201,7 +201,7 @@ function twitchCard(state, auth, refresh) {
           h('span.notice__icon', { text: '●' }),
           h('div', null,
             h('div.strong.text-sm', { text: 'Stream läuft – Zuschauerzahlen werden mitgeschrieben' }),
-            h('div.text-sm.muted', { text: `${fmt.plural(info.liveSession.samples, 'Stichprobe', 'Stichproben')} seit ${fmt.relative(info.liveSession.startedAt)}` })))
+            h('div.text-sm.muted', { text: `${fmt.plural(info.liveSession.samples, 'Stichprobe', 'Stichproben')} · gestartet ${fmt.relative(info.liveSession.startedAt)}` })))
       : null,
 
     info.lastError || auth.lastError
@@ -260,7 +260,7 @@ async function twitchPreview() {
             h('span.notice__icon', { text: '◈' }),
             h('div', null,
               h('div.strong', { text: `Stream läuft: ${live.title}` }),
-              h('div.text-sm.muted', { text: `${fmt.num(live.viewers)} Zuschauer${live.game ? ` · ${live.game}` : ''} · seit ${fmt.relative(live.startedAt)}` })))
+              h('div.text-sm.muted', { text: `${fmt.num(live.viewers)} Zuschauer${live.game ? ` · ${live.game}` : ''} · gestartet ${fmt.relative(live.startedAt)}` })))
         : h('p.text-sm.muted', { text: 'Gerade läuft kein Stream.' }),
 
       h('div', null,

@@ -63,6 +63,23 @@ export function keywords(text) {
   return [...new Set(found.filter((word) => word.length >= 4 && !STOPWORDS.has(word)))];
 }
 
+/**
+ * Schreibweise eines Themenworts, wie sie in den eigenen Titeln tatsächlich
+ * vorkommt. Gezählt wird kleingeschrieben, angezeigt wird „Minecraft“ statt
+ * „minecraft“ – sonst stünde in jedem Titelvorschlag ein falsch geschriebenes Wort.
+ */
+export function casingFrom(word, rows = []) {
+  for (const row of rows) {
+    const title = String(row.title || '');
+    const index = title.toLowerCase().indexOf(word);
+    if (index !== -1) return title.slice(index, index + word.length);
+  }
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/** Faktor deutsch geschrieben: 3,5 statt 3.5. */
+const factor = (value) => fmt.num(value, { decimals: 1 });
+
 /** Welche Kennzahl trägt die Aussage auf dieser Plattform? */
 export function leadMetric(platformId) {
   const known = platform(platformId);
@@ -158,6 +175,7 @@ export function topics({ platformId = null, accountId = null, days = 365, minPos
 
     results.push({
       word,
+      label: casingFrom(word, withWord),
       count: withWord.length,
       withMedian,
       withoutMedian,
@@ -260,11 +278,11 @@ export function suggestions({ platformId = null, accountId = null, days = 365, l
       kind: 'Thema wiederholen',
       topic: topic.word,
       platformId: topic.platformId,
-      title: `Mehr zum Thema „${topic.word}“`,
-      why: `Beiträge mit „${topic.word}“ im Titel erreichen bei dir im Mittel ${show(topic.withMedian, topic.metricKey)} – das ist das ${topic.lift.toFixed(1)}-fache deiner übrigen Beiträge (${show(topic.withoutMedian, topic.metricKey)}). Das ist kein Zufallstreffer, sondern zieht sich durch ${fmt.plural(topic.count, 'Beitrag', 'Beiträge')}.`,
+      title: `Mehr zum Thema „${topic.label}“`,
+      why: `Beiträge mit „${topic.label}“ im Titel erreichen bei dir im Mittel ${show(topic.withMedian, topic.metricKey)} – das ist das ${factor(topic.lift)}-fache deiner übrigen Beiträge (${show(topic.withoutMedian, topic.metricKey)}). Das ist kein Zufallstreffer, sondern zieht sich durch ${fmt.plural(topic.count, 'Beitrag', 'Beiträge')}.`,
       evidence: topic.examples.map((row) => `${fmt.truncate(row.title, 60)} – ${show(row.value, row.metricKey)}`),
-      titles: titleSuggestions(topic.word, 4),
-      hook: hookSuggestions(topic.word, 1)[0],
+      titles: titleSuggestions(topic.label, 4),
+      hook: hookSuggestions(topic.label, 1)[0],
       format: example?.format || null,
       when: clock?.weekday ? { weekday: clock.weekday.key, hour: clock.hour?.key ?? null } : null,
     });
@@ -273,14 +291,15 @@ export function suggestions({ platformId = null, accountId = null, days = 365, l
   // --- Aus dem stärksten Einzelbeitrag: die Nachfolge
   if (best.length) {
     const top = best[0];
-    const topic = keywords(top.title)[0] || top.title.split(/\s+/)[0];
+    const keyword = keywords(top.title)[0];
+    const topic = keyword ? casingFrom(keyword, [top]) : top.title.split(/\s+/)[0];
     out.push({
       id: `winner:${top.entry.id}`,
       kind: 'Erfolg fortsetzen',
       topic,
       platformId: top.platformId,
       title: `Nachfolger für „${fmt.truncate(top.title, 50)}“`,
-      why: `Dieser Beitrag liegt mit ${show(top.value, top.metricKey)} beim ${top.lift.toFixed(1)}-fachen deines Mittelwerts (${show(baseline, top.metricKey)}). Ein Publikum, das einmal zugegriffen hat, greift beim selben Thema wieder zu – der zweite Teil ist fast immer günstiger als ein neues Thema.`,
+      why: `Dieser Beitrag liegt mit ${show(top.value, top.metricKey)} beim ${factor(top.lift)}-fachen deines Mittelwerts (${show(baseline, top.metricKey)}). Ein Publikum, das einmal zugegriffen hat, greift beim selben Thema wieder zu – der zweite Teil ist fast immer günstiger als ein neues Thema.`,
       evidence: [`Veröffentlicht ${fmt.date(top.at, 'medium')}${top.format ? ` · Format: ${top.format}` : ''}`],
       titles: titleSuggestions(topic, 4),
       hook: hookSuggestions(topic, 1)[0],
@@ -297,7 +316,7 @@ export function suggestions({ platformId = null, accountId = null, days = 365, l
       topic: null,
       platformId,
       title: `Häufiger: ${shape.label}`,
-      why: `Titel dieser Bauart erreichen bei dir ${show(shape.yesMedian, shape.metricKey)} gegenüber ${show(shape.noMedian, shape.metricKey)} bei den übrigen – das ${shape.lift.toFixed(1)}-fache. ${shape.hint}`,
+      why: `Titel dieser Bauart erreichen bei dir ${show(shape.yesMedian, shape.metricKey)} gegenüber ${show(shape.noMedian, shape.metricKey)} bei den übrigen – das ${factor(shape.lift)}-fache. ${shape.hint}`,
       evidence: [`Grundlage: ${fmt.plural(shape.count, 'Beitrag', 'Beiträge')} mit diesem Merkmal`],
       titles: [],
       hook: null,

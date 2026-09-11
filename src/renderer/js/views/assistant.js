@@ -151,7 +151,7 @@ function winnersCard(data) {
             h('td', null, h('span.row.gap-sm', null, glyph(row.platformId, 15), h('span.text-sm', { text: platformName(row.platformId) }))),
             h('td.text-sm.muted.nowrap', { text: fmt.date(row.at, 'short') }),
             h('td.num.strong', { text: show(row.value, row.metricKey) }),
-            h('td.num', { style: { color: 'var(--ok)' }, text: `${row.lift.toFixed(1)}×` }))))));
+            h('td.num', { style: { color: 'var(--ok)' }, text: `${fmt.num(row.lift, { decimals: 1 })}×` }))))));
 }
 
 function topicsCard(list) {
@@ -167,12 +167,12 @@ function topicsCard(list) {
         return h('div.meter', null,
           h('div.meter__head', null,
             h('span.row.gap-sm', null,
-              h('span.strong', { text: topic.word }),
+              h('span.strong', { text: topic.label || topic.word }),
               h('span.text-xs.faint', { text: `${fmt.plural(topic.count, 'Beitrag', 'Beiträge')}` })),
             h('span', null,
               h('span.strong', { text: show(topic.withMedian, topic.metricKey) }),
               h('span.text-xs.faint', { text: ` statt ${show(topic.withoutMedian, topic.metricKey)}` }),
-              h('span', { style: { color: 'var(--ok)', marginLeft: '8px', fontWeight: '700' }, text: `${topic.lift.toFixed(1)}×` }))),
+              h('span', { style: { color: 'var(--ok)', marginLeft: '8px', fontWeight: '700' }, text: `${fmt.num(topic.lift, { decimals: 1 })}×` }))),
           h('div.bar', null, h('div.bar__fill', { style: { width: `${Math.min(100, (topic.lift / max) * 100)}%` } })));
       })));
 }
@@ -188,7 +188,7 @@ function shapesCard(list) {
             h('div.text-xs.faint', { text: shape.hint })),
           h('div.nowrap', null,
             h('span.strong', { text: show(shape.yesMedian, shape.metricKey) }),
-            h('span', { style: { color: 'var(--ok)', marginLeft: '8px', fontWeight: '700' }, text: `${shape.lift.toFixed(1)}×` }))))));
+            h('span', { style: { color: 'var(--ok)', marginLeft: '8px', fontWeight: '700' }, text: `${fmt.num(shape.lift, { decimals: 1 })}×` }))))));
 }
 
 /**

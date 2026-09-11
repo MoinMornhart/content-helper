@@ -15,42 +15,50 @@ import { wordCount, speakingSeconds } from './format.js';
 
 // ------------------------------------------------------------------ Muster
 
-/** Titelmuster. {t} wird durch das Thema ersetzt, {n} durch eine Zahl. */
+/**
+ * Titelmuster. {t} wird durch das Thema ersetzt, {n} durch eine Zahl.
+ *
+ * Jedes Muster mit Zahl bringt seine eigenen, glaubwürdigen Werte mit. Eine
+ * gemeinsame Zahlenliste für alle ergab Titel wie „Das hätte ich vor 21 Jahren
+ * wissen sollen“ oder „100 Werkzeuge, die …“ – und damit genau das Gegenteil
+ * eines guten Titels.
+ */
 const TITLE_PATTERNS = [
   { text: 'Wie {t} wirklich funktioniert', kind: 'Erklärung' },
-  { text: '{n} Dinge über {t}, die kaum jemand weiß', kind: 'Liste' },
-  { text: 'Ich habe {n} Tage {t} gemacht – das kam dabei heraus', kind: 'Selbstversuch' },
+  { text: '{n} Dinge über {t}, die kaum jemand weiß', kind: 'Liste', n: [3, 5, 7, 10] },
+  { text: 'Ich habe {n} Tage {t} gemacht – das kam dabei heraus', kind: 'Selbstversuch', n: [7, 14, 30, 100] },
   { text: 'Der häufigste Fehler bei {t}', kind: 'Fehler' },
   { text: '{t}: Anfänger gegen Fortgeschrittene', kind: 'Vergleich' },
-  { text: 'Warum dein {t} nicht funktioniert', kind: 'Diagnose' },
-  { text: '{t} in {n} Minuten erklärt', kind: 'Kompakt' },
-  { text: 'Das hätte ich vor {n} Jahren über {t} wissen sollen', kind: 'Rückblick' },
+  { text: 'Warum {t} bei dir nicht funktioniert', kind: 'Diagnose' },
+  { text: '{t} in {n} Minuten erklärt', kind: 'Kompakt', n: [3, 5, 10] },
+  { text: 'Das hätte ich vor {n} Jahren über {t} wissen sollen', kind: 'Rückblick', n: [2, 3, 5] },
   { text: '{t} – lohnt sich das überhaupt?', kind: 'Bewertung' },
   { text: 'So macht man {t} richtig (ohne {x})', kind: 'Anleitung' },
-  { text: 'Von null auf {n}: mein Weg mit {t}', kind: 'Werdegang' },
+  { text: 'Von null auf {n} Abonnenten: mein Weg mit {t}', kind: 'Werdegang', n: ['1.000', '10.000'] },
   { text: 'Was niemand über {t} sagt', kind: 'Offenlegung' },
   { text: '{t} kostet dich mehr, als du denkst', kind: 'Warnung' },
   { text: 'Der schnellste Weg zu {t}', kind: 'Abkürzung' },
-  { text: '{n} Werkzeuge, die {t} sofort einfacher machen', kind: 'Werkzeuge' },
+  { text: '{n} Werkzeuge, die {t} sofort einfacher machen', kind: 'Werkzeuge', n: [3, 5, 7] },
   { text: 'Ich habe {t} getestet, damit du es nicht musst', kind: 'Test' },
   { text: '{t}: der Unterschied zwischen gut und großartig', kind: 'Feinschliff' },
   { text: 'Hör auf, {t} so zu machen', kind: 'Widerspruch' },
 ];
 
-/** Einstiegssaetze fuer die ersten Sekunden eines Videos. */
+/** Einstiegssaetze fuer die ersten Sekunden eines Videos – ebenfalls mit eigenen Zahlen. */
 const HOOK_PATTERNS = [
-  'Die meisten machen bei {t} denselben Fehler – und merken es nie.',
-  'Ich habe {n} Stunden in {t} gesteckt, damit du es in drei Minuten hast.',
-  'Wenn du bei {t} nur eine Sache änderst, dann diese.',
-  'Das hier hat mein Ergebnis bei {t} verdoppelt.',
-  'Vergiss alles, was du über {t} gehört hast.',
-  'Es gibt zwei Arten von Leuten bei {t}. Eine davon verschwendet Zeit.',
-  'Vor {n} Monaten konnte ich {t} überhaupt nicht. Heute so.',
-  'Niemand redet darüber, aber {t} scheitert fast immer aus demselben Grund.',
-  'Kurz bevor ich {t} aufgeben wollte, ist mir das aufgefallen.',
-  'Das dauert 30 Sekunden und spart dir bei {t} Stunden.',
-  'Schau dir das an – und dann sag mir, ob {t} für dich noch Sinn ergibt.',
-  '{n} von 10 machen das bei {t} falsch. Ich war lange einer davon.',
+  { text: 'Die meisten machen bei {t} denselben Fehler – und merken es nie.' },
+  { text: 'Ich habe {n} Stunden in {t} gesteckt, damit du es in drei Minuten hast.', n: [10, 20, 50, 100] },
+  { text: 'Wenn du bei {t} nur eine Sache änderst, dann diese.' },
+  { text: 'Das hier hat mein Ergebnis bei {t} verdoppelt.' },
+  { text: 'Vergiss alles, was du über {t} gehört hast.' },
+  { text: 'Es gibt zwei Arten von Leuten bei {t}. Eine davon verschwendet Zeit.' },
+  { text: 'Vor {n} Monaten konnte ich {t} überhaupt nicht. Heute so.', n: [3, 6, 12] },
+  { text: 'Niemand redet darüber, aber {t} scheitert fast immer aus demselben Grund.' },
+  { text: 'Kurz bevor ich {t} aufgeben wollte, ist mir das aufgefallen.' },
+  { text: 'Das dauert 30 Sekunden und spart dir bei {t} Stunden.' },
+  { text: 'Schau dir das an – und dann sag mir, ob {t} für dich noch Sinn ergibt.' },
+  // Muss unter 10 bleiben – vorher war hier „21 von 10“ möglich.
+  { text: '{n} von 10 machen das bei {t} falsch. Ich war lange einer davon.', n: [7, 8, 9] },
 ];
 
 /** Ideengeber je nach Sorte Inhalt. */
@@ -132,7 +140,8 @@ export const SCRIPT_TEMPLATES = {
   },
 };
 
-const NUMBERS = [3, 5, 7, 10, 12, 21, 30, 100];
+/** Rückfall für Muster ohne eigene Zahlenliste. */
+const NUMBERS = [3, 5, 7];
 const pick = (list, seed) => list[Math.abs(seed) % list.length];
 
 /** Wiederholbare Zufallsfolge: gleiche Eingabe, gleiche Vorschlaege. */
@@ -142,10 +151,11 @@ function seedFrom(text) {
   return hash;
 }
 
+/** Setzt Thema und die zum Muster passende Zahl ein. */
 function fillPattern(pattern, topic, seed) {
-  return pattern
+  return pattern.text
     .replaceAll('{t}', topic)
-    .replaceAll('{n}', String(pick(NUMBERS, seed)))
+    .replaceAll('{n}', String(pick(pattern.n || NUMBERS, seed)))
     .replaceAll('{x}', 'teure Ausrüstung');
 }
 
@@ -165,7 +175,7 @@ export function titles(topic, count = 8, offset = 0) {
   );
   return shuffled.slice(0, count).map((pattern, index) => ({
     kind: pattern.kind,
-    text: fillPattern(pattern.text, clean, seed + index),
+    text: fillPattern(pattern, clean, seed + index),
   }));
 }
 
@@ -175,7 +185,7 @@ export function hooks(topic, count = 6, offset = 0) {
   if (!clean) return [];
   const seed = seedFrom(clean) + offset * 13;
   const shuffled = [...HOOK_PATTERNS].sort(
-    (a, b) => ((seedFrom(a) + seed) % 89) - ((seedFrom(b) + seed) % 89)
+    (a, b) => ((seedFrom(a.text) + seed) % 89) - ((seedFrom(b.text) + seed) % 89)
   );
   return shuffled.slice(0, count).map((pattern, index) => fillPattern(pattern, clean, seed + index));
 }

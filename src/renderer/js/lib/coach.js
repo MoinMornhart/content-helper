@@ -129,7 +129,7 @@ const RULES = [
       'neglected-channel', 'info', '⬡',
       `${platformName(worst.id)} liegt brach`,
       worst.last
-        ? `Dort ging seit ${fmt.relative(worst.last)} nichts mehr raus, obwohl der Kanal aktiv ist. Entweder wieder bespielen – oder in den Einstellungen abschalten, damit die Übersicht ehrlich bleibt.`
+        ? `Dort ging zuletzt ${fmt.relative(worst.last)} etwas raus, obwohl der Kanal aktiv ist. Entweder wieder bespielen – oder in den Einstellungen abschalten, damit die Übersicht ehrlich bleibt.`
         : `Für diesen Kanal ist noch nie etwas geplant worden. Entweder starten oder in den Einstellungen abwählen.`,
       { label: 'Kanäle prüfen', view: 'channels' }
     );
@@ -347,7 +347,7 @@ const RULES = [
     return insight(
       'shorts-from-long', 'info', '✂',
       'Aus langen Inhalten entstehen zu wenige Clips',
-      `${fmt.plural(longform.length, 'langes Format', 'lange Formate')} stehen ${fmt.plural(shorts.length, 'Kurzclip', 'Kurzclips')} gegenüber. Zwei bis drei Ausschnitte pro Langvideo oder Stream sind Reichweite ohne zusätzlichen Dreh – und der beste Weg, neue Zuschauer zum Hauptkanal zu führen.`,
+      `${fmt.plural(longform.length, 'langes Format', 'lange Formate')} ${longform.length === 1 ? 'steht' : 'stehen'} ${fmt.plural(shorts.length, 'Kurzclip', 'Kurzclips')} gegenüber. Zwei bis drei Ausschnitte pro Langvideo oder Stream sind Reichweite ohne zusätzlichen Dreh – und der beste Weg, neue Zuschauer zum Hauptkanal zu führen.`,
       { label: 'Clips einplanen', view: 'composer' }
     );
   },
