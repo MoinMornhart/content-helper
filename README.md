@@ -3,6 +3,10 @@
 </p>
 
 <p align="center">
+  <b>Deutsch</b> · <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <a href="https://github.com/MoinMornhart/content-helper/releases/latest"><img src="https://img.shields.io/github/v/release/MoinMornhart/content-helper?label=Version&color=8b5cf6" alt="Neueste Version"></a>
   <a href="https://github.com/MoinMornhart/content-helper/actions/workflows/pruefung.yml"><img src="https://github.com/MoinMornhart/content-helper/actions/workflows/pruefung.yml/badge.svg" alt="Prüfung"></a>
   <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D6" alt="Windows 10 und 11">
@@ -42,7 +46,8 @@ und schaut dabei auf **deine** Zahlen, nicht auf allgemeine Ratschläge.
 | **Wo liegen deine Daten?** | als lesbare Dateien auf deinem PC |
 | **API-Schlüssel oder Developer-Apps** | für YouTube keine; für Twitch meldest du dich mit deinem Konto an – dazu einmalig eine Client-ID, weil Twitch nur registrierte Anwendungen bedient |
 | **Mehrere PCs** | per Code verbunden, verschlüsselt über deinen OneDrive-, Dropbox- oder Google-Drive-Ordner |
-| **Veröffentlichen** | automatisch zum Termin auf YouTube, TikTok, Instagram, Facebook, LinkedIn und X – wie bei Buffer |
+| **Veröffentlichen** | automatisch zum Termin auf YouTube, TikTok, Instagram, Facebook, LinkedIn und X |
+| **Sprache** | Deutsch oder Englisch – folgt Windows, umstellbar unter *Einstellungen → Erscheinungsbild* |
 | **Aktualisierung** | lädt sich selbst im Hintergrund und spielt sich beim Neustart ein |
 
 ---
@@ -66,7 +71,7 @@ und schaut dabei auf **deine** Zahlen, nicht auf allgemeine Ratschläge.
     <td width="50%" valign="top">
       <h3>▦ Kalender und Warteschlange</h3>
       <p>Monats- und Wochenansicht, Umplanen per Ziehen, Beiträge in der Farbe ihres Kanals.
-      In der <b>Warteschlange</b> legst du wie bei Buffer feste Zeitfenster an – fertige Beiträge
+      In der <b>Warteschlange</b> legst du feste Zeitfenster an – fertige Beiträge
       rutschen der Reihe nach hinein.</p>
       <p>Der Plan lässt sich in <b>Apple Kalender und Outlook abonnieren</b> und aktualisiert sich dort
       von selbst, oder als Datei in jeden Kalender übernehmen.</p>
@@ -211,13 +216,13 @@ Fehlern versucht sie es erneut, mit wachsendem Abstand; was dauerhaft scheitert,
 </p>
 
 **Ehrlich gesagt:** Jede Plattform gibt Uploads nur an eine bei ihr registrierte und geprüfte Anwendung
-frei – so wie bei Buffer auch. Bis YouTube und TikTok die Content-Helper-Anwendung geprüft haben,
-landen Uploads dort auf „privat“. Wie die Anwendungen eingerichtet werden, steht in
-[docs/VEROEFFENTLICHEN.md](docs/VEROEFFENTLICHEN.md).
+frei. Bis YouTube und TikTok die Content-Helper-Anwendung geprüft haben, landen Uploads dort auf
+„privat“. Wie die Anwendungen eingerichtet werden, steht in
+[docs/VEROEFFENTLICHEN.md](docs/VEROEFFENTLICHEN.md) – in der App öffnet „Einrichten“ die richtige
+Seite und trägt Kopiertes selbst ein.
 
-**Kein Server:** Anders als bei Buffer postet dein eigener PC. Wo die Plattform nicht selbst planen
-kann, muss er zum Termin laufen – beim Schließen bleibt die App im Infobereich aktiv und startet auf
-Wunsch mit Windows.
+**Kein Server:** Dein eigener PC postet. Wo die Plattform nicht selbst planen kann, muss er zum Termin
+laufen – beim Schließen bleibt die App im Infobereich aktiv und startet auf Wunsch mit Windows.
 
 ---
 
@@ -252,8 +257,13 @@ npm start            # App starten
 npm run dev          # mit Entwicklerwerkzeugen
 npm test             # alle Prüfungen (siehe unten)
 npm run screenshots  # Bildschirmfotos für dieses README neu erzeugen
+npm run screenshots:en  # dasselbe auf Englisch
 npm run dist         # Windows-Installer bauen
 ```
+
+**Übersetzung:** Der deutsche Text im Code ist zugleich der Schlüssel – `t('Gespeichert.')` zeigt auf
+Englisch „Saved.“. Die englischen Texte stehen in `src/shared/i18n/en/*.json`; `npm run test:i18n`
+meldet jeden Text ohne Übersetzung.
 
 Voraussetzung ist Node.js 20 oder neuer. Die Oberfläche kommt ohne Framework und ohne Build-Schritt aus;
 zur Laufzeit wird nur `electron-updater` für die Selbstaktualisierung gebraucht.
@@ -263,12 +273,13 @@ zur Laufzeit wird nur `electron-updater` für die Selbstaktualisierung gebraucht
 | Befehl | prüft |
 | --- | --- |
 | `npm run lint` | Syntax aller Module |
+| `npm run test:i18n` | jeder Text hat eine englische Übersetzung, Platzhalter stimmen überein |
 | `npm run test:connectors` | YouTube- und Twitch-Anbindung, mehrere Kanäle, leere Kanäle – ohne Netz |
 | `npm run test:calendar` | Kalenderdateien nach RFC 5545: Faltung, Maskierung, stabile Kennungen |
 | `npm run test:companion` | den WLAN-Server des Handy-Begleiters von außen, inklusive Zugriffsschutz |
 | `npm run test:sync` | drei simulierte PCs an einem Cloud-Ordner: Konflikte, Löschen, Verschlüsselung, Ausfälle |
 | `npm run test:publish` | Veröffentlichen ohne Netz: Termine, Wiederholen, Fortsetzen, nie doppelt – und jede Plattform Schritt für Schritt |
-| `npm test` | alles davor, dazu einen Rauchtest über alle 16 Ansichten und den Assistenten |
+| `npm test` | alles davor, dazu einen Rauchtest über alle Ansichten auf Deutsch und Englisch |
 
 **Neue Version veröffentlichen:**
 

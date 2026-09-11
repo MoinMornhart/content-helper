@@ -11,6 +11,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 const platforms = require('../shared/platforms.json');
 const metrics = require('../shared/metrics.json');
+const { loadDictionary } = require('./i18n');
 
 const invoke = (channel, payload) => ipcRenderer.invoke(channel, payload);
 
@@ -23,7 +24,7 @@ function on(channel, handler) {
 
 contextBridge.exposeInMainWorld('ch', {
   /** Statisches Plattform- und Kennzahlenwissen, direkt beim Start verfuegbar. */
-  catalog: { platforms, metrics },
+  catalog: { platforms, metrics, i18n: { en: loadDictionary() } },
 
   db: {
     list: (collection) => invoke('db:list', { collection }),

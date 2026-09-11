@@ -15,6 +15,7 @@
 import * as store from './store.js';
 import * as fmt from './format.js';
 import { metric as metricInfo } from './platforms.js';
+import { t } from './i18n.js';
 
 export const entries = () => store.all('analytics');
 
@@ -168,7 +169,7 @@ export function byWeekday(key = 'views', options = {}) {
 export function byFormat(key = 'views', options = {}) {
   const buckets = new Map();
   for (const { entry, post } of joined(options)) {
-    const format = post.format || 'Ohne Format';
+    const format = post.format || t('Ohne Format');
     const n = value(entry, key);
     if (n === null) continue;
     if (!buckets.has(format)) buckets.set(format, []);

@@ -14,9 +14,10 @@ import * as advisor from '../lib/advisor.js';
 import * as posts from '../lib/posts.js';
 import { platform, platformName, glyph, metric, active } from '../lib/platforms.js';
 import { toast, modal, segmented } from '../lib/ui.js';
+import { t, mark } from '../lib/i18n.js';
 
-export const title = 'Assistent';
-export const lead = 'Aus deinen eigenen Zahlen: was funktioniert und was als Nächstes kommt.';
+export const title = mark('Assistent');
+export const lead = mark('Aus deinen eigenen Zahlen: was funktioniert und was als Nächstes kommt.');
 
 let platformFilter = null;
 /** Gewähltes Konto; undefined heisst: noch keine Wahl getroffen. */
@@ -31,14 +32,14 @@ const show = (value, key) => fmt.metricValue(value, metric(key).type);
 async function takeAsIdea(suggestion, chosenTitle, refresh) {
   await store.add('ideas', {
     title: chosenTitle || suggestion.title,
-    notes: `${suggestion.why}\n\n${suggestion.evidence.join('\n')}${suggestion.hook ? `\n\nEinstieg: ${suggestion.hook}` : ''}`,
+    notes: `${suggestion.why}\n\n${suggestion.evidence.join('\n')}${suggestion.hook ? `\n\n${t('Einstieg: {hook}', { hook: suggestion.hook })}` : ''}`,
     hook: suggestion.hook || '',
     status: 'inbox',
     score: 4,
     platforms: suggestion.platformId ? [suggestion.platformId] : [],
     source: 'Assistent',
   });
-  toast('Als Idee im Eingang abgelegt.', 'ok');
+  toast(t('Als Idee im Eingang abgelegt.'), 'ok');
   refresh();
 }
 
@@ -57,7 +58,7 @@ async function scheduleFrom(suggestion, chosenTitle, goto) {
     scheduledAt: when ? when.toISOString() : null,
     notes: suggestion.why,
   }));
-  toast(when ? `Eingeplant für ${fmt.dateTime(when)}.` : 'Als Entwurf angelegt.', 'ok');
+  toast(when ? t('Eingeplant für {when}.', { when: fmt.dateTime(when) }) : t('Als Entwurf angelegt.'), 'ok');
   goto('composer', { id: created.id });
 }
 
@@ -86,7 +87,7 @@ function suggestionCard(suggestion, { refresh, goto }) {
         style: option.text === chosen ? { borderColor: 'var(--accent)' } : {},
         onClick: () => { chosen = option.text; renderTitles(); },
       },
-        h('span.badge', { text: option.kind }),
+        h('span.badge', { text: t(option.kind) }),
         h('span.grow', { text: option.text }),
         option.text === chosen ? h('span', { style: { color: 'var(--accent)' }, text: '✓' }) : null)));
   };
@@ -98,7 +99,11 @@ function suggestionCard(suggestion, { refresh, goto }) {
         suggestion.platformId ? glyph(suggestion.platformId, 20) : null,
         h('span.badge.badge--accent', { text: suggestion.kind })),
       suggestion.when
-        ? h('span.text-xs.faint', { text: `am besten ${fmt.weekdayName(suggestion.when.weekday)}${suggestion.when.hour !== null ? ` gegen ${String(suggestion.when.hour).padStart(2, '0')} Uhr` : ''}` })
+        ? h('span.text-xs.faint', {
+            text: suggestion.when.hour !== null
+              ? t('am besten {day} gegen {hour} Uhr', { day: fmt.weekdayName(suggestion.when.weekday), hour: String(suggestion.when.hour).padStart(2, '0') })
+              : t('am besten {day}', { day: fmt.weekdayName(suggestion.when.weekday) }),
+          })
         : null),
 
     h('h3.mb-sm', { text: suggestion.title }),
@@ -111,39 +116,39 @@ function suggestionCard(suggestion, { refresh, goto }) {
 
     titleOptions.length
       ? h('div.mt', null,
-          h('div.field__label.mb-sm', { text: 'Titelvorschläge – einen auswählen' }),
+          h('div.field__label.mb-sm', { text: t('Titelvorschläge – einen auswählen') }),
           titleList)
       : null,
 
     h('div.row.wrap.gap-sm.mt', null,
       h('button.btn.btn--sm.btn--primary', {
-        text: 'Einplanen',
+        text: t('Einplanen'),
         onClick: () => scheduleFrom(suggestion, chosen, goto),
       }),
       h('button.btn.btn--sm', {
-        text: 'Als Idee sichern',
+        text: t('Als Idee sichern'),
         onClick: () => takeAsIdea(suggestion, chosen, refresh),
       })));
 }
 
 function winnersCard(data) {
   if (!data.winners.length) {
-    return card('Deine stärksten Beiträge', { hint: 'noch kein klarer Ausreisser' },
+    return card(t('Deine stärksten Beiträge'), { hint: t('noch kein klarer Ausreisser') },
       h('p.text-sm.muted', {
         text: data.total
-          ? `Bisher liegt kein Beitrag deutlich über deinem Mittelwert von ${fmt.num(data.baseline || 0, { compact: true })}. Das ist kein schlechtes Zeichen – es heisst nur, dass die Streuung gering ist und sich daraus noch kein Muster ableiten lässt.`
-          : 'Es sind noch keine Zahlen erfasst.',
+          ? t('Bisher liegt kein Beitrag deutlich über deinem Mittelwert von {value}. Das ist kein schlechtes Zeichen – es heisst nur, dass die Streuung gering ist und sich daraus noch kein Muster ableiten lässt.', { value: fmt.num(data.baseline || 0, { compact: true }) })
+          : t('Es sind noch keine Zahlen erfasst.'),
       }));
   }
 
-  return card('Deine stärksten Beiträge', { hint: `Mittelwert: ${fmt.num(data.baseline, { compact: true })}` },
+  return card(t('Deine stärksten Beiträge'), { hint: t('Mittelwert: {value}', { value: fmt.num(data.baseline, { compact: true }) }) },
     h('table.table', null,
       h('thead', null, h('tr', null,
-        h('th', { text: 'Beitrag' }),
-        h('th', { text: 'Kanal' }),
-        h('th', { text: 'Datum' }),
-        h('th.num', { text: 'Ergebnis' }),
-        h('th.num', { text: 'Vorsprung' }))),
+        h('th', { text: t('Beitrag') }),
+        h('th', { text: t('Kanal') }),
+        h('th', { text: t('Datum') }),
+        h('th.num', { text: t('Ergebnis') }),
+        h('th.num', { text: t('Vorsprung') }))),
       h('tbody', null,
         ...data.winners.slice(0, 8).map((row) =>
           h('tr', null,
@@ -156,11 +161,11 @@ function winnersCard(data) {
 
 function topicsCard(list) {
   if (!list.length) {
-    return card('Themen, die tragen', {},
-      h('p.text-sm.muted', { text: 'Noch kein Thema kommt in genug Beiträgen vor, um einen Vorsprung sicher zu belegen. Ab etwa zwei Beiträgen zum selben Thema erscheint hier eine Auswertung.' }));
+    return card(t('Themen, die tragen'), {},
+      h('p.text-sm.muted', { text: t('Noch kein Thema kommt in genug Beiträgen vor, um einen Vorsprung sicher zu belegen. Ab etwa zwei Beiträgen zum selben Thema erscheint hier eine Auswertung.') }));
   }
 
-  return card('Themen, die tragen', { hint: 'Vergleich mit deinen übrigen Beiträgen' },
+  return card(t('Themen, die tragen'), { hint: t('Vergleich mit deinen übrigen Beiträgen') },
     h('div.col.gap-lg', null,
       ...list.slice(0, 6).map((topic) => {
         const max = list[0].lift;
@@ -168,10 +173,10 @@ function topicsCard(list) {
           h('div.meter__head', null,
             h('span.row.gap-sm', null,
               h('span.strong', { text: topic.label || topic.word }),
-              h('span.text-xs.faint', { text: `${fmt.plural(topic.count, 'Beitrag', 'Beiträge')}` })),
+              h('span.text-xs.faint', { text: fmt.plural(topic.count, mark('Beitrag'), mark('Beiträge')) })),
             h('span', null,
               h('span.strong', { text: show(topic.withMedian, topic.metricKey) }),
-              h('span.text-xs.faint', { text: ` statt ${show(topic.withoutMedian, topic.metricKey)}` }),
+              h('span.text-xs.faint', { text: ' ' + t('statt {value}', { value: show(topic.withoutMedian, topic.metricKey) }) }),
               h('span', { style: { color: 'var(--ok)', marginLeft: '8px', fontWeight: '700' }, text: `${fmt.num(topic.lift, { decimals: 1 })}×` }))),
           h('div.bar', null, h('div.bar__fill', { style: { width: `${Math.min(100, (topic.lift / max) * 100)}%` } })));
       })));
@@ -179,7 +184,7 @@ function topicsCard(list) {
 
 function shapesCard(list) {
   if (!list.length) return null;
-  return card('Titel, die bei dir besser laufen', { hint: 'Bauweise statt Thema' },
+  return card(t('Titel, die bei dir besser laufen'), { hint: t('Bauweise statt Thema') },
     h('div.col.gap-sm', null,
       ...list.map((shape) =>
         h('div.row.between', null,
@@ -220,11 +225,11 @@ function accountChips(accounts, refresh) {
           onClick: () => { accountFilter = account.id; refresh(); },
         }, glyph('youtube', 14), h('span', { text: account.name }), h('span.text-xs.faint', { text: String(account.count) }))),
       h(`span.chip${accountFilter === null ? '.is-active' : ''}`, {
-        text: 'Alle gemischt',
+        text: t('Alle gemischt'),
         onClick: () => { accountFilter = null; refresh(); },
       })),
     accountFilter === null
-      ? h('div.text-xs', { style: { color: 'var(--warn)' }, text: 'Mehrere Kanäle gemischt – die Empfehlungen sind dadurch weniger treffsicher.' })
+      ? h('div.text-xs', { style: { color: 'var(--warn)' }, text: t('Mehrere Kanäle gemischt – die Empfehlungen sind dadurch weniger treffsicher.') })
       : null);
 }
 
@@ -244,11 +249,11 @@ export async function render({ setActions, refresh, goto }) {
 
   setActions(
     segmented(
-      [{ value: 90, label: '90 Tage' }, { value: 365, label: 'Jahr' }, { value: 3650, label: 'Alles' }],
+      [{ value: 90, label: t('90 Tage') }, { value: 365, label: t('Jahr') }, { value: 3650, label: t('Alles') }],
       range,
       (value) => { range = value; refresh(); }
     ),
-    h('button.btn.btn--sm', { text: 'Verbindungen', onClick: () => goto('connections') })
+    h('button.btn.btn--sm', { text: t('Verbindungen'), onClick: () => goto('connections') })
   );
 
   // ---------------------------------------------------------------- Zu wenig Daten
@@ -257,29 +262,29 @@ export async function render({ setActions, refresh, goto }) {
       accountRow,
       card(null, {},
         empty(
-          'Noch zu wenig Material für eine Aussage',
-          `Der Assistent braucht mindestens ${state.minPosts} gemessene Beiträge, um Muster von Zufall zu unterscheiden. Vorhanden: ${state.measured}. Aus weniger etwas abzuleiten wäre Kaffeesatzleserei.`,
+          t('Noch zu wenig Material für eine Aussage'),
+          t('Der Assistent braucht mindestens {min} gemessene Beiträge, um Muster von Zufall zu unterscheiden. Vorhanden: {count}. Aus weniger etwas abzuleiten wäre Kaffeesatzleserei.', { min: state.minPosts, count: state.measured }),
           h('div.row.gap-sm.mt', null,
-            h('button.btn.btn--primary', { text: 'Kanäle verbinden', onClick: () => goto('connections') }),
-            h('button.btn', { text: 'Zahlen erfassen', onClick: () => goto('analytics') })))),
+            h('button.btn.btn--primary', { text: t('Kanäle verbinden'), onClick: () => goto('connections') }),
+            h('button.btn', { text: t('Zahlen erfassen'), onClick: () => goto('analytics') })))),
 
-      card('Der schnellste Weg dorthin', {},
+      card(t('Der schnellste Weg dorthin'), {},
         h('div.col.gap-lg', null,
           h('div.row.gap-sm', null,
             h('span.badge.badge--accent', { text: '1' }),
             h('div', null,
-              h('div.strong.text-sm', { text: 'YouTube verbinden – ohne Zugangsschlüssel' }),
-              h('div.text-sm.muted', { text: 'Kanalname genügt. Die App holt sofort die letzten 15 Videos mit Aufrufen und Likes; damit ist die Schwelle in der Regel auf einen Schlag erreicht.' }))),
+              h('div.strong.text-sm', { text: t('YouTube verbinden – ohne Zugangsschlüssel') }),
+              h('div.text-sm.muted', { text: t('Kanalname genügt. Die App holt sofort die letzten 15 Videos mit Aufrufen und Likes; damit ist die Schwelle in der Regel auf einen Schlag erreicht.') }))),
           h('div.row.gap-sm', null,
             h('span.badge.badge--accent', { text: '2' }),
             h('div', null,
-              h('div.strong.text-sm', { text: 'Twitch verbinden' }),
-              h('div.text-sm.muted', { text: 'Bringt vergangene Übertragungen und, während du live bist, die Zuschauerzahlen mit.' }))),
+              h('div.strong.text-sm', { text: t('Twitch verbinden') }),
+              h('div.text-sm.muted', { text: t('Bringt vergangene Übertragungen und, während du live bist, die Zuschauerzahlen mit.') }))),
           h('div.row.gap-sm', null,
             h('span.badge.badge--accent', { text: '3' }),
             h('div', null,
-              h('div.strong.text-sm', { text: 'Alternativ: CSV aus dem Studio' }),
-              h('div.text-sm.muted', { text: 'Für Kanäle ohne Verbindung – der Export enthält alles, was der Assistent braucht.' }))))));
+              h('div.strong.text-sm', { text: t('Alternativ: CSV aus dem Studio') }),
+              h('div.text-sm.muted', { text: t('Für Kanäle ohne Verbindung – der Export enthält alles, was der Assistent braucht.') }))))));
   }
 
   // ---------------------------------------------------------------- Auswertung
@@ -294,7 +299,7 @@ export async function render({ setActions, refresh, goto }) {
   return h('div.col.gap-lg', null,
     h('div.chips', null,
       h(`span.chip${platformFilter === null ? '.is-active' : ''}`, {
-        text: 'Alle Plattformen',
+        text: t('Alle Plattformen'),
         onClick: () => { platformFilter = null; refresh(); },
       }),
       ...used.map((id) =>
@@ -305,35 +310,35 @@ export async function render({ setActions, refresh, goto }) {
 
     h('div.grid.grid-4', null,
       card(null, {}, h('div.stat', null,
-        h('div.stat__label', { text: 'Ausgewertet' }),
+        h('div.stat__label', { text: t('Ausgewertet') }),
         h('div.stat__value', { text: String(state.measured) }),
-        h('div.stat__meta', { text: `${state.linked} mit Beitrag verknüpft` }))),
+        h('div.stat__meta', { text: t('{n} mit Beitrag verknüpft', { n: state.linked }) }))),
       card(null, {}, h('div.stat', null,
-        h('div.stat__label', { text: 'Dein Mittelwert' }),
+        h('div.stat__label', { text: t('Dein Mittelwert') }),
         h('div.stat__value', { text: fmt.num(data.baseline || 0, { compact: true }) }),
-        h('div.stat__meta', { text: 'Median, nicht Durchschnitt' }))),
+        h('div.stat__meta', { text: t('Median, nicht Durchschnitt') }))),
       card(null, {}, h('div.stat', null,
-        h('div.stat__label', { text: 'Ausreisser nach oben' }),
+        h('div.stat__label', { text: t('Ausreisser nach oben') }),
         h('div.stat__value', { text: String(data.winners.length) }),
-        h('div.stat__meta', { text: 'mindestens das 1,5-fache' }))),
+        h('div.stat__meta', { text: t('mindestens das 1,5-fache') }))),
       card(null, {}, h('div.stat', null,
-        h('div.stat__label', { text: 'Bestes Fenster' }),
+        h('div.stat__label', { text: t('Bestes Fenster') }),
         h('div.stat__value', {
           text: clock?.weekday ? fmt.weekdayShort(clock.weekday.key) : '–',
           style: { fontSize: '23px' },
         }),
         h('div.stat__meta', {
-          text: clock?.hour ? `gegen ${String(clock.hour.key).padStart(2, '0')}:00 Uhr` : 'zu wenige zugeordnete Beiträge',
+          text: clock?.hour ? t('gegen {hour}:00 Uhr', { hour: String(clock.hour.key).padStart(2, '0') }) : t('zu wenige zugeordnete Beiträge'),
         })))),
 
     h('section.section.mt-0', null,
       h('div.section__head', null,
-        h('div.section__title', { text: 'Das solltest du als Nächstes machen' }),
-        h('div.section__hint', { text: 'jeder Vorschlag mit Begründung aus deinen Zahlen' })),
+        h('div.section__title', { text: t('Das solltest du als Nächstes machen') }),
+        h('div.section__hint', { text: t('jeder Vorschlag mit Begründung aus deinen Zahlen') })),
       list.length
         ? h('div.col.gap-lg', null, ...list.map((suggestion) => suggestionCard(suggestion, { refresh, goto })))
         : card(null, { class: 'card--quiet' },
-            h('p.text-sm.muted', { text: 'Deine Beiträge liegen bisher zu dicht beieinander, als dass sich ein tragendes Muster abheben würde. Mehr Bandbreite beim Ausprobieren erzeugt genau die Unterschiede, aus denen sich lernen lässt.' }))),
+            h('p.text-sm.muted', { text: t('Deine Beiträge liegen bisher zu dicht beieinander, als dass sich ein tragendes Muster abheben würde. Mehr Bandbreite beim Ausprobieren erzeugt genau die Unterschiede, aus denen sich lernen lässt.') }))),
 
     h('div.split', null,
       winnersCard(data),

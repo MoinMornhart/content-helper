@@ -307,6 +307,41 @@ app.whenReady().then(async () => {
     problems.push(`QR-Code-Pruefung warf: ${error.message}`);
   }
 
+  // ---------------------------------------------------------------- Englisch
+  // Dieselben Ansichten noch einmal auf Englisch: Nichts darf abstürzen, und
+  // die Navigation muss tatsächlich umgeschaltet sein.
+  try {
+    await win.webContents.executeJavaScript("window.__app.store.saveSettings({ language: 'en' })");
+    await win.loadFile(path.join(__dirname, '..', 'src', 'renderer', 'index.html'));
+    await wait(1200);
+    const nav = await win.webContents.executeJavaScript(
+      "[...document.querySelectorAll('.nav-item')].map((node) => node.textContent.trim()).join(' | ')"
+    );
+    if (!nav.includes('Settings') || nav.includes('Einstellungen')) {
+      problems.push(`Englisch: Navigation nicht umgeschaltet (${nav.slice(0, 160)})`);
+    } else {
+      process.stdout.write('  ok   Englisch    Navigation umgeschaltet\n');
+    }
+    for (const view of VIEWS) {
+      await win.webContents.executeJavaScript(`window.__app.goto(${JSON.stringify(view)})`);
+      await wait(500);
+      const report = await win.webContents.executeJavaScript(`(() => {
+        const host = document.querySelector('.view');
+        const text = host ? host.textContent : '';
+        return {
+          nodes: host ? host.querySelectorAll('*').length : 0,
+          failed: /konnte nicht geladen werden|could not be loaded/i.test(text),
+          message: text.slice(0, 200),
+        };
+      })()`);
+      if (report.failed) problems.push(`Englisch: Ansicht "${view}" meldet einen Ladefehler: ${report.message}`);
+      else if (report.nodes < 5) problems.push(`Englisch: Ansicht "${view}" ist praktisch leer (${report.nodes} Elemente).`);
+      else process.stdout.write(`  ok   en/${view.padEnd(9)} ${report.nodes} Elemente\n`);
+    }
+  } catch (error) {
+    problems.push(`Englisch-Durchlauf warf: ${error.message}`);
+  }
+
   store.flush();
   // Der temporaere Ordner haelt noch offene Dateien der Laufzeit – das Loeschen
   // darf das Ergebnis des Tests nicht beeinflussen.

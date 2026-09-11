@@ -28,7 +28,12 @@ const { CloudSync } = require('../src/main/sync/cloud-sync');
 const { createPublisher } = require('../src/main/publish');
 const { registerIpc } = require('../src/main/ipc');
 
-const OUT = path.join(__dirname, '..', 'docs', 'screenshots');
+/** Sprache der Bilder: `npm run screenshots:en` übergibt --en. */
+const LANG = process.argv.includes('--en') ? 'en' : 'de';
+const L = (de, en) => (LANG === 'en' ? en : de);
+const OUT = path.join(__dirname, '..', 'docs', 'screenshots', ...(LANG === 'en' ? ['en'] : []));
+const CHANNEL = L('Beispielkanal', 'Demo Channel');
+const CHANNEL_CLIPS = L('Beispielkanal Clips', 'Demo Channel Clips');
 const WIDTH = 1440;
 const HEIGHT = 900;
 
@@ -48,18 +53,18 @@ function seed(store) {
 
   // --- Vergangene Videos: ein erkennbares Muster für den Assistenten
   const history = [
-    ['Minecraft: Meine Basis nach 100 Tagen', 48200, -52, 17, 'Case Study'],
-    ['Redstone einfach erklärt – in 10 Minuten', 36900, -45, 17, 'Tutorial'],
-    ['7 Minecraft-Fehler, die fast jeder macht', 31400, -38, 17, 'Listicle'],
-    ['Minecraft-Farmen, die sich wirklich lohnen', 27100, -31, 17, 'Tutorial'],
-    ['Ich baue in Minecraft eine ganze Stadt', 24800, -24, 18, 'Vlog'],
-    ['Mein Schreibtisch-Setup 2026', 8400, -49, 11, 'Review'],
-    ['So schneide ich meine Videos', 7100, -42, 11, 'Tutorial'],
-    ['Fragen und Antworten zum Kanal', 5200, -35, 12, 'Q&A'],
-    ['Rückblick auf das letzte Jahr', 6300, -28, 11, 'Vlog'],
-    ['Warum ich jetzt öfter streame', 5900, -17, 12, 'Vlog'],
-    ['Minecraft Survival: Die ersten 24 Stunden', 29600, -10, 17, 'Vlog'],
-    ['Die beste Minecraft-Mod des Jahres', 22300, -4, 17, 'Review'],
+    [L('Minecraft: Meine Basis nach 100 Tagen', 'Minecraft: My base after 100 days'), 48200, -52, 17, 'Case Study'],
+    [L('Redstone einfach erklärt – in 10 Minuten', 'Redstone explained simply – in 10 minutes'), 36900, -45, 17, 'Tutorial'],
+    [L('7 Minecraft-Fehler, die fast jeder macht', '7 Minecraft mistakes almost everyone makes'), 31400, -38, 17, 'Listicle'],
+    [L('Minecraft-Farmen, die sich wirklich lohnen', 'Minecraft farms that are actually worth it'), 27100, -31, 17, 'Tutorial'],
+    [L('Ich baue in Minecraft eine ganze Stadt', 'I build a whole city in Minecraft'), 24800, -24, 18, 'Vlog'],
+    [L('Mein Schreibtisch-Setup 2026', 'My desk setup 2026'), 8400, -49, 11, 'Review'],
+    [L('So schneide ich meine Videos', 'How I edit my videos'), 7100, -42, 11, 'Tutorial'],
+    [L('Fragen und Antworten zum Kanal', 'Q&A about the channel'), 5200, -35, 12, 'Q&A'],
+    [L('Rückblick auf das letzte Jahr', 'Looking back at last year'), 6300, -28, 11, 'Vlog'],
+    [L('Warum ich jetzt öfter streame', 'Why I stream more often now'), 5900, -17, 12, 'Vlog'],
+    [L('Minecraft Survival: Die ersten 24 Stunden', 'Minecraft Survival: the first 24 hours'), 29600, -10, 17, 'Vlog'],
+    [L('Die beste Minecraft-Mod des Jahres', 'The best Minecraft mod of the year'), 22300, -4, 17, 'Review'],
   ];
 
   for (const [title, views, offset, hour, format] of history) {
@@ -67,25 +72,33 @@ function seed(store) {
     const post = store.insert('posts', {
       title, body: '', platforms: ['youtube'], format, status: 'published',
       publishedAt: when.toISOString(), scheduledAt: when.toISOString(),
-      accountId: MAIN, accountName: 'Beispielkanal',
+      accountId: MAIN, accountName: CHANNEL,
     });
     store.insert('analytics', {
       platformId: 'youtube', postId: post.id, date: key(when), title,
       metrics: { views, likes: Math.round(views * 0.045), comments: Math.round(views * 0.006) },
-      source: 'youtube', accountId: MAIN, accountName: 'Beispielkanal',
+      source: 'youtube', accountId: MAIN, accountName: CHANNEL,
     });
   }
 
   // --- Kurzvideos und Streams
-  for (const [title, views, offset] of [['Redstone-Trick in 30 Sekunden', 61200, -20], ['Der schnellste Weg zu Diamanten', 44800, -13], ['Creeper-Falle, die wirklich klappt', 38700, -6]]) {
+  for (const [title, views, offset] of [
+    [L('Redstone-Trick in 30 Sekunden', 'Redstone trick in 30 seconds'), 61200, -20],
+    [L('Der schnellste Weg zu Diamanten', 'The fastest way to diamonds'), 44800, -13],
+    [L('Creeper-Falle, die wirklich klappt', 'A creeper trap that actually works'), 38700, -6],
+  ]) {
     const when = at(offset, 19);
     store.insert('analytics', {
       platformId: 'youtube_shorts', date: key(when), title,
       metrics: { views, completionRate: 58, likes: Math.round(views * 0.07) },
-      source: 'manual', accountId: CLIPS, accountName: 'Beispielkanal Clips',
+      source: 'manual', accountId: CLIPS, accountName: CHANNEL_CLIPS,
     });
   }
-  for (const [title, avg, peak, offset] of [['Werkstatt-Abend: Wir bauen weiter', 41, 88, -15], ['Community-Abend mit Zuschauerwünschen', 56, 112, -8], ['Speedrun-Versuch Nummer 3', 63, 131, -1]]) {
+  for (const [title, avg, peak, offset] of [
+    [L('Werkstatt-Abend: Wir bauen weiter', 'Workshop night: building on'), 41, 88, -15],
+    [L('Community-Abend mit Zuschauerwünschen', 'Community night with viewer requests'), 56, 112, -8],
+    [L('Speedrun-Versuch Nummer 3', 'Speedrun attempt number 3'), 63, 131, -1],
+  ]) {
     const when = at(offset, 19);
     store.insert('analytics', {
       platformId: 'twitch', date: key(when), title,
@@ -96,34 +109,35 @@ function seed(store) {
 
   // --- Geplante Beiträge der nächsten Tage
   const upcoming = [
-    ['Minecraft-Basis: Teil 2 – der Keller', ['youtube', 'x'], 1, 17, 'scheduled', 'Tutorial'],
-    ['Redstone-Tür in 20 Sekunden', ['youtube_shorts', 'tiktok', 'instagram_reels'], 2, 19, 'scheduled', 'Hook & Payoff'],
-    ['Stream: Wir bauen die Stadt fertig', ['twitch'], 3, 19, 'scheduled', 'Werkstatt-Stream'],
-    ['Die 5 besten Seeds für Einsteiger', ['youtube'], 5, 17, 'scheduled', 'Listicle'],
-    ['Wochenrückblick', ['newsletter'], 6, 7, 'scheduled', 'Wochenrückblick'],
-    ['Community-Frage: Was bauen wir als Nächstes?', ['threads', 'bluesky'], 0, 12, 'scheduled', null],
+    [L('Minecraft-Basis: Teil 2 – der Keller', 'Minecraft base: part 2 – the basement'), ['youtube', 'x'], 1, 17, 'scheduled', 'Tutorial'],
+    [L('Redstone-Tür in 20 Sekunden', 'Redstone door in 20 seconds'), ['youtube_shorts', 'tiktok', 'instagram_reels'], 2, 19, 'scheduled', 'Hook & Payoff'],
+    [L('Stream: Wir bauen die Stadt fertig', 'Stream: finishing the city'), ['twitch'], 3, 19, 'scheduled', 'Werkstatt-Stream'],
+    [L('Die 5 besten Seeds für Einsteiger', 'The 5 best seeds for beginners'), ['youtube'], 5, 17, 'scheduled', 'Listicle'],
+    [L('Wochenrückblick', 'Weekly recap'), ['newsletter'], 6, 7, 'scheduled', 'Wochenrückblick'],
+    [L('Community-Frage: Was bauen wir als Nächstes?', 'Community question: what should we build next?'), ['threads', 'bluesky'], 0, 12, 'scheduled', null],
   ];
   let composerId = null;
   for (const [title, platforms, offset, hour, status, format] of upcoming) {
     const when = at(offset, hour);
     const post = store.insert('posts', {
       title,
-      body: title.startsWith('Minecraft-Basis')
-        ? 'Letztes Mal ging es um die Grundmauern – heute geht es nach unten.\n\nIch zeige, wie der Keller geplant ist, welche Fehler ich gemacht habe und was ich beim nächsten Mal anders mache.\n\nWas soll als Nächstes gebaut werden?'
-        : 'Kurz, konkret, ohne Einleitung.',
-      hashtags: title.startsWith('Minecraft-Basis') ? ['minecraft', 'survival', 'bauen'] : ['minecraft'],
+      body: title === upcoming[0][0]
+        ? L('Letztes Mal ging es um die Grundmauern – heute geht es nach unten.\n\nIch zeige, wie der Keller geplant ist, welche Fehler ich gemacht habe und was ich beim nächsten Mal anders mache.\n\nWas soll als Nächstes gebaut werden?',
+          'Last time was all about the foundations – today we go down.\n\nI’ll show how the basement is planned, which mistakes I made and what I’d do differently next time.\n\nWhat should we build next?')
+        : L('Kurz, konkret, ohne Einleitung.', 'Short, concrete, no intro.'),
+      hashtags: title === upcoming[0][0] ? ['minecraft', 'survival', L('bauen', 'building')] : ['minecraft'],
       platforms, format, status,
       scheduledAt: when.toISOString(),
       checklist: [
-        { text: 'Thumbnail gebaut', done: true },
-        { text: 'Kapitelmarken gesetzt', done: false },
-        { text: 'Beschreibung mit Links gefüllt', done: true },
+        { text: L('Thumbnail gebaut', 'Thumbnail done'), done: true },
+        { text: L('Kapitelmarken gesetzt', 'Chapter markers set'), done: false },
+        { text: L('Beschreibung mit Links gefüllt', 'Description filled with links'), done: true },
       ],
     });
     if (!composerId) {
       composerId = post.id;
       // Der Composer zeigt ein gewähltes Video und den Stand bei YouTube.
-      const video = store.insert('media', { name: 'basis-teil-2-keller.mp4', filePath: 'C:/Beispiel/basis-teil-2-keller.mp4', ext: 'mp4', size: 1843200000, tags: ['minecraft'] });
+      const video = store.insert('media', { name: L('basis-teil-2-keller.mp4', 'base-part-2-basement.mp4'), filePath: L('C:/Beispiel/basis-teil-2-keller.mp4', 'C:/Example/base-part-2-basement.mp4'), ext: 'mp4', size: 1843200000, tags: ['minecraft'] });
       store.update('posts', post.id, {
         mediaIds: [video.id],
         publishOptions: { youtube: { privacy: 'public', madeForKids: false } },
@@ -134,19 +148,20 @@ function seed(store) {
 
   // --- Ideen in allen Spalten
   const ideas = [
-    ['Vergleich: Vanilla gegen Modpack', 'inbox', 4],
-    ['Was eine Minecraft-Stadt wirklich kostet', 'inbox', 3],
-    ['Anfängerfehler beim Redstone', 'doing', 5],
-    ['Kurzvideo aus Clip: Der Creeper-Moment', 'ready', 4],
-    ['Mythos: Diamanten gibt es nur tief unten', 'ready', 3],
-    ['Hinter den Kulissen: So entsteht ein Video', 'done', 4],
+    [L('Vergleich: Vanilla gegen Modpack', 'Comparison: vanilla vs. modpack'), 'inbox', 4],
+    [L('Was eine Minecraft-Stadt wirklich kostet', 'What a Minecraft city really costs'), 'inbox', 3],
+    [L('Anfängerfehler beim Redstone', 'Beginner mistakes with redstone'), 'doing', 5],
+    [L('Kurzvideo aus Clip: Der Creeper-Moment', 'Short from a clip: the creeper moment'), 'ready', 4],
+    [L('Mythos: Diamanten gibt es nur tief unten', 'Myth: diamonds only spawn deep down'), 'ready', 3],
+    [L('Hinter den Kulissen: So entsteht ein Video', 'Behind the scenes: how a video is made'), 'done', 4],
   ];
   for (const [title, status, score] of ideas) {
-    store.insert('ideas', { title, status, score, platforms: ['youtube'], source: 'Beispiel' });
+    store.insert('ideas', { title, status, score, platforms: ['youtube'], source: L('Beispiel', 'Example') });
   }
 
   store.saveSettings({
     onboardingDone: true,
+    language: LANG,
     activePlatforms: ['youtube', 'youtube_shorts', 'tiktok', 'instagram_reels', 'twitch', 'x', 'threads', 'bluesky', 'newsletter'],
     queueSlots: [
       { days: [2, 4], time: '17:00', platformId: null },
@@ -156,10 +171,10 @@ function seed(store) {
     weeklyGoal: { posts: 5, ideas: 10, streams: 3 },
     connections: {
       // Erfundene Anmeldung – in diesem Lauf wird nichts abgefragt.
-      twitch: { clientId: 'beispiel', refreshToken: 'beispiel', login: 'beispielkanal', userId: '1', displayName: 'Beispielkanal', signedInAt: at(-12, 10).toISOString(), lastSync: at(0, 8).toISOString() },
+      twitch: { clientId: 'beispiel', refreshToken: 'beispiel', login: 'beispielkanal', userId: '1', displayName: CHANNEL, signedInAt: at(-12, 10).toISOString(), lastSync: at(0, 8).toISOString() },
       youtubeChannels: [
-        { channelId: MAIN, name: 'Beispielkanal', createPosts: true, lastSync: at(0, 8, 40).toISOString(), lastSource: 'feed', addedAt: at(-60, 10).toISOString() },
-        { channelId: CLIPS, name: 'Beispielkanal Clips', createPosts: false, lastSync: at(0, 8, 40).toISOString(), lastSource: 'feed', addedAt: at(-30, 10).toISOString() },
+        { channelId: MAIN, name: CHANNEL, createPosts: true, lastSync: at(0, 8, 40).toISOString(), lastSource: 'feed', addedAt: at(-60, 10).toISOString() },
+        { channelId: CLIPS, name: CHANNEL_CLIPS, createPosts: false, lastSync: at(0, 8, 40).toISOString(), lastSource: 'feed', addedAt: at(-30, 10).toISOString() },
       ],
     },
   });
@@ -171,8 +186,8 @@ function seed(store) {
         google: { clientId: 'beispiel', clientSecret: 'beispiel' },
         tiktok: { clientKey: 'beispiel', clientSecret: 'beispiel' },
       },
-      youtubeUpload: { refreshToken: 'beispiel', channelTitle: 'Beispielkanal', connectedAt: at(-3, 10).toISOString() },
-      tiktokPublish: { refreshToken: 'beispiel', displayName: 'Beispielkanal', username: 'beispielkanal', connectedAt: at(-3, 10).toISOString() },
+      youtubeUpload: { refreshToken: 'beispiel', channelTitle: CHANNEL, connectedAt: at(-3, 10).toISOString() },
+      tiktokPublish: { refreshToken: 'beispiel', displayName: CHANNEL, username: 'beispielkanal', connectedAt: at(-3, 10).toISOString() },
     },
   });
   store.flush();

@@ -18,6 +18,9 @@ const { Companion } = require('./companion');
 const { Connectors } = require('./connectors');
 const { CloudSync } = require('./sync/cloud-sync');
 const { createPublisher } = require('./publish');
+const i18n = require('./i18n');
+
+const { t } = i18n;
 
 const isDev = process.argv.includes('--dev');
 const startHidden = process.argv.includes('--hidden');
@@ -112,54 +115,54 @@ function goto(view) {
 function buildMenu() {
   const template = [
     {
-      label: 'Datei',
+      label: t('Datei'),
       submenu: [
-        { label: 'Neuer Beitrag', accelerator: 'CmdOrCtrl+N', click: () => mainWindow?.webContents.send('nav:action', { action: 'new-post' }) },
-        { label: 'Neue Idee', accelerator: 'CmdOrCtrl+I', click: () => mainWindow?.webContents.send('nav:action', { action: 'new-idea' }) },
+        { label: t('Neuer Beitrag'), accelerator: 'CmdOrCtrl+N', click: () => mainWindow?.webContents.send('nav:action', { action: 'new-post' }) },
+        { label: t('Neue Idee'), accelerator: 'CmdOrCtrl+I', click: () => mainWindow?.webContents.send('nav:action', { action: 'new-idea' }) },
         { type: 'separator' },
-        { label: 'Sicherung exportieren', click: () => mainWindow?.webContents.send('nav:action', { action: 'export-backup' }) },
-        { label: 'Sicherung einlesen', click: () => mainWindow?.webContents.send('nav:action', { action: 'import-backup' }) },
+        { label: t('Sicherung exportieren'), click: () => mainWindow?.webContents.send('nav:action', { action: 'export-backup' }) },
+        { label: t('Sicherung einlesen'), click: () => mainWindow?.webContents.send('nav:action', { action: 'import-backup' }) },
         { type: 'separator' },
-        { label: 'Beenden', accelerator: 'CmdOrCtrl+Q', click: () => { quitting = true; app.quit(); } },
+        { label: t('Beenden'), accelerator: 'CmdOrCtrl+Q', click: () => { quitting = true; app.quit(); } },
       ],
     },
     {
-      label: 'Ansicht',
+      label: t('Ansicht'),
       submenu: [
         { label: 'Dashboard', accelerator: 'CmdOrCtrl+1', click: () => goto('dashboard') },
-        { label: 'Kalender', accelerator: 'CmdOrCtrl+2', click: () => goto('calendar') },
+        { label: t('Kalender'), accelerator: 'CmdOrCtrl+2', click: () => goto('calendar') },
         { label: 'Composer', accelerator: 'CmdOrCtrl+3', click: () => goto('composer') },
-        { label: 'Ideen', accelerator: 'CmdOrCtrl+4', click: () => goto('ideas') },
+        { label: t('Ideen'), accelerator: 'CmdOrCtrl+4', click: () => goto('ideas') },
         { label: 'Analytics', accelerator: 'CmdOrCtrl+5', click: () => goto('analytics') },
         { label: 'Coach', accelerator: 'CmdOrCtrl+6', click: () => goto('coach') },
         { type: 'separator' },
-        { role: 'reload', label: 'Neu laden' },
-        { role: 'toggleDevTools', label: 'Entwicklerwerkzeuge' },
+        { role: 'reload', label: t('Neu laden') },
+        { role: 'toggleDevTools', label: t('Entwicklerwerkzeuge') },
         { type: 'separator' },
-        { role: 'resetZoom', label: 'Zoom zuruecksetzen' },
-        { role: 'zoomIn', label: 'Groesser' },
-        { role: 'zoomOut', label: 'Kleiner' },
-        { role: 'togglefullscreen', label: 'Vollbild' },
+        { role: 'resetZoom', label: t('Zoom zuruecksetzen') },
+        { role: 'zoomIn', label: t('Groesser') },
+        { role: 'zoomOut', label: t('Kleiner') },
+        { role: 'togglefullscreen', label: t('Vollbild') },
       ],
     },
     {
-      label: 'Bearbeiten',
+      label: t('Bearbeiten'),
       submenu: [
-        { role: 'undo', label: 'Rueckgaengig' },
-        { role: 'redo', label: 'Wiederholen' },
+        { role: 'undo', label: t('Rueckgaengig') },
+        { role: 'redo', label: t('Wiederholen') },
         { type: 'separator' },
-        { role: 'cut', label: 'Ausschneiden' },
-        { role: 'copy', label: 'Kopieren' },
-        { role: 'paste', label: 'Einfuegen' },
-        { role: 'selectAll', label: 'Alles auswaehlen' },
+        { role: 'cut', label: t('Ausschneiden') },
+        { role: 'copy', label: t('Kopieren') },
+        { role: 'paste', label: t('Einfuegen') },
+        { role: 'selectAll', label: t('Alles auswaehlen') },
       ],
     },
     {
-      label: 'Hilfe',
+      label: t('Hilfe'),
       submenu: [
-        { label: 'Datenordner oeffnen', click: () => shell.openPath(store.paths().data) },
-        { label: 'Projektseite auf GitHub', click: () => shell.openExternal('https://github.com/MoinMornhart/content-helper') },
-        { label: 'Ueber Content Helper', click: () => goto('settings') },
+        { label: t('Datenordner oeffnen'), click: () => shell.openPath(store.paths().data) },
+        { label: t('Projektseite auf GitHub'), click: () => shell.openExternal('https://github.com/MoinMornhart/content-helper') },
+        { label: t('Ueber Content Helper'), click: () => goto('settings') },
       ],
     },
   ];
@@ -179,29 +182,40 @@ function refreshTray() {
   if (!tray) return;
   const summary = scheduler.summary();
   const next = summary.next
-    ? `Naechster: ${summary.next.title} – ${new Date(summary.next.at).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' })}`
-    : 'Nichts geplant';
+    ? t('Naechster: {title} – {when}', {
+      title: summary.next.title,
+      when: new Date(summary.next.at).toLocaleString(i18n.locale(), { dateStyle: 'short', timeStyle: 'short' }),
+    })
+    : t('Nichts geplant');
 
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: next, enabled: false },
-      { label: `${summary.scheduledCount} geplant · ${summary.dueCount} faellig · ${summary.missedCount} verpasst`, enabled: false },
+      {
+        label: t('{scheduled} geplant · {due} faellig · {missed} verpasst', {
+          scheduled: summary.scheduledCount,
+          due: summary.dueCount,
+          missed: summary.missedCount,
+        }),
+        enabled: false,
+      },
       { type: 'separator' },
-      { label: 'Fenster oeffnen', click: () => showWindow() },
-      { label: 'Neuer Beitrag', click: () => { showWindow(); mainWindow?.webContents.send('nav:action', { action: 'new-post' }); } },
-      { label: 'Kalender', click: () => goto('calendar') },
+      { label: t('Fenster oeffnen'), click: () => showWindow() },
+      { label: t('Neuer Beitrag'), click: () => { showWindow(); mainWindow?.webContents.send('nav:action', { action: 'new-post' }); } },
+      { label: t('Kalender'), click: () => goto('calendar') },
       { type: 'separator' },
-      { label: 'Beenden', click: () => { quitting = true; app.quit(); } },
+      { label: t('Beenden'), click: () => { quitting = true; app.quit(); } },
     ])
   );
 
-  tray.setToolTip(summary.dueCount ? `Content Helper – ${summary.dueCount} faellig` : 'Content Helper');
+  tray.setToolTip(summary.dueCount ? t('Content Helper – {count} faellig', { count: summary.dueCount }) : 'Content Helper');
 }
 
 app.whenReady().then(() => {
   app.setAppUserModelId('de.mornhart.contenthelper');
 
   store = new Store(app.getPath('userData'));
+  i18n.init(() => store.settings().language);
   scheduler = new Scheduler(store, getWindow);
 
   updater = new Updater(store, getWindow);
@@ -224,6 +238,13 @@ app.whenReady().then(() => {
   createWindow();
   buildMenu();
   buildTray();
+  // Sprache umgestellt: Menü und Infobereich neu aufbauen.
+  store.onChange((change) => {
+    if (change.type === 'settings' && change.patch && 'language' in change.patch) {
+      buildMenu();
+      refreshTray();
+    }
+  });
   scheduler.start();
   updater.start();
   connectors.start();

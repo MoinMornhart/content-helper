@@ -14,9 +14,10 @@ import * as chart from '../lib/chart.js';
 import * as csv from '../lib/csv.js';
 import { active, platform, platformName, glyph, metric, METRICS } from '../lib/platforms.js';
 import { toast, confirm, modal, segmented } from '../lib/ui.js';
+import { t, mark } from '../lib/i18n.js';
 
-export const title = 'Analytics';
-export const lead = 'Zahlen aus den Studios – ohne Schlüssel, ohne Konto.';
+export const title = mark('Analytics');
+export const lead = mark('Zahlen aus den Studios – ohne Schlüssel, ohne Konto.');
 
 let range = 30;
 let platformFilter = null;
@@ -38,10 +39,10 @@ function captureDialog(refresh, preset = {}) {
     .sort((a, b) => new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0));
 
   const postSelect = h('select.select', null,
-    h('option', { value: '', text: '– keinem Beitrag zuordnen –' }),
+    h('option', { value: '', text: t('– keinem Beitrag zuordnen –') }),
     ...published.map((post) => h('option', { value: post.id, text: fmt.truncate(post.title || post.body, 70) })));
 
-  const titleInput = h('input.input', { placeholder: 'Bezeichnung, z. B. Videotitel', value: preset.title || '' });
+  const titleInput = h('input.input', { placeholder: t('Bezeichnung, z. B. Videotitel'), value: preset.title || '' });
   const fieldsHost = h('div.grid.grid-3');
   const inputs = new Map();
 
@@ -53,7 +54,7 @@ function captureDialog(refresh, preset = {}) {
       const input = h('input.input', {
         type: 'number',
         step: info.type === 'percent' || info.type === 'number' ? '0.1' : '1',
-        placeholder: info.type === 'seconds' ? 'Sekunden' : '',
+        placeholder: info.type === 'seconds' ? t('Sekunden') : '',
       });
       inputs.set(key, input);
       return h('label.field', null, h('span.field__label', { text: info.label }), input);
@@ -75,19 +76,19 @@ function captureDialog(refresh, preset = {}) {
   });
 
   modal({
-    title: 'Zahlen erfassen',
+    title: t('Zahlen erfassen'),
     body: h('div.col.gap-lg', null,
       h('div.grid.grid-3', null,
-        h('label.field', null, h('span.field__label', { text: 'Kanal' }), platformSelect),
-        h('label.field', null, h('span.field__label', { text: 'Datum' }), dateInput),
-        h('label.field', null, h('span.field__label', { text: 'Zu welchem Beitrag?' }), postSelect)),
-      h('label.field', null, h('span.field__label', { text: 'Bezeichnung' }), titleInput),
+        h('label.field', null, h('span.field__label', { text: t('Kanal') }), platformSelect),
+        h('label.field', null, h('span.field__label', { text: t('Datum') }), dateInput),
+        h('label.field', null, h('span.field__label', { text: t('Zu welchem Beitrag?') }), postSelect)),
+      h('label.field', null, h('span.field__label', { text: t('Bezeichnung') }), titleInput),
       h('hr.divider'),
       fieldsHost,
-      h('p.text-xs.faint', { text: 'Leere Felder werden übersprungen. Nur was du wirklich abliest, landet in der Auswertung.' })),
+      h('p.text-xs.faint', { text: t('Leere Felder werden übersprungen. Nur was du wirklich abliest, landet in der Auswertung.') })),
     actions: [
       {
-        label: 'Speichern',
+        label: t('Speichern'),
         primary: true,
         action: async () => {
           const metrics = {};
@@ -95,7 +96,7 @@ function captureDialog(refresh, preset = {}) {
             if (input.value.trim() === '') continue;
             metrics[key] = Number(input.value);
           }
-          if (!Object.keys(metrics).length) return toast('Bitte mindestens einen Wert eintragen.', 'warn');
+          if (!Object.keys(metrics).length) return toast(t('Bitte mindestens einen Wert eintragen.'), 'warn');
           await store.add('analytics', {
             platformId: platformSelect.value,
             date: dateInput.value || fmt.dayKey(),
@@ -104,7 +105,7 @@ function captureDialog(refresh, preset = {}) {
             metrics,
             source: 'manual',
           });
-          toast('Erfasst.', 'ok');
+          toast(t('Erfasst.'), 'ok');
           refresh();
         },
       },
@@ -116,12 +117,12 @@ function captureDialog(refresh, preset = {}) {
 
 /** Datei einlesen, Spalten zuordnen, Vorschau zeigen, übernehmen. */
 async function importCsv(refresh) {
-  const result = await window.ch.files.readText([{ name: 'Tabellen', extensions: ['csv', 'tsv', 'txt'] }]);
+  const result = await window.ch.files.readText([{ name: t('Tabellen'), extensions: ['csv', 'tsv', 'txt'] }]);
   if (!result?.ok || result.data.canceled) return;
 
   const rows = csv.parse(result.data.text);
   const { headers, records } = csv.toObjects(rows);
-  if (!records.length) return toast('Die Datei enthält keine auswertbaren Zeilen.', 'warn');
+  if (!records.length) return toast(t('Die Datei enthält keine auswertbaren Zeilen.'), 'warn');
 
   const mapping = csv.guessMapping(headers);
   const settings = store.settings();
@@ -140,9 +141,9 @@ async function importCsv(refresh) {
     const extra = Object.keys(mapping).filter((field) => !relevant.includes(field) && fields.includes(field));
 
     fill(mappingHost, ...[...relevant, ...extra].map((field) => {
-      const label = field === 'date' ? 'Datum' : field === 'title' ? 'Bezeichnung' : metric(field).label;
+      const label = field === 'date' ? t('Datum') : field === 'title' ? t('Bezeichnung') : metric(field).label;
       const select = h('select.select', null,
-        h('option', { value: '', text: '– nicht übernehmen –' }),
+        h('option', { value: '', text: t('– nicht übernehmen –') }),
         ...headers.map((header) => h('option', { value: header, text: header, selected: mapping[field] === header })));
       selects.set(field, select);
       return h('div.row.gap-sm', null,
@@ -154,20 +155,20 @@ async function importCsv(refresh) {
   renderMapping();
 
   modal({
-    title: `CSV einlesen · ${result.data.name}`,
+    title: t('CSV einlesen · {name}', { name: result.data.name }),
     size: 'wide',
     body: h('div.col.gap-lg', null,
       h('div.notice.notice--accent', null,
         h('span.notice__icon', { text: 'ℹ' }),
         h('div', null,
-          h('div.strong.text-sm', { text: `${fmt.plural(records.length, 'Zeile', 'Zeilen')} gefunden, ${headers.length} Spalten` }),
-          h('div.text-sm.muted', { text: 'Die Zuordnung wurde anhand der Spaltennamen vorgeschlagen. Prüfe sie kurz – Spalten, die du nicht brauchst, lässt du auf „nicht übernehmen“.' }))),
-      h('label.field', null, h('span.field__label', { text: 'Für welchen Kanal?' }), platformSelect),
+          h('div.strong.text-sm', { text: t('{rows} gefunden, {columns} Spalten', { rows: fmt.plural(records.length, 'Zeile', 'Zeilen'), columns: headers.length }) }),
+          h('div.text-sm.muted', { text: t('Die Zuordnung wurde anhand der Spaltennamen vorgeschlagen. Prüfe sie kurz – Spalten, die du nicht brauchst, lässt du auf „nicht übernehmen“.') }))),
+      h('label.field', null, h('span.field__label', { text: t('Für welchen Kanal?') }), platformSelect),
       h('hr.divider'),
       mappingHost),
     actions: [
       {
-        label: 'Übernehmen',
+        label: t('Übernehmen'),
         primary: true,
         action: async () => {
           const chosen = {};
@@ -175,10 +176,13 @@ async function importCsv(refresh) {
             if (select.value) chosen[field] = select.value;
           }
           const { entries, skipped } = csv.toEntries(records, chosen, platformSelect.value);
-          if (!entries.length) return toast('Aus dieser Zuordnung ergeben sich keine Werte.', 'warn');
+          if (!entries.length) return toast(t('Aus dieser Zuordnung ergeben sich keine Werte.'), 'warn');
 
           for (const entry of entries) await store.add('analytics', entry);
-          toast(`${fmt.plural(entries.length, 'Eintrag', 'Einträge')} übernommen${skipped ? `, ${skipped} ohne Werte übersprungen` : ''}.`, 'ok');
+          const count = fmt.plural(entries.length, 'Eintrag', 'Einträge'); // i18n-ignore
+          toast(skipped
+            ? t('{entries} übernommen, {skipped} ohne Werte übersprungen.', { entries: count, skipped })
+            : t('{entries} übernommen.', { entries: count }), 'ok');
           refresh();
         },
       },
@@ -201,7 +205,7 @@ export async function render({ params, setActions, refresh, goto }) {
   const accountRow = accountMap.size > 1
     ? h('div.chips', null,
         h(`span.chip${accountFilter === null ? '.is-active' : ''}`, {
-          text: 'Alle Konten',
+          text: t('Alle Konten'),
           onClick: () => { accountFilter = null; refresh(); },
         }),
         ...[...accountMap].map(([id, name]) =>
@@ -214,20 +218,20 @@ export async function render({ params, setActions, refresh, goto }) {
   if (!availableKeys.includes(metricKey)) metricKey = availableKeys[0] || 'views';
 
   setActions(
-    h('button.btn.btn--sm', { text: 'CSV einlesen', onClick: () => importCsv(refresh) }),
-    h('button.btn.btn--sm.btn--primary', { text: '＋ Zahlen erfassen', onClick: () => captureDialog(refresh) })
+    h('button.btn.btn--sm', { text: t('CSV einlesen'), onClick: () => importCsv(refresh) }),
+    h('button.btn.btn--sm.btn--primary', { text: t('＋ Zahlen erfassen'), onClick: () => captureDialog(refresh) })
   );
 
   if (!entries.length) {
     return card(null, {},
-      empty('Noch keine Zahlen erfasst',
-        'Zwei Wege, beide ohne Zugangsschlüssel: den CSV-Export aus dem jeweiligen Studio einlesen – oder die wichtigsten Werte von Hand eintragen.',
+      empty(t('Noch keine Zahlen erfasst'),
+        t('Zwei Wege, beide ohne Zugangsschlüssel: den CSV-Export aus dem jeweiligen Studio einlesen – oder die wichtigsten Werte von Hand eintragen.'),
         h('div.col.gap-sm.mt', null,
           h('div.row.gap-sm', null,
-            h('button.btn.btn--primary', { text: 'CSV einlesen', onClick: () => importCsv(refresh) }),
-            h('button.btn', { text: 'Von Hand erfassen', onClick: () => captureDialog(refresh) })),
+            h('button.btn.btn--primary', { text: t('CSV einlesen'), onClick: () => importCsv(refresh) }),
+            h('button.btn', { text: t('Von Hand erfassen'), onClick: () => captureDialog(refresh) })),
           h('div.col.gap-xs.mt', null,
-            h('div.text-xs.faint.strong', { text: 'Wo du die Exporte findest' }),
+            h('div.text-xs.faint.strong', { text: t('Wo du die Exporte findest') }),
             ...active(store.settings())
               .filter((p) => p.csvHint)
               .map((p) => h('div.text-xs.faint', { text: `${p.name}: ${p.csvHint}` }))))));
@@ -240,7 +244,7 @@ export async function render({ params, setActions, refresh, goto }) {
 
   const platformRow = h('div.chips', null,
     h(`span.chip${platformFilter === null ? '.is-active' : ''}`, {
-      text: 'Alle Plattformen',
+      text: t('Alle Plattformen'),
       onClick: () => { platformFilter = null; refresh(); },
     }),
     ...[...new Set(entries.map((entry) => entry.platformId))].map((id) =>
@@ -264,18 +268,18 @@ export async function render({ params, setActions, refresh, goto }) {
 
   const trendClass = change === null ? 'flat' : change > 0.02 ? 'up' : change < -0.02 ? 'down' : 'flat';
   const trendText = change === null
-    ? 'kein Vergleichszeitraum'
-    : `${change > 0 ? '+' : ''}${Math.round(change * 100)} % gegenüber den ${range} Tagen davor`;
+    ? t('kein Vergleichszeitraum')
+    : t('{change} % gegenüber den {days} Tagen davor', { change: `${change > 0 ? '+' : ''}${Math.round(change * 100)}`, days: range });
 
   return h('div.col.gap-lg', null,
     h('div.row.wrap.between.gap-sm', null,
       metricRow,
       segmented(
         [
-          { value: 7, label: '7 Tage' },
-          { value: 30, label: '30 Tage' },
-          { value: 90, label: '90 Tage' },
-          { value: 365, label: 'Jahr' },
+          { value: 7, label: t('{days} Tage', { days: 7 }) },
+          { value: 30, label: t('{days} Tage', { days: 30 }) },
+          { value: 90, label: t('{days} Tage', { days: 90 }) },
+          { value: 365, label: t('Jahr') },
         ],
         range,
         (value) => { range = value; refresh(); }
@@ -289,33 +293,33 @@ export async function render({ params, setActions, refresh, goto }) {
         h('div.stat__value', { text: format(current) }),
         h('div', { class: `trend ${trendClass}`, text: trendText }))),
       card(null, {}, h('div.stat', null,
-        h('div.stat__label', { text: 'Vorzeitraum' }),
+        h('div.stat__label', { text: t('Vorzeitraum') }),
         h('div.stat__value', { text: format(previous) }),
-        h('div.stat__meta', { text: `die ${range} Tage davor` }))),
+        h('div.stat__meta', { text: t('die {days} Tage davor', { days: range }) }))),
       card(null, {}, h('div.stat', null,
-        h('div.stat__label', { text: 'Erfasste Einträge' }),
+        h('div.stat__label', { text: t('Erfasste Einträge') }),
         h('div.stat__value', { text: String(an.inRange({ days: range, platformId: platformFilter, accountId: accountFilter }).length) }),
-        h('div.stat__meta', { text: `${entries.length} insgesamt` }))),
+        h('div.stat__meta', { text: t('{count} insgesamt', { count: entries.length }) }))),
       card(null, {}, h('div.stat', null,
-        h('div.stat__label', { text: 'Bester Tag' }),
+        h('div.stat__label', { text: t('Bester Tag') }),
         h('div.stat__value', { text: format(Math.max(...series.map((point) => point.value), 0)) }),
         h('div.stat__meta', { text: series.reduce((best, point) => (point.value > best.value ? point : best), series[0] || {}).label || '–' })))),
 
-    card(`${info.label} im Verlauf`, { hint: `${range} Tage${platformFilter ? ` · ${platformName(platformFilter)}` : ''}` },
+    card(t('{metric} im Verlauf', { metric: info.label }), { hint: t('{days} Tage', { days: range }) + (platformFilter ? ` · ${platformName(platformFilter)}` : '') },
       chart.line(series, { format })),
 
     h('div.grid.grid-2', null,
-      card('Nach Wochentag', { hint: 'Durchschnitt je veröffentlichtem Beitrag' },
+      card(t('Nach Wochentag'), { hint: t('Durchschnitt je veröffentlichtem Beitrag') },
         weekday.length
           ? chart.bars(weekday.map((row) => ({ label: row.label, value: row.value })), { format })
-          : h('p.text-sm.muted', { text: 'Dafür müssen Messwerte einem veröffentlichten Beitrag zugeordnet sein.' })),
-      card('Nach Uhrzeit', { hint: 'Durchschnitt je Veröffentlichungsstunde' },
+          : h('p.text-sm.muted', { text: t('Dafür müssen Messwerte einem veröffentlichten Beitrag zugeordnet sein.') })),
+      card(t('Nach Uhrzeit'), { hint: t('Durchschnitt je Veröffentlichungsstunde') },
         hours.length
           ? chart.bars(hours.map((row) => ({ label: `${String(row.hour).padStart(2, '0')}`, value: row.value })), { format })
-          : h('p.text-sm.muted', { text: 'Noch zu wenige zugeordnete Beiträge.' }))),
+          : h('p.text-sm.muted', { text: t('Noch zu wenige zugeordnete Beiträge.') }))),
 
     h('div.grid.grid-2', null,
-      card('Nach Kanal', { hint: `${range} Tage` },
+      card(t('Nach Kanal'), { hint: t('{days} Tage', { days: range }) },
         platforms.length
           ? h('div.col.gap-sm', null,
               ...platforms.map((row) => {
@@ -328,8 +332,8 @@ export async function render({ params, setActions, refresh, goto }) {
                     style: { width: `${(row.value / max) * 100}%`, background: platform(row.platformId)?.color },
                   })));
               }))
-          : h('p.text-sm.muted', { text: 'Keine Daten im Zeitraum.' })),
-      card('Nach Format', { hint: 'was wirklich trägt' },
+          : h('p.text-sm.muted', { text: t('Keine Daten im Zeitraum.') })),
+      card(t('Nach Format'), { hint: t('was wirklich trägt') },
         formats.length
           ? h('div.col.gap-sm', null,
               ...formats.map((row) => {
@@ -337,17 +341,17 @@ export async function render({ params, setActions, refresh, goto }) {
                 return h('div.meter', null,
                   h('div.meter__head', null,
                     h('span', { text: row.format }),
-                    h('span.strong', { text: `${format(row.value)} · ${fmt.plural(row.count, 'Beitrag', 'Beiträge')}` })),
+                    h('span.strong', { text: `${format(row.value)} · ${fmt.plural(row.count, 'Beitrag', 'Beiträge')}` })), // i18n-ignore
                   h('div.bar', null, h('div.bar__fill', { style: { width: `${(row.value / max) * 100}%` } })));
               }))
-          : h('p.text-sm.muted', { text: 'Trage bei deinen Beiträgen ein Format ein, dann erscheint hier der Vergleich.' }))),
+          : h('p.text-sm.muted', { text: t('Trage bei deinen Beiträgen ein Format ein, dann erscheint hier der Vergleich.') }))),
 
-    card('Stärkste Einträge', { hint: `nach ${info.label}` },
+    card(t('Stärkste Einträge'), { hint: t('nach {metric}', { metric: info.label }) },
       h('table.table', null,
         h('thead', null, h('tr', null,
-          h('th', { text: 'Bezeichnung' }),
-          h('th', { text: 'Kanal' }),
-          h('th', { text: 'Datum' }),
+          h('th', { text: t('Bezeichnung') }),
+          h('th', { text: t('Kanal') }),
+          h('th', { text: t('Datum') }),
           h('th.num', { text: info.label }),
           h('th', { text: '' }))),
         h('tbody', null,
@@ -359,15 +363,15 @@ export async function render({ params, setActions, refresh, goto }) {
               h('td.num.strong', { text: format(value) }),
               h('td', null, h('button.btn.btn--ghost.btn--sm', {
                 text: '✕',
-                title: 'Eintrag löschen',
+                title: t('Eintrag löschen'),
                 onClick: async () => {
-                  if (!(await confirm({ title: 'Eintrag löschen?', message: 'Der Messwert verschwindet aus der Auswertung.', confirmLabel: 'Löschen', tone: 'danger' }))) return;
+                  if (!(await confirm({ title: t('Eintrag löschen?'), message: t('Der Messwert verschwindet aus der Auswertung.'), confirmLabel: t('Löschen'), tone: 'danger' }))) return;
                   await store.remove('analytics', entry.id);
                   refresh();
                 },
               }))))))),
 
     h('div.row.between', null,
-      h('p.text-xs.faint', { text: 'Alle Werte liegen ausschließlich auf diesem Rechner.' }),
-      h('button.btn.btn--ghost.btn--sm', { text: 'Zum Coach', onClick: () => goto('coach') })));
+      h('p.text-xs.faint', { text: t('Alle Werte liegen ausschließlich auf diesem Rechner.') }),
+      h('button.btn.btn--ghost.btn--sm', { text: t('Zum Coach'), onClick: () => goto('coach') })));
 }

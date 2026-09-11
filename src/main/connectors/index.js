@@ -11,6 +11,7 @@
 
 const { TwitchConnector } = require('./twitch');
 const { YouTubeConnector } = require('./youtube');
+const { t } = require('../i18n');
 
 /** Vollständiger Abgleich: alle 20 Minuten reicht, die Zahlen ändern sich langsam. */
 const SYNC_INTERVAL_MS = 20 * 60 * 1000;
@@ -42,7 +43,7 @@ class Connectors {
 
   connector(name) {
     const found = this.all[name];
-    if (!found) throw new Error(`Unbekannte Verbindung: ${name}`);
+    if (!found) throw new Error(t('Unbekannte Verbindung: {name}', { name }));
     return found;
   }
 
@@ -77,12 +78,12 @@ class Connectors {
 
   assertFetchesHere() {
     if (this.fetchesHere()) return;
-    throw new Error('YouTube und Twitch werden auf einem anderen deiner PCs abgeholt. Umstellen kannst du das unter „PCs verbinden“.');
+    throw new Error(t('YouTube und Twitch werden auf einem anderen deiner PCs abgeholt. Umstellen kannst du das unter „PCs verbinden“.'));
   }
 
   async syncAll() {
     if (this.running) return { skipped: true };
-    if (!this.fetchesHere()) return { skipped: true, reason: 'Abgeholt wird auf einem anderen PC.' };
+    if (!this.fetchesHere()) return { skipped: true, reason: t('Abgeholt wird auf einem anderen PC.') };
     this.running = true;
     const results = {};
 

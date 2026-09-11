@@ -21,6 +21,7 @@ const { pkcePair, newState, loopback, codeFrom, TokenStore, form } = require('..
 const { credentialsFor } = require('../credentials');
 const { mimeOf, probe } = require('../media-info');
 const { sleep, parseJson, retryable, permanent, statusError, poll, clip, length, RELOGIN } = require('./common');
+const { t } = require('../../i18n');
 
 const AUTH_URL = 'https://www.tiktok.com/v2/auth/authorize/';
 const BASE = 'https://open.tiktokapis.com';
@@ -35,18 +36,18 @@ const SESSION_TTL_MS = 55 * 60_000;
 
 /** TikToks Fehlercodes in Sätze übersetzen. */
 const ERRORS = {
-  unaudited_client_can_only_post_to_private_accounts: () => permanent('Die TikTok-Anwendung des Content Helpers ist von TikTok noch nicht geprüft. Bis dahin sind nur private Posts möglich – stell die Sichtbarkeit auf „Nur ich“.'),
-  spam_risk_too_many_posts: () => permanent('TikTok lässt für dieses Konto heute keine weiteren Posts zu. Morgen erneut einplanen.'),
-  spam_risk_user_banned_from_posting: () => permanent('TikTok hat das Posten für dieses Konto gesperrt.'),
-  reached_active_user_cap: () => retryable('TikTok hat das Tageslimit der Anwendung erreicht. Neuer Versuch folgt.'),
-  privacy_level_option_mismatch: () => permanent('Diese Sichtbarkeit bietet TikTok für dein Konto nicht an. Bitte im Composer neu wählen.'),
-  access_token_invalid: () => permanent(`TikTok: Die Anmeldung ist abgelaufen. ${RELOGIN}`),
-  scope_not_authorized: () => permanent(`TikTok: Die Anmeldung erlaubt das Posten nicht. ${RELOGIN}`),
-  rate_limit_exceeded: () => retryable('TikTok bremst gerade – zu viele Anfragen. Es geht gleich weiter.'),
-  file_format_check_failed: () => permanent('TikTok nimmt dieses Videoformat nicht an (MP4, MOV oder WebM mit H.264/H.265).'),
-  duration_check_failed: () => permanent('Das Video ist für dein TikTok-Konto zu lang.'),
-  frame_rate_check_failed: () => permanent('TikTok verlangt 23 bis 60 Bilder pro Sekunde.'),
-  picture_size_check_failed: () => permanent('Die Bildgröße passt nicht – TikTok verlangt 360 bis 4096 Pixel Kantenlänge.'),
+  unaudited_client_can_only_post_to_private_accounts: () => permanent(t('Die TikTok-Anwendung des Content Helpers ist von TikTok noch nicht geprüft. Bis dahin sind nur private Posts möglich – stell die Sichtbarkeit auf „Nur ich“.')),
+  spam_risk_too_many_posts: () => permanent(t('TikTok lässt für dieses Konto heute keine weiteren Posts zu. Morgen erneut einplanen.')),
+  spam_risk_user_banned_from_posting: () => permanent(t('TikTok hat das Posten für dieses Konto gesperrt.')),
+  reached_active_user_cap: () => retryable(t('TikTok hat das Tageslimit der Anwendung erreicht. Neuer Versuch folgt.')),
+  privacy_level_option_mismatch: () => permanent(t('Diese Sichtbarkeit bietet TikTok für dein Konto nicht an. Bitte im Composer neu wählen.')),
+  access_token_invalid: () => permanent(t('{name}: Die Anmeldung ist abgelaufen. {relogin}', { name: 'TikTok', relogin: t(RELOGIN) })),
+  scope_not_authorized: () => permanent(t('TikTok: Die Anmeldung erlaubt das Posten nicht. {relogin}', { relogin: t(RELOGIN) })),
+  rate_limit_exceeded: () => retryable(t('{name} bremst gerade – zu viele Anfragen. Es geht gleich weiter.', { name: 'TikTok' })),
+  file_format_check_failed: () => permanent(t('TikTok nimmt dieses Videoformat nicht an (MP4, MOV oder WebM mit H.264/H.265).')),
+  duration_check_failed: () => permanent(t('Das Video ist für dein TikTok-Konto zu lang.')),
+  frame_rate_check_failed: () => permanent(t('TikTok verlangt 23 bis 60 Bilder pro Sekunde.')),
+  picture_size_check_failed: () => permanent(t('Die Bildgröße passt nicht – TikTok verlangt 360 bis 4096 Pixel Kantenlänge.')),
 };
 
 class TikTokPublisher {
@@ -75,7 +76,7 @@ class TikTokPublisher {
 
   async signIn() {
     const creds = this.creds();
-    if (!creds.complete) throw new Error('Für TikTok ist die Anwendung noch nicht eingerichtet.');
+    if (!creds.complete) throw new Error(t('Für TikTok ist die Anwendung noch nicht eingerichtet.'));
 
     const { verifier, challenge } = pkcePair({ hex: true });
     const state = newState();
@@ -125,8 +126,8 @@ class TikTokPublisher {
     const payload = parseJson(response.text) || {};
     if (response.status >= 400 || payload.error) {
       if (/invalid_grant|refresh/i.test(`${payload.error} ${payload.error_description}`)) {
-        this.tokens.save({ lastError: 'Die Anmeldung ist abgelaufen.' });
-        throw permanent(`TikTok: Die Anmeldung ist abgelaufen. ${RELOGIN}`);
+        this.tokens.save({ lastError: t('Die Anmeldung ist abgelaufen.') });
+        throw permanent(t('{name}: Die Anmeldung ist abgelaufen. {relogin}', { name: 'TikTok', relogin: t(RELOGIN) }));
       }
       throw statusError('TikTok', response.status >= 400 ? response.status : 400, payload.error_description || payload.error);
     }
@@ -143,7 +144,7 @@ class TikTokPublisher {
   async token() {
     const config = this.tokens.get();
     if (config.accessToken && Date.now() < (config.accessExpires || 0) - 60_000) return config.accessToken;
-    if (!config.refreshToken) throw permanent(`Für TikTok besteht keine Anmeldung. ${RELOGIN}`);
+    if (!config.refreshToken) throw permanent(t('Für {name} besteht keine Anmeldung. {relogin}', { name: 'TikTok', relogin: t(RELOGIN) }));
     const payload = await this.tokenRequest({ grant_type: 'refresh_token', refresh_token: config.refreshToken });
     return payload.access_token;
   }
@@ -192,14 +193,18 @@ class TikTokPublisher {
   check(content) {
     const options = content.options || {};
     const problems = [];
-    if (!content.video) problems.push('Für TikTok fehlt das Video – bitte im Composer eine Videodatei wählen.');
-    else if (!['mp4', 'mov', 'webm'].includes(content.video.ext)) problems.push('TikTok nimmt nur MP4, MOV oder WebM.');
-    else if (content.video.size > 4 * 1024 * MB) problems.push('TikTok nimmt höchstens 4 GB.');
-    if (!options.privacy) problems.push('Für TikTok ist noch keine Sichtbarkeit gewählt – TikTok verlangt, dass du sie selbst festlegst.');
-    if (options.commercial && !options.yourBrand && !options.brandedContent) problems.push('Werblicher Inhalt ist markiert, aber nicht, für wen – bitte „Eigene Marke“ oder „Bezahlte Partnerschaft“ wählen.');
-    if (options.brandedContent && options.privacy === 'SELF_ONLY') problems.push('Bezahlte Partnerschaften dürfen bei TikTok nicht privat sein.');
+    if (!content.video) problems.push(t('Für TikTok fehlt das Video – bitte im Composer eine Videodatei wählen.'));
+    else if (!['mp4', 'mov', 'webm'].includes(content.video.ext)) problems.push(t('TikTok nimmt nur MP4, MOV oder WebM.'));
+    else if (content.video.size > 4 * 1024 * MB) problems.push(t('TikTok nimmt höchstens 4 GB.'));
+    if (!options.privacy) problems.push(t('Für TikTok ist noch keine Sichtbarkeit gewählt – TikTok verlangt, dass du sie selbst festlegst.'));
+    if (options.commercial && !options.yourBrand && !options.brandedContent) {
+      problems.push(t('Werblicher Inhalt ist markiert, aber nicht, für wen – bitte „Eigene Marke“ oder „Bezahlte Partnerschaft“ wählen.'));
+    }
+    if (options.brandedContent && options.privacy === 'SELF_ONLY') problems.push(t('Bezahlte Partnerschaften dürfen bei TikTok nicht privat sein.'));
     const caption = [content.title, content.text].filter(Boolean).join('\n\n');
-    if (length(caption) > 2200) problems.push(`Der Text ist ${length(caption)} Zeichen lang, TikTok erlaubt 2200.`);
+    if (length(caption) > 2200) {
+      problems.push(t('Der Text ist {count} Zeichen lang, {name} erlaubt {max}.', { count: length(caption), name: 'TikTok', max: 2200 }));
+    }
     return problems;
   }
 
@@ -209,12 +214,12 @@ class TikTokPublisher {
     const info = await this.creatorInfo();
 
     if (Array.isArray(info.privacy_level_options) && !info.privacy_level_options.includes(options.privacy)) {
-      throw permanent('Diese Sichtbarkeit bietet TikTok für dein Konto nicht an. Bitte im Composer neu wählen.');
+      throw permanent(t('Diese Sichtbarkeit bietet TikTok für dein Konto nicht an. Bitte im Composer neu wählen.'));
     }
     const limit = info.max_video_post_duration_sec;
     const duration = probe(video.path).durationSec;
     if (limit && duration && duration > limit) {
-      throw permanent(`Das Video ist ${Math.round(duration)} Sekunden lang, dein TikTok-Konto erlaubt ${limit}.`);
+      throw permanent(t('Das Video ist {seconds} Sekunden lang, dein TikTok-Konto erlaubt {max}.', { seconds: Math.round(duration), max: limit }));
     }
 
     let session = job.session;
@@ -257,11 +262,11 @@ class TikTokPublisher {
       });
       if (response.status === 403 || response.status === 404) {
         job.saveSession(null);
-        throw retryable('Die Upload-Adresse von TikTok ist abgelaufen. Der Upload beginnt beim nächsten Versuch neu.');
+        throw retryable(t('Die Upload-Adresse von TikTok ist abgelaufen. Der Upload beginnt beim nächsten Versuch neu.'));
       }
       if (response.status === 416) {
         job.saveSession(null);
-        throw retryable('TikTok hat einen Block anders erwartet. Der Upload beginnt beim nächsten Versuch neu.');
+        throw retryable(t('TikTok hat einen Block anders erwartet. Der Upload beginnt beim nächsten Versuch neu.'));
       }
       if (response.status !== 206 && response.status !== 201 && response.status !== 200) {
         throw statusError('TikTok', response.status, parseJson(response.text)?.error?.message);
@@ -280,7 +285,7 @@ class TikTokPublisher {
     }, { every: 5_000, times: 48, wait: this.sleep });
 
     if (result?.failed) {
-      throw (ERRORS[result.reason] || (() => permanent(`TikTok hat das Video abgelehnt (${result.reason || 'ohne Begründung'}).`)))();
+      throw (ERRORS[result.reason] || (() => permanent(t('TikTok hat das Video abgelehnt ({reason}).', { reason: result.reason || t('ohne Begründung') }))))();
     }
 
     const username = this.tokens.get().username;
@@ -289,7 +294,7 @@ class TikTokPublisher {
       state: 'published',
       remoteId: postId ? String(postId) : session.publishId,
       url: postId && username ? `https://www.tiktok.com/@${username}/video/${postId}` : (username ? `https://www.tiktok.com/@${username}` : null),
-      message: result ? null : 'Das Video ist bei TikTok angekommen und wird noch geprüft – bei öffentlichen Posts kann das dauern.',
+      message: result ? null : t('Das Video ist bei TikTok angekommen und wird noch geprüft – bei öffentlichen Posts kann das dauern.'),
     };
   }
 

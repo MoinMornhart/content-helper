@@ -73,34 +73,34 @@ export function toObjects(rows) {
 // ------------------------------------------------------------------ Erkennung
 
 /** Bekannte Spaltennamen der gängigen Exporte, klein geschrieben. */
-const ALIASES = {
-  date: ['datum', 'date', 'tag', 'video publish time', 'veröffentlichungszeit', 'veroeffentlichungszeit', 'zeitpunkt', 'day', 'stream date', 'streamdatum'],
-  title: ['videotitel', 'video title', 'titel', 'title', 'content', 'inhalt', 'beitrag', 'post', 'stream title', 'streamtitel', 'name'],
-  views: ['aufrufe', 'views', 'video views', 'wiedergaben', 'aufrufe insgesamt', 'total views', 'plays', 'videoaufrufe'],
-  impressions: ['impressionen', 'impressions', 'einblendungen'],
-  reach: ['reichweite', 'reach', 'erreichte konten', 'accounts reached', 'unique viewers', 'einzelne zuschauer'],
-  ctr: ['klickrate der impressionen (%)', 'impressions click-through rate (%)', 'klickrate', 'ctr', 'click-through rate'],
-  avgViewSec: ['durchschnittliche wiedergabedauer', 'average view duration', 'ø wiedergabedauer', 'avg watch time', 'durchschnittliche wiedergabezeit'],
-  watchHours: ['wiedergabezeit (stunden)', 'watch time (hours)', 'wiedergabezeit', 'watch time'],
-  completionRate: ['abschlussrate', 'completion rate', 'vollständig angesehen', 'watched full video', 'durchschnittlich angesehen (%)'],
-  likes: ['likes', 'mag ich', '„gefällt mir“-angaben', 'gefällt mir', 'reactions', 'reaktionen'],
-  comments: ['kommentare', 'comments'],
-  shares: ['geteilt', 'shares', 'weitergeleitet', 'mal geteilt'],
-  saves: ['gespeichert', 'saves', 'gemerkt', 'bookmarks'],
-  subsGained: ['abonnenten', 'subscribers', 'neue abonnenten', 'subscribers gained'],
-  followersGained: ['neue follower', 'followers gained', 'follower', 'followers', 'neue abonnenten'],
-  profileVisits: ['profilaufrufe', 'profile views', 'profilbesuche'],
-  linkClicks: ['linkklicks', 'link clicks', 'klicks auf links'],
-  avgViewers: ['durchschnittliche zuschauer', 'average viewers', 'ø zuschauer', 'avg viewers'],
-  peakViewers: ['maximale zuschauer', 'peak viewers', 'höchstzuschauerzahl', 'max viewers'],
-  hoursWatched: ['gesehene stunden', 'hours watched', 'zuschauerstunden'],
-  chatMessages: ['chatnachrichten', 'chat messages'],
-  streamMinutes: ['streamdauer', 'stream duration', 'live-minuten', 'minutes streamed'],
-  replies: ['antworten', 'replies'],
-  reposts: ['reposts', 'retweets', 'geteilte beiträge'],
-  bookmarks: ['lesezeichen', 'bookmarks'],
-  upvotes: ['upvotes', 'punkte', 'score'],
-  openRate: ['öffnungsrate', 'open rate'],
+const ALIASES = { // i18n-ignore – Spaltennamen sind Daten, keine Oberfläche
+  date: ['datum', 'date', 'tag', 'video publish time', 'veröffentlichungszeit', 'veroeffentlichungszeit', 'zeitpunkt', 'day', 'stream date', 'streamdatum', 'publish time'], // i18n-ignore
+  title: ['videotitel', 'video title', 'titel', 'title', 'content', 'inhalt', 'beitrag', 'post', 'stream title', 'streamtitel', 'name'], // i18n-ignore
+  views: ['aufrufe', 'views', 'video views', 'wiedergaben', 'aufrufe insgesamt', 'total views', 'plays', 'videoaufrufe'], // i18n-ignore
+  impressions: ['impressionen', 'impressions', 'einblendungen'], // i18n-ignore
+  reach: ['reichweite', 'reach', 'erreichte konten', 'accounts reached', 'unique viewers', 'einzelne zuschauer', 'reached audience'], // i18n-ignore
+  ctr: ['klickrate der impressionen (%)', 'impressions click-through rate (%)', 'klickrate', 'ctr', 'click-through rate'], // i18n-ignore
+  avgViewSec: ['durchschnittliche wiedergabedauer', 'average view duration', 'ø wiedergabedauer', 'avg watch time', 'durchschnittliche wiedergabezeit', 'average watch time'], // i18n-ignore
+  watchHours: ['wiedergabezeit (stunden)', 'watch time (hours)', 'wiedergabezeit', 'watch time'], // i18n-ignore
+  completionRate: ['abschlussrate', 'completion rate', 'vollständig angesehen', 'watched full video', 'durchschnittlich angesehen (%)'], // i18n-ignore
+  likes: ['likes', 'mag ich', '„gefällt mir“-angaben', 'gefällt mir', 'reactions', 'reaktionen'], // i18n-ignore
+  comments: ['kommentare', 'comments'], // i18n-ignore
+  shares: ['geteilt', 'shares', 'weitergeleitet', 'mal geteilt'], // i18n-ignore
+  saves: ['gespeichert', 'saves', 'gemerkt', 'bookmarks'], // i18n-ignore
+  subsGained: ['abonnenten', 'subscribers', 'neue abonnenten', 'subscribers gained'], // i18n-ignore
+  followersGained: ['neue follower', 'followers gained', 'follower', 'followers', 'neue abonnenten', 'new followers', 'follows'], // i18n-ignore
+  profileVisits: ['profilaufrufe', 'profile views', 'profilbesuche', 'profile visits'], // i18n-ignore
+  linkClicks: ['linkklicks', 'link clicks', 'klicks auf links'], // i18n-ignore
+  avgViewers: ['durchschnittliche zuschauer', 'average viewers', 'ø zuschauer', 'avg viewers'], // i18n-ignore
+  peakViewers: ['maximale zuschauer', 'peak viewers', 'höchstzuschauerzahl', 'max viewers'], // i18n-ignore
+  hoursWatched: ['gesehene stunden', 'hours watched', 'zuschauerstunden'], // i18n-ignore
+  chatMessages: ['chatnachrichten', 'chat messages'], // i18n-ignore
+  streamMinutes: ['streamdauer', 'stream duration', 'live-minuten', 'minutes streamed'], // i18n-ignore
+  replies: ['antworten', 'replies'], // i18n-ignore
+  reposts: ['reposts', 'retweets', 'geteilte beiträge'], // i18n-ignore
+  bookmarks: ['lesezeichen', 'bookmarks'], // i18n-ignore
+  upvotes: ['upvotes', 'punkte', 'score'], // i18n-ignore
+  openRate: ['öffnungsrate', 'open rate'], // i18n-ignore
 };
 
 /**

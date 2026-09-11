@@ -31,6 +31,7 @@ const os = require('os');
 const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
+const { t } = require('../i18n');
 
 const ROOT_NAME = 'Content Helper Sync';
 
@@ -88,7 +89,7 @@ function decodeCode(code) {
     .replace(/O/g, '0');
 
   if (!/^[0-9A-HJKMNP-TV-Z]{20}$/.test(clean)) {
-    throw new Error('Das ist kein gültiger Code. Er sieht so aus: CH-XXXXX-XXXXX-XXXXX-XXXXX.');
+    throw new Error(t('Das ist kein gültiger Code. Er sieht so aus: CH-XXXXX-XXXXX-XXXXX-XXXXX.'));
   }
 
   let bits = 0;
@@ -133,7 +134,7 @@ function seal(key, value) {
 
 /** Gegenstück zu seal(). Wirft, wenn Schlüssel falsch oder Datei unvollständig ist. */
 function unseal(key, buffer) {
-  if (!buffer || buffer.length < 30 || buffer[0] !== 1) throw new Error('Unbekanntes oder unvollständiges Dateiformat.');
+  if (!buffer || buffer.length < 30 || buffer[0] !== 1) throw new Error(t('Unbekanntes oder unvollständiges Dateiformat.'));
   const decipher = crypto.createDecipheriv('aes-256-gcm', key, buffer.subarray(1, 13));
   decipher.setAuthTag(buffer.subarray(13, 29));
   const plain = Buffer.concat([decipher.update(buffer.subarray(29)), decipher.final()]);
@@ -255,7 +256,7 @@ class CloudSync {
     };
 
     add('onedrive', 'OneDrive', process.env.OneDriveConsumer || process.env.OneDrive);
-    add('onedrive', 'OneDrive (Arbeit/Schule)', process.env.OneDriveCommercial);
+    add('onedrive', t('OneDrive (Arbeit/Schule)'), process.env.OneDriveCommercial);
 
     for (const base of [process.env.LOCALAPPDATA, process.env.APPDATA]) {
       if (!base) continue;
@@ -283,7 +284,7 @@ class CloudSync {
 
   /** Erster PC: legt einen Raum an und liefert den Code für die anderen. */
   async create({ folder }) {
-    if (this.isEnabled()) throw new Error('Dieser PC ist bereits mit einem Sync-Raum verbunden.');
+    if (this.isEnabled()) throw new Error(t('Dieser PC ist bereits mit einem Sync-Raum verbunden.'));
     this.assertFolder(folder);
 
     const secret = crypto.randomBytes(SECRET_BYTES);
@@ -294,7 +295,7 @@ class CloudSync {
     const key = deriveKey(secret, spaceId);
     writeAtomic(path.join(root, 'space.json'), JSON.stringify({
       app: 'Content Helper',
-      hint: 'Verschlüsselter Abgleich zwischen PCs. Nicht von Hand ändern.',
+      hint: 'Verschlüsselter Abgleich zwischen PCs. Nicht von Hand ändern.', // i18n-ignore – steht in der Datei im Cloud-Ordner
       v: 1,
       spaceId,
       createdAt: now(),
@@ -326,7 +327,7 @@ class CloudSync {
 
   /** Weiterer PC: tritt mit dem Code bei und holt sich den Stand der anderen. */
   async join({ folder, code }) {
-    if (this.isEnabled()) throw new Error('Dieser PC ist bereits mit einem Sync-Raum verbunden.');
+    if (this.isEnabled()) throw new Error(t('Dieser PC ist bereits mit einem Sync-Raum verbunden.'));
     this.assertFolder(folder);
 
     const secret = decodeCode(code);
@@ -335,14 +336,14 @@ class CloudSync {
     const metaFile = path.join(root, 'space.json');
 
     if (!fs.existsSync(metaFile)) {
-      throw new Error('In diesem Ordner gibt es keinen Sync-Raum zu diesem Code. Prüfe den Code – und ob der Cloud-Ordner auf diesem PC schon fertig synchronisiert ist.');
+      throw new Error(t('In diesem Ordner gibt es keinen Sync-Raum zu diesem Code. Prüfe den Code – und ob der Cloud-Ordner auf diesem PC schon fertig synchronisiert ist.'));
     }
 
     const key = deriveKey(secret, spaceId);
     try {
       unseal(key, Buffer.from(JSON.parse(fs.readFileSync(metaFile, 'utf8')).check, 'base64'));
     } catch {
-      throw new Error('Der Code passt nicht zu diesem Sync-Raum.');
+      throw new Error(t('Der Code passt nicht zu diesem Sync-Raum.'));
     }
 
     this.key = key;
@@ -372,17 +373,17 @@ class CloudSync {
   }
 
   assertFolder(folder) {
-    if (!folder) throw new Error('Bitte einen Cloud-Ordner wählen.');
+    if (!folder) throw new Error(t('Bitte einen Cloud-Ordner wählen.'));
     try {
       if (!fs.statSync(folder).isDirectory()) throw new Error();
       fs.accessSync(folder, fs.constants.W_OK);
     } catch {
-      throw new Error('In diesen Ordner kann nicht geschrieben werden.');
+      throw new Error(t('In diesen Ordner kann nicht geschrieben werden.'));
     }
   }
 
   showCode() {
-    if (!this.isEnabled()) throw new Error('Dieser PC ist mit keinem Sync-Raum verbunden.');
+    if (!this.isEnabled()) throw new Error(t('Dieser PC ist mit keinem Sync-Raum verbunden.'));
     return encodeCode(Buffer.from(this.config().secret, 'hex'));
   }
 
@@ -505,7 +506,7 @@ class CloudSync {
     const name = `${Date.now().toString(36).padStart(10, '0')}-${String(this.seq++).padStart(5, '0')}.chg`;
 
     if (!this.reachable()) {
-      this.fail(new Error('Der Sync-Ordner ist gerade nicht erreichbar. Deine Änderungen bleiben gespeichert und gehen raus, sobald er wieder da ist.'));
+      this.fail(new Error(t('Der Sync-Ordner ist gerade nicht erreichbar. Deine Änderungen bleiben gespeichert und gehen raus, sobald er wieder da ist.')));
       return 0;
     }
 
@@ -513,7 +514,7 @@ class CloudSync {
       fs.mkdirSync(dir, { recursive: true });
       writeAtomic(path.join(dir, name), seal(this.keyFor(), { device: config.deviceId, at: now(), changes: batch }));
     } catch (error) {
-      this.fail(new Error(`Änderungen konnten nicht in den Sync-Ordner geschrieben werden (${error.code || error.message}). Sie bleiben gespeichert und gehen beim nächsten Versuch raus.`));
+      this.fail(new Error(t('Änderungen konnten nicht in den Sync-Ordner geschrieben werden ({reason}). Sie bleiben gespeichert und gehen beim nächsten Versuch raus.', { reason: error.code || error.message })));
       return 0;
     }
 
@@ -530,7 +531,7 @@ class CloudSync {
     if (!this.isEnabled()) return 0;
     const root = this.spacePath();
     if (!this.reachable()) {
-      this.fail(new Error('Der Sync-Ordner ist gerade nicht erreichbar. Läuft OneDrive, Dropbox oder Google Drive auf diesem PC?'));
+      this.fail(new Error(t('Der Sync-Ordner ist gerade nicht erreichbar. Läuft OneDrive, Dropbox oder Google Drive auf diesem PC?')));
       return 0;
     }
 

@@ -22,6 +22,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { t, mark } = require('../i18n');
 
 const TICK_MS = 15_000;
 /** Wartezeiten zwischen Versuchen: 1, 5, 15, 30, 60 Minuten – dann aufgeben. */
@@ -34,14 +35,14 @@ const IMAGE_EXT = ['jpg', 'jpeg', 'png', 'webp'];
 
 /** Zustände je Plattform eines Beitrags. */
 const STATES = {
-  waiting: 'wartet',
-  uploading: 'wird hochgeladen',
-  processing: 'wird verarbeitet',
-  scheduled: 'hochgeladen, geht zum Termin live',
-  published: 'veröffentlicht',
-  retry: 'neuer Versuch folgt',
-  failed: 'fehlgeschlagen',
-  cancelled: 'zurückgezogen',
+  waiting: mark('wartet'),
+  uploading: mark('wird hochgeladen'),
+  processing: mark('wird verarbeitet'),
+  scheduled: mark('hochgeladen, geht zum Termin live'),
+  published: mark('veröffentlicht'),
+  retry: mark('neuer Versuch folgt'),
+  failed: mark('fehlgeschlagen'),
+  cancelled: mark('zurückgezogen'),
 };
 
 /** Fehler, bei dem ein erneuter Versuch nichts ändert (Datei fehlt, Anmeldung entzogen …). */
@@ -146,8 +147,8 @@ class Publisher {
       if (!stillPlanned || !(post.platforms || []).includes(platformId)) {
         if (provider?.cancel) {
           provider.cancel({ remoteId: delivery.remoteId, platformId })
-            .then(() => this.setDelivery(post.id, platformId, { state: 'cancelled', message: 'Termin zurückgenommen – bei der Plattform wieder auf privat gestellt.' }))
-            .catch((error) => this.setDelivery(post.id, platformId, { message: `Zurückziehen fehlgeschlagen: ${error.message}` }));
+            .then(() => this.setDelivery(post.id, platformId, { state: 'cancelled', message: t('Termin zurückgenommen – bei der Plattform wieder auf privat gestellt.') }))
+            .catch((error) => this.setDelivery(post.id, platformId, { message: t('Zurückziehen fehlgeschlagen: {message}', { message: error.message }) }));
         }
         continue;
       }
@@ -156,17 +157,17 @@ class Publisher {
         const when = post.scheduledAt;
         this.setDelivery(post.id, platformId, { scheduledFor: when });
         provider.reschedule({ remoteId: delivery.remoteId, platformId, scheduledFor: when })
-          .catch((error) => this.setDelivery(post.id, platformId, { message: `Neuer Termin konnte nicht übertragen werden: ${error.message}` }));
+          .catch((error) => this.setDelivery(post.id, platformId, { message: t('Neuer Termin konnte nicht übertragen werden: {message}', { message: error.message }) }));
         continue;
       }
 
       // Plattform kann den Termin nicht nachträglich ändern: dort zurückziehen
       // und zum neuen Termin frisch hochladen.
       if (delivery.scheduledFor !== post.scheduledAt && provider?.cancel) {
-        this.setDelivery(post.id, platformId, { state: 'processing', message: 'Termin geändert – wird neu eingeplant.' });
+        this.setDelivery(post.id, platformId, { state: 'processing', message: t('Termin geändert – wird neu eingeplant.') });
         provider.cancel({ remoteId: delivery.remoteId, platformId })
           .then(() => this.setDelivery(post.id, platformId, { state: 'waiting', remoteId: null, scheduledFor: null, attempts: 0, message: null }))
-          .catch((error) => this.setDelivery(post.id, platformId, { state: 'scheduled', message: `Neuer Termin konnte nicht übertragen werden: ${error.message}` }));
+          .catch((error) => this.setDelivery(post.id, platformId, { state: 'scheduled', message: t('Neuer Termin konnte nicht übertragen werden: {message}', { message: error.message }) }));
         continue;
       }
 
@@ -206,7 +207,7 @@ class Publisher {
         if (now - at > LATE_LIMIT_MS && delivery.state === 'waiting') {
           this.setDelivery(post.id, platformId, {
             state: 'failed',
-            message: 'Der Termin ist über einen Tag her – der PC war zu der Zeit wohl aus. Neu einplanen, dann geht es raus.',
+            message: t('Der Termin ist über einen Tag her – der PC war zu der Zeit wohl aus. Neu einplanen, dann geht es raus.'),
           });
           continue;
         }
@@ -276,12 +277,15 @@ class Publisher {
         type: scheduled ? 'uploaded' : 'published',
         postId,
         platformId,
-        title: post.title || 'Beitrag',
+        title: post.title || t('Beitrag'),
         url: result.url || null,
         at: new Date(this.now()).toISOString(),
       });
       if (!scheduled) {
-        this.notify(`Veröffentlicht: ${post.title || 'Beitrag'}`, `Auf ${provider.nameFor ? provider.nameFor(platformId) : provider.name} ist er jetzt online.`);
+        this.notify(
+          t('Veröffentlicht: {title}', { title: post.title || t('Beitrag') }),
+          t('Auf {platform} ist er jetzt online.', { platform: provider.nameFor ? provider.nameFor(platformId) : provider.name })
+        );
       }
       this.settle(postId);
       return { postId, platformId, ok: true, state: scheduled ? 'scheduled' : 'published' };
@@ -299,7 +303,7 @@ class Publisher {
         : { state: 'retry', message: error.message, nextTryAt: new Date(this.now() + delay).toISOString() });
 
       if (permanent) {
-        this.notify(`Nicht veröffentlicht: ${post.title || 'Beitrag'}`, error.message);
+        this.notify(t('Nicht veröffentlicht: {title}', { title: post.title || t('Beitrag') }), error.message);
         this.settle(postId);
       }
       return { postId, platformId, ok: false, permanent, error: error.message };
@@ -323,7 +327,7 @@ class Publisher {
       || null;
 
     if (video && !fs.existsSync(video.filePath)) {
-      throw new PermanentError(`Die Videodatei ist nicht mehr da: ${video.filePath}`);
+      throw new PermanentError(t('Die Videodatei ist nicht mehr da: {path}', { path: video.filePath }));
     }
 
     const tags = (variant.hashtags?.length ? variant.hashtags : post.hashtags) || [];
@@ -372,7 +376,7 @@ class Publisher {
   /** „Jetzt veröffentlichen“ oder nach einem Fehler erneut versuchen. */
   retry(postId, platformId = null) {
     const post = this.store.get('posts', postId);
-    if (!post) throw new Error('Diesen Beitrag gibt es nicht mehr.');
+    if (!post) throw new Error(t('Diesen Beitrag gibt es nicht mehr.'));
     for (const id of platformId ? [platformId] : this.automaticTargets(post)) {
       const state = post.delivery?.[id]?.state;
       if (['published', 'scheduled', 'uploading'].includes(state)) continue;
@@ -386,8 +390,8 @@ class Publisher {
   /** Beitrag sofort veröffentlichen, ohne auf einen Termin zu warten. */
   publishNow(postId) {
     const post = this.store.get('posts', postId);
-    if (!post) throw new Error('Diesen Beitrag gibt es nicht mehr.');
-    if (!this.automaticTargets(post).length) throw new Error('Für keinen der gewählten Kanäle besteht eine Anmeldung zum Veröffentlichen.');
+    if (!post) throw new Error(t('Diesen Beitrag gibt es nicht mehr.'));
+    if (!this.automaticTargets(post).length) throw new Error(t('Für keinen der gewählten Kanäle besteht eine Anmeldung zum Veröffentlichen.'));
     this.store.update('posts', postId, { scheduledAt: new Date(this.now()).toISOString(), status: 'scheduled', preNotifiedAt: null });
     return this.retry(postId);
   }

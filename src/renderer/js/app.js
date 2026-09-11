@@ -8,36 +8,39 @@
 import { h, fill, qs } from './lib/dom.js';
 import * as store from './lib/store.js';
 import { toast } from './lib/ui.js';
+import { t, mark, setLanguage } from './lib/i18n.js';
 
 /**
  * Navigation in vier Schritten des Arbeitsablaufs: sehen, machen, verstehen,
  * einrichten. Was zur Einrichtung gehoert, steht unten und nicht zwischen den
  * taeglich gebrauchten Ansichten.
+ *
+ * Beschriftungen sind nur gekennzeichnet und werden in buildShell() uebersetzt.
  */
 const NAV = [
-  { group: 'Überblick', items: [
-    { id: 'dashboard', label: 'Dashboard', icon: '◈' },
-    { id: 'calendar', label: 'Kalender', icon: '▦' },
-    { id: 'queue', label: 'Warteschlange', icon: '☰' },
+  { group: mark('Überblick'), items: [
+    { id: 'dashboard', label: mark('Dashboard'), icon: '◈' },
+    { id: 'calendar', label: mark('Kalender'), icon: '▦' },
+    { id: 'queue', label: mark('Warteschlange'), icon: '☰' },
   ] },
-  { group: 'Produzieren', items: [
-    { id: 'assistant', label: 'Assistent', icon: '✧' },
-    { id: 'ideas', label: 'Ideen', icon: '✦' },
-    { id: 'scripts', label: 'Skripte', icon: '§' },
-    { id: 'composer', label: 'Composer', icon: '✎' },
-    { id: 'media', label: 'Medien', icon: '▤' },
+  { group: mark('Produzieren'), items: [
+    { id: 'assistant', label: mark('Assistent'), icon: '✧' },
+    { id: 'ideas', label: mark('Ideen'), icon: '✦' },
+    { id: 'scripts', label: mark('Skripte'), icon: '§' },
+    { id: 'composer', label: mark('Composer'), icon: '✎' },
+    { id: 'media', label: mark('Medien'), icon: '▤' },
   ] },
-  { group: 'Auswerten', items: [
-    { id: 'analytics', label: 'Analytics', icon: '◫' },
-    { id: 'coach', label: 'Coach', icon: '◎' },
+  { group: mark('Auswerten'), items: [
+    { id: 'analytics', label: mark('Analytics'), icon: '◫' },
+    { id: 'coach', label: mark('Coach'), icon: '◎' },
   ] },
-  { group: 'Einrichten', items: [
-    { id: 'connections', label: 'Verbindungen', icon: '⇄' },
-    { id: 'publishing', label: 'Veröffentlichen', icon: '➚' },
-    { id: 'channels', label: 'Kanäle', icon: '⬡' },
-    { id: 'mobile', label: 'Handy', icon: '▯' },
-    { id: 'devices', label: 'PCs verbinden', icon: '⧉' },
-    { id: 'settings', label: 'Einstellungen', icon: '⚙' },
+  { group: mark('Einrichten'), items: [
+    { id: 'connections', label: mark('Verbindungen'), icon: '⇄' },
+    { id: 'publishing', label: mark('Veröffentlichen'), icon: '➚' },
+    { id: 'channels', label: mark('Kanäle'), icon: '⬡' },
+    { id: 'mobile', label: mark('Handy'), icon: '▯' },
+    { id: 'devices', label: mark('PCs verbinden'), icon: '⧉' },
+    { id: 'settings', label: mark('Einstellungen'), icon: '⚙' },
   ] },
 ];
 
@@ -58,7 +61,7 @@ let pendingVersion = null;
 function buildShell() {
   const nav = h('nav.sidebar__nav');
   for (const group of NAV) {
-    nav.append(h('div.nav-group', { text: group.group }));
+    nav.append(h('div.nav-group', { text: t(group.group) }));
     for (const item of group.items) {
       const badge = h('span.nav-item__badge.hidden');
       const button = h('button.nav-item', {
@@ -66,7 +69,7 @@ function buildShell() {
         onClick: () => goto(item.id),
       },
         h('span.nav-item__icon', { text: item.icon }),
-        h('span', { text: item.label }),
+        h('span', { text: t(item.label) }),
         badge);
       refs[`badge:${item.id}`] = badge;
       nav.append(button);
@@ -81,23 +84,23 @@ function buildShell() {
       h('div.sidebar__logo', { text: '▶' }),
       h('div', null,
         h('div.sidebar__title', { text: 'Content Helper' }),
-        h('div.sidebar__subtitle', { text: 'lokal · ohne Konto' }))),
+        h('div.sidebar__subtitle', { text: t('lokal · ohne Konto') }))),
     nav,
     h('div.sidebar__footer', null,
-      h('button.btn.btn--primary.btn--block', { text: '＋  Neuer Beitrag', onClick: () => goto('composer', { fresh: true }) }),
+      h('button.btn.btn--primary.btn--block', { text: '＋  ' + t('Neuer Beitrag'), onClick: () => goto('composer', { fresh: true }) }),
       // Der Stand der Aktualisierung gehoert zur Version – und damit hierher,
       // nicht in die Kopfzeile ueber den Inhalt.
       refs.update,
       h('div.text-xs.faint.row.between', null,
         h('span', { id: 'version-label', text: '' }),
-        h('button.btn.btn--ghost.btn--sm', { text: 'Update prüfen', onClick: checkUpdateManually }))));
+        h('button.btn.btn--ghost.btn--sm', { text: t('Update prüfen'), onClick: checkUpdateManually }))));
 
-  refs.title = h('div.topbar__title', { text: 'Dashboard' });
+  refs.title = h('div.topbar__title', { text: t('Dashboard') });
   refs.hint = h('div.topbar__hint', { text: '' });
   refs.actions = h('div.row.gap-sm');
   refs.searchInput = h('input', {
     type: 'search',
-    placeholder: 'Suchen … (Strg+K)',
+    placeholder: t('Suchen … (Strg+K)'),
     oninput: (event) => {
       state.search = event.target.value;
       store.emit('search', state.search);
@@ -134,8 +137,9 @@ export async function goto(viewId, params = {}) {
     const module = state.loaded.get(viewId) || (await import(`./views/${viewId}.js`));
     state.loaded.set(viewId, module);
 
-    refs.title.textContent = module.title || viewId;
-    refs.hint.textContent = typeof module.lead === 'function' ? module.lead() : module.lead || '';
+    // Titel und Einleitung sind in den Ansichten nur gekennzeichnet (mark).
+    refs.title.textContent = module.title ? t(module.title) : viewId;
+    refs.hint.textContent = typeof module.lead === 'function' ? module.lead() : t(module.lead || '');
 
     const context = {
       params,
@@ -153,7 +157,7 @@ export async function goto(viewId, params = {}) {
   } catch (error) {
     console.error(error);
     fill(refs.view, h('div.card', null,
-      h('h2', { text: 'Diese Ansicht konnte nicht geladen werden' }),
+      h('h2', { text: t('Diese Ansicht konnte nicht geladen werden') }),
       h('p.muted.mt-sm', { text: error.message }),
       h('pre.mono.text-xs.muted', { text: error.stack || '' })));
   }
@@ -229,25 +233,25 @@ export function applyTheme(settings) {
  * eine falsche Beruhigung ist schlimmer als eine offene Fehlermeldung.
  */
 async function checkUpdateManually() {
-  toast('Suche nach einer neueren Version …', 'info', 2000);
+  toast(t('Suche nach einer neueren Version …'), 'info', 2000);
   const result = await window.ch.update.check(true);
-  if (!result?.ok) return toast(`Update-Prüfung fehlgeschlagen: ${result?.error || 'unbekannt'}`, 'danger', 7000);
+  if (!result?.ok) return toast(t('Update-Prüfung fehlgeschlagen: {error}', { error: result?.error || t('unbekannt') }), 'danger', 7000);
 
   const info = result.data;
   if (info.downloaded) {
-    toast(`Version ${info.latest} liegt bereit – ein Neustart spielt sie ein.`, 'ok', 8000);
+    toast(t('Version {version} liegt bereit – ein Neustart spielt sie ein.', { version: info.latest }), 'ok', 8000);
   } else if (info.available && info.selfUpdate) {
-    toast(`Version ${info.latest} wird im Hintergrund geladen.`, 'ok', 7000);
+    toast(t('Version {version} wird im Hintergrund geladen.', { version: info.latest }), 'ok', 7000);
     setUpdateState({ state: 'downloading', latest: info.latest, percent: 0 });
   } else if (info.available) {
-    toast(`Version ${info.latest} ist verfügbar – du hast ${info.current}.`, 'ok', 8000);
+    toast(t('Version {version} ist verfügbar – du hast {current}.', { version: info.latest, current: info.current }), 'ok', 8000);
     setUpdateState({ state: 'manual', latest: info.latest });
   } else if (info.offline) {
-    toast(`Prüfung nicht möglich: ${info.error || 'keine Verbindung'}.`, 'warn', 7000);
+    toast(t('Prüfung nicht möglich: {error}.', { error: info.error || t('keine Verbindung') }), 'warn', 7000);
   } else if (info.noReleases) {
-    toast('Prüfung nicht möglich: Auf der Projektseite ist keine Veröffentlichung sichtbar.', 'warn', 7000);
+    toast(t('Prüfung nicht möglich: Auf der Projektseite ist keine Veröffentlichung sichtbar.'), 'warn', 7000);
   } else {
-    toast(`Alles aktuell – Version ${info.current} ist die neueste.`, 'ok');
+    toast(t('Alles aktuell – Version {version} ist die neueste.', { version: info.current }), 'ok');
   }
 }
 
@@ -266,7 +270,7 @@ function setUpdateState({ state, latest, percent = 0 }) {
     fill(refs.update,
       h('div.update-slot__box', null,
         h('div.row.between', null,
-          h('span.text-xs.strong', { text: `Version ${latest || ''} wird geladen` }),
+          h('span.text-xs.strong', { text: t('Version {version} wird geladen', { version: latest || '' }) }),
           h('span.text-xs.faint', { text: `${percent} %` })),
         h('div.bar.mt-sm', null, h('div.bar__fill', { style: { width: `${percent}%` } }))));
     return;
@@ -275,12 +279,12 @@ function setUpdateState({ state, latest, percent = 0 }) {
   if (state === 'ready') {
     fill(refs.update,
       h('div.update-slot__box.is-ready', null,
-        h('div.text-xs.strong.mb-sm', { text: `Version ${latest} liegt bereit` }),
+        h('div.text-xs.strong.mb-sm', { text: t('Version {version} liegt bereit', { version: latest }) }),
         h('button.btn.btn--primary.btn--sm.btn--block', {
-          text: 'Neu starten und einspielen',
-          title: 'Wird sonst automatisch beim nächsten Beenden eingespielt.',
+          text: t('Neu starten und einspielen'),
+          title: t('Wird sonst automatisch beim nächsten Beenden eingespielt.'),
           onClick: async () => {
-            toast('Starte neu …', 'info', 4000);
+            toast(t('Starte neu …'), 'info', 4000);
             await window.ch.update.install();
           },
         })));
@@ -290,10 +294,10 @@ function setUpdateState({ state, latest, percent = 0 }) {
   if (state === 'manual') {
     fill(refs.update,
       h('div.update-slot__box', null,
-        h('div.text-xs.strong.mb-sm', { text: `Version ${latest} verfügbar` }),
-        h('div.text-xs.faint.mb-sm', { text: 'Diese Fassung läuft aus dem Quellordner und kann sich nicht selbst ersetzen.' }),
+        h('div.text-xs.strong.mb-sm', { text: t('Version {version} verfügbar', { version: latest }) }),
+        h('div.text-xs.faint.mb-sm', { text: t('Diese Fassung läuft aus dem Quellordner und kann sich nicht selbst ersetzen.') }),
         h('button.btn.btn--sm.btn--block', {
-          text: 'Veröffentlichung öffnen',
+          text: t('Veröffentlichung öffnen'),
           onClick: () => window.ch.update.openReleasePage(),
         })));
     return;
@@ -305,9 +309,11 @@ function setUpdateState({ state, latest, percent = 0 }) {
 // ------------------------------------------------------------------ Start
 
 async function main() {
-  buildShell();
-
   const settings = await store.boot();
+  // Die Sprache muss feststehen, bevor irgendetwas gezeichnet wird – auch die
+  // Seitenleiste, deshalb entsteht sie erst danach.
+  setLanguage(settings.language);
+  buildShell();
   applyTheme(settings);
 
   const version = await window.ch.system.version();
@@ -359,10 +365,10 @@ async function main() {
   window.ch.update.onAvailable((info) => {
     if (info.autoDownload) {
       setUpdateState({ state: 'downloading', latest: info.latest, percent: 0 });
-      toast(`Version ${info.latest} wird im Hintergrund geladen.`, 'ok', 6000);
+      toast(t('Version {version} wird im Hintergrund geladen.', { version: info.latest }), 'ok', 6000);
     } else {
       setUpdateState({ state: 'manual', latest: info.latest });
-      toast(`Version ${info.latest} ist verfügbar.`, 'ok', 8000);
+      toast(t('Version {version} ist verfügbar.', { version: info.latest }), 'ok', 8000);
     }
   });
 
@@ -373,7 +379,7 @@ async function main() {
   window.ch.update.onReady(({ version }) => {
     pendingVersion = version;
     setUpdateState({ state: 'ready', latest: version });
-    toast(`Version ${version} ist fertig geladen – ein Neustart spielt sie ein.`, 'ok', 9000);
+    toast(t('Version {version} ist fertig geladen – ein Neustart spielt sie ein.', { version }), 'ok', 9000);
   });
 
   window.ch.update.onState(({ state, message }) => {
@@ -422,12 +428,12 @@ function handleAction(action) {
     case 'new-post': return goto('composer', { fresh: true });
     case 'new-idea': return goto('ideas', { fresh: true });
     case 'export-backup': return window.ch.backup.export().then((result) => {
-      if (result?.ok && !result.data.canceled) toast('Sicherung gespeichert.', 'ok');
+      if (result?.ok && !result.data.canceled) toast(t('Sicherung gespeichert.'), 'ok');
     });
     case 'import-backup': return window.ch.backup.import(false).then(async (result) => {
       if (result?.ok && !result.data.canceled) {
         await store.reload();
-        toast('Sicherung eingelesen.', 'ok');
+        toast(t('Sicherung eingelesen.'), 'ok');
         goto(state.view, state.params);
       }
     });

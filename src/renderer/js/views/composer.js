@@ -12,9 +12,10 @@ import * as posts from '../lib/posts.js';
 import * as writing from '../lib/writing.js';
 import { active, platform, glyph, limitState, suggestedSlots, KIND_LABEL } from '../lib/platforms.js';
 import { toast, confirm, prompt, modal, toggle } from '../lib/ui.js';
+import { t, mark, language } from '../lib/i18n.js';
 
-export const title = 'Composer';
-export const lead = 'Einmal schreiben, überall passend ausspielen.';
+export const title = mark('Composer');
+export const lead = mark('Einmal schreiben, überall passend ausspielen.');
 
 /** Der Beitrag, an dem gerade gearbeitet wird. */
 let draft = null;
@@ -52,7 +53,7 @@ function markDirty(rerender) {
 function counter(text, limit) {
   const state = limitState(text, limit);
   const node = h(`span.counter${state.state === 'over' ? '.is-over' : state.state === 'warn' ? '.is-warn' : ''}`, {
-    text: limit ? `${state.used} / ${limit}` : `${state.used} Zeichen`,
+    text: limit ? `${state.used} / ${limit}` : t('{count} Zeichen', { count: state.used }),
   });
   return node;
 }
@@ -89,7 +90,7 @@ function preview(post, platformId) {
     h('div', null,
       p.limits?.title
         ? h('div.preview__body', { style: { paddingBottom: '0' } },
-            h('div.preview__title', { text: titleText || 'Ohne Titel' }),
+            h('div.preview__title', { text: titleText || t('Ohne Titel') }),
             counter(titleText, p.limits.title))
         : null,
       bodyNode,
@@ -99,25 +100,25 @@ function preview(post, platformId) {
               text: tags.map((tag) => (tag.startsWith('#') ? tag : `#${tag}`)).join(' '),
             }),
             p.limits?.hashtags && tags.length > p.limits.hashtags
-              ? h('div.text-xs', { style: { color: 'var(--danger)' }, text: `${p.name} erlaubt höchstens ${p.limits.hashtags} Hashtags.` })
+              ? h('div.text-xs', { style: { color: 'var(--danger)' }, text: t('{platform} erlaubt höchstens {max} Hashtags.', { platform: p.name, max: p.limits.hashtags }) })
               : null)
         : null),
     h('div.row.gap-sm', { style: { padding: '0 13px 13px' } },
       h('button.btn.btn--sm', {
-        text: 'Text kopieren',
+        text: t('Text kopieren'),
         onClick: async () => {
           await window.ch.system.copy(posts.renderFor(post, platformId));
-          toast(`Fassung für ${p.name} kopiert.`, 'ok');
+          toast(t('Fassung für {platform} kopiert.', { platform: p.name }), 'ok');
         },
       }),
       p.uploadUrl
         ? h('button.btn.btn--sm.btn--ghost', {
-            text: 'Upload öffnen',
+            text: t('Upload öffnen'),
             onClick: () => window.ch.system.openExternal(p.uploadUrl),
           })
         : null,
       h('button.btn.btn--sm.btn--ghost', {
-        text: post.perPlatform?.[platformId] ? 'Eigene Fassung bearbeiten' : 'Eigene Fassung',
+        text: post.perPlatform?.[platformId] ? t('Eigene Fassung bearbeiten') : t('Eigene Fassung'),
         onClick: () => openVariantEditor(post, platformId),
       })));
 }
@@ -129,46 +130,52 @@ function openVariantEditor(post, platformId) {
 
   const titleInput = h('input.input', {
     value: variant.title ?? post.title ?? '',
-    placeholder: 'Titel für diese Plattform',
+    placeholder: t('Titel für diese Plattform'),
   });
   const bodyInput = h('textarea.textarea.textarea--tall', {
     value: variant.body ?? post.body ?? '',
-    placeholder: 'Text für diese Plattform',
+    placeholder: t('Text für diese Plattform'),
   });
   const tagsInput = h('input.input', {
     value: (variant.hashtags ?? post.hashtags ?? []).join(' '),
-    placeholder: '#hashtag #beispiel',
+    placeholder: t('#hashtag #beispiel'),
   });
 
+  const limits = [
+    p.limits?.title ? t('Titel {count} Zeichen', { count: p.limits.title }) : null,
+    t('Text {count} Zeichen', { count: p.limits?.body || '–' }),
+    p.limits?.hashtags ? t('{count} Hashtags', { count: p.limits.hashtags }) : null,
+  ].filter(Boolean).join(', ');
+
   modal({
-    title: `Eigene Fassung für ${p.name}`,
+    title: t('Eigene Fassung für {platform}', { platform: p.name }),
     body: h('div.col.gap-lg', null,
-      h('p.text-sm.muted', { text: `Limits: ${p.limits?.title ? `Titel ${p.limits.title} Zeichen, ` : ''}Text ${p.limits?.body || '–'} Zeichen${p.limits?.hashtags ? `, ${p.limits.hashtags} Hashtags` : ''}.` }),
-      p.limits?.title ? h('label.field', null, h('span.field__label', { text: 'Titel' }), titleInput) : null,
-      h('label.field', null, h('span.field__label', { text: 'Text' }), bodyInput),
-      h('label.field', null, h('span.field__label', { text: 'Hashtags' }), tagsInput),
+      h('p.text-sm.muted', { text: t('Limits: {limits}.', { limits }) }),
+      p.limits?.title ? h('label.field', null, h('span.field__label', { text: t('Titel') }), titleInput) : null,
+      h('label.field', null, h('span.field__label', { text: t('Text') }), bodyInput),
+      h('label.field', null, h('span.field__label', { text: t('Hashtags') }), tagsInput),
       p.tips?.length
         ? h('div.notice.notice--accent', null,
             h('span.notice__icon', { text: '◆' }),
             h('div', null,
-              h('div.strong.text-sm', { text: `Worauf es bei ${p.name} ankommt` }),
+              h('div.strong.text-sm', { text: t('Worauf es bei {platform} ankommt', { platform: p.name }) }),
               h('ul.text-sm.muted', { style: { margin: '6px 0 0', paddingLeft: '18px' } },
                 ...p.tips.map((tip) => h('li', { text: tip })))))
         : null),
     actions: [
       {
-        label: 'Eigene Fassung entfernen',
+        label: t('Eigene Fassung entfernen'),
         action: async () => {
           const next = { ...(draft.perPlatform || {}) };
           delete next[platformId];
           draft.perPlatform = next;
           await store.patch('posts', draft.id, { perPlatform: next });
-          toast('Fassung entfernt – es gilt wieder der gemeinsame Text.', 'ok');
+          toast(t('Fassung entfernt – es gilt wieder der gemeinsame Text.'), 'ok');
           rerenderPreviews();
         },
       },
       {
-        label: 'Übernehmen',
+        label: t('Übernehmen'),
         primary: true,
         action: async () => {
           draft.perPlatform = {
@@ -180,7 +187,7 @@ function openVariantEditor(post, platformId) {
             },
           };
           if (draft.id) await store.patch('posts', draft.id, { perPlatform: draft.perPlatform });
-          toast(`Eigene Fassung für ${p.name} gespeichert.`, 'ok');
+          toast(t('Eigene Fassung für {platform} gespeichert.', { platform: p.name }), 'ok');
           rerenderPreviews();
         },
       },
@@ -222,13 +229,13 @@ function scheduleNote(post, info) {
   const auto = (post.platforms || []).filter((id) => providerFor(info, id));
   const manual = (post.platforms || []).filter((id) => !providerFor(info, id));
   const names = (ids) => ids.map((id) => platform(id)?.name || id).join(', ');
-  if (auto.length && !manual.length) return `Zum Termin geht der Beitrag auf ${names(auto)} von selbst raus.`;
-  if (auto.length) return `${names(auto)}: geht von selbst raus. ${names(manual)}: Zum Termin meldet sich die App und legt den Text in die Zwischenablage.`;
-  return 'Für diese Kanäle besteht keine Anmeldung zum Veröffentlichen – zum Termin meldet sich die App und legt den Text in die Zwischenablage. Anmelden kannst du dich unter „Veröffentlichen“.';
+  if (auto.length && !manual.length) return t('Zum Termin geht der Beitrag auf {platforms} von selbst raus.', { platforms: names(auto) });
+  if (auto.length) return t('{auto}: geht von selbst raus. {manual}: Zum Termin meldet sich die App und legt den Text in die Zwischenablage.', { auto: names(auto), manual: names(manual) });
+  return t('Für diese Kanäle besteht keine Anmeldung zum Veröffentlichen – zum Termin meldet sich die App und legt den Text in die Zwischenablage. Anmelden kannst du dich unter „Veröffentlichen“.');
 }
 
 const extOf = (entry) => String(entry?.ext || entry?.filePath?.split('.').pop() || '').toLowerCase();
-const megabytes = (bytes) => `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 100 ? 0 : 1).replace('.', ',')} MB`;
+const megabytes = (bytes) => `${(bytes / 1024 / 1024).toFixed(bytes > 1024 * 1024 * 100 ? 0 : 1).replace('.', language() === 'en' ? '.' : ',')} MB`;
 
 function currentVideo() {
   return (draft.mediaIds || []).map((id) => store.byId('media', id)).find((entry) => entry && VIDEO_EXT.includes(extOf(entry))) || null;
@@ -244,7 +251,7 @@ async function pickFile(kinds) {
   const files = result?.ok ? result.data : [];
   const fileInfo = files.find((entry) => kinds.includes(entry.ext));
   if (!fileInfo) {
-    if (files.length) toast(kinds === VIDEO_EXT ? 'Das ist keine Videodatei.' : 'Das ist kein Bild (JPG, PNG oder WebP).', 'warn');
+    if (files.length) toast(kinds === VIDEO_EXT ? t('Das ist keine Videodatei.') : t('Das ist kein Bild (JPG, PNG oder WebP).'), 'warn');
     return null;
   }
   const existing = store.all('media').find((entry) => entry.filePath === fileInfo.filePath);
@@ -264,7 +271,7 @@ function mediaCard(refresh) {
         const info = result?.ok ? result.data : null;
         if (!info?.durationSec) return;
         const parts = [megabytes(video.size || 0), fmt.duration(info.durationSec)];
-        if (info.width && info.height) parts.push(`${info.width}×${info.height}${info.height > info.width ? ' · hochkant' : ''}`);
+        if (info.width && info.height) parts.push(`${info.width}×${info.height}${info.height > info.width ? ` · ${t('hochkant')}` : ''}`);
         meta.textContent = parts.join(' · ');
       });
     }
@@ -273,10 +280,10 @@ function mediaCard(refresh) {
       h('div.video-pick', null,
         h('div.video-pick__icon', { text: video ? '▶' : '＋' }),
         h('div.grow', null,
-          h('div.strong.truncate', { text: video ? video.name : 'Noch kein Video gewählt' }),
-          video ? meta : h('span.text-xs.faint', { text: 'Wird zum Termin automatisch hochgeladen, wo du angemeldet bist.' })),
+          h('div.strong.truncate', { text: video ? video.name : t('Noch kein Video gewählt') }),
+          video ? meta : h('span.text-xs.faint', { text: t('Wird zum Termin automatisch hochgeladen, wo du angemeldet bist.') })),
         h('button.btn.btn--sm', {
-          text: video ? 'Anderes Video' : 'Video wählen',
+          text: video ? t('Anderes Video') : t('Video wählen'),
           onClick: async () => {
             const entry = await pickFile(VIDEO_EXT);
             if (!entry) return;
@@ -289,7 +296,7 @@ function mediaCard(refresh) {
         video
           ? h('button.btn.btn--sm.btn--ghost', {
               text: '✕',
-              title: 'Video entfernen',
+              title: t('Video entfernen'),
               onClick: () => {
                 draft.mediaIds = (draft.mediaIds || []).filter((id) => id !== video.id);
                 render();
@@ -298,9 +305,9 @@ function mediaCard(refresh) {
             })
           : null),
       h('div.row.gap-sm', null,
-        h('span.text-sm.muted.grow', { text: thumb ? `Thumbnail: ${thumb.name}` : 'Eigenes Thumbnail (für YouTube, optional)' }),
+        h('span.text-sm.muted.grow', { text: thumb ? t('Thumbnail: {name}', { name: thumb.name }) : t('Eigenes Thumbnail (für YouTube, optional)') }),
         h('button.btn.btn--sm.btn--ghost', {
-          text: thumb ? 'Ändern' : 'Bild wählen',
+          text: thumb ? t('Ändern') : t('Bild wählen'),
           onClick: async () => {
             const entry = await pickFile(IMAGE_EXT);
             if (!entry) return;
@@ -315,15 +322,15 @@ function mediaCard(refresh) {
   };
   render();
 
-  return card('Video', { hint: 'wird automatisch hochgeladen' }, host);
+  return card(t('Video'), { hint: t('wird automatisch hochgeladen') }, host);
 }
 
 // Beschriftungen der TikTok-Sichtbarkeiten – TikTok liefert nur die Kennungen.
 const TIKTOK_PRIVACY = {
-  PUBLIC_TO_EVERYONE: 'Alle',
-  MUTUAL_FOLLOW_FRIENDS: 'Freunde (gegenseitig folgen)',
-  FOLLOWER_OF_CREATOR: 'Follower',
-  SELF_ONLY: 'Nur ich',
+  PUBLIC_TO_EVERYONE: mark('Alle (öffentlich)'),
+  MUTUAL_FOLLOW_FRIENDS: mark('Freunde (gegenseitig folgen)'),
+  FOLLOWER_OF_CREATOR: mark('Follower'),
+  SELF_ONLY: mark('Nur ich'),
 };
 
 function optionsOf(platformId) {
@@ -339,15 +346,15 @@ function youtubeOptions(platformId, refresh) {
   const options = optionsOf(platformId);
   return h('div.grid.grid-2', { style: { gap: '10px' } },
     h('label.field', null,
-      h('span.field__label', { text: 'Sichtbarkeit' }),
+      h('span.field__label', { text: t('Sichtbarkeit') }),
       h('select.select', { onChange: (event) => setOption(platformId, { privacy: event.target.value }, refresh) },
-        ...[['public', 'Öffentlich (zum Termin)'], ['unlisted', 'Nicht gelistet'], ['private', 'Privat']].map(([value, label]) =>
+        ...[['public', t('Öffentlich (zum Termin)')], ['unlisted', t('Nicht gelistet')], ['private', t('Privat')]].map(([value, label]) =>
           h('option', { value, text: label, selected: (options.privacy || 'public') === value })))),
     h('label.field', null,
-      h('span.field__label', { text: 'Für Kinder gemacht?' }),
+      h('span.field__label', { text: t('Für Kinder gemacht?') }),
       h('select.select', { onChange: (event) => setOption(platformId, { madeForKids: event.target.value === 'yes' }, refresh) },
-        h('option', { value: 'no', text: 'Nein', selected: !options.madeForKids }),
-        h('option', { value: 'yes', text: 'Ja', selected: Boolean(options.madeForKids) }))));
+        h('option', { value: 'no', text: t('Nein'), selected: !options.madeForKids }),
+        h('option', { value: 'yes', text: t('Ja'), selected: Boolean(options.madeForKids) }))));
 }
 
 /**
@@ -356,11 +363,11 @@ function youtubeOptions(platformId, refresh) {
  * Zustimmungstext.
  */
 function tiktokOptions(refresh) {
-  const host = h('div.col.gap-sm', null, h('div.text-xs.faint', { text: 'Lade die Einstellungen deines TikTok-Kontos …' }));
+  const host = h('div.col.gap-sm', null, h('div.text-xs.faint', { text: t('Lade die Einstellungen deines TikTok-Kontos …') }));
 
   window.ch.publish.tiktokInfo().then((result) => {
     if (!result?.ok) {
-      fill(host, h('div.text-xs', { style: { color: 'var(--danger)' }, text: `TikTok antwortet nicht: ${result?.error || 'unbekannt'}` }));
+      fill(host, h('div.text-xs', { style: { color: 'var(--danger)' }, text: t('TikTok antwortet nicht: {error}', { error: result?.error || t('unbekannt') }) }));
       return;
     }
     const info = result.data || {};
@@ -372,30 +379,32 @@ function tiktokOptions(refresh) {
       fill(commercialHost,
         current.commercial
           ? h('div.col.gap-xs', { style: { paddingLeft: '8px' } },
-              toggle('Eigene Marke (wird als „Werbeinhalt“ gekennzeichnet)', Boolean(current.yourBrand), (value) => { setOption('tiktok', { yourBrand: value }, refresh); renderCommercial(); }),
-              toggle('Bezahlte Partnerschaft (wird als „Bezahlte Partnerschaft“ gekennzeichnet)', Boolean(current.brandedContent), (value) => { setOption('tiktok', { brandedContent: value }, refresh); renderCommercial(); }))
+              toggle(t('Eigene Marke (wird als „Werbeinhalt“ gekennzeichnet)'), Boolean(current.yourBrand), (value) => { setOption('tiktok', { yourBrand: value }, refresh); renderCommercial(); }),
+              toggle(t('Bezahlte Partnerschaft (wird als „Bezahlte Partnerschaft“ gekennzeichnet)'), Boolean(current.brandedContent), (value) => { setOption('tiktok', { brandedContent: value }, refresh); renderCommercial(); }))
           : null,
         h('p.text-xs.faint', {
-          text: `Mit dem Posten stimmst du TikToks Music Usage Confirmation${current.commercial && current.brandedContent ? ' und der Branded Content Policy' : ''} zu.`,
+          text: current.commercial && current.brandedContent
+            ? t('Mit dem Posten stimmst du TikToks Music Usage Confirmation und der Branded Content Policy zu.')
+            : t('Mit dem Posten stimmst du TikToks Music Usage Confirmation zu.'),
         }));
     };
     renderCommercial();
 
     fill(host,
-      h('div.text-sm', null, h('span.muted', { text: 'Wird gepostet als ' }), h('span.strong', { text: info.creator_nickname || info.creator_username || 'dein Konto' })),
+      h('div.text-sm', null, h('span.muted', { text: t('Wird gepostet als ') }), h('span.strong', { text: info.creator_nickname || info.creator_username || t('dein Konto') })),
       h('label.field', null,
-        h('span.field__label', { text: 'Wer darf das Video sehen?' }),
+        h('span.field__label', { text: t('Wer darf das Video sehen?') }),
         h('select.select', { onChange: (event) => setOption('tiktok', { privacy: event.target.value || null }, refresh) },
-          h('option', { value: '', text: 'Bitte wählen', selected: !options.privacy }),
+          h('option', { value: '', text: t('Bitte wählen'), selected: !options.privacy }),
           ...(info.privacy_level_options || []).map((value) =>
-            h('option', { value, text: TIKTOK_PRIVACY[value] || value, selected: options.privacy === value })))),
-      toggle(info.comment_disabled ? 'Kommentare (im Konto abgeschaltet)' : 'Kommentare erlauben', Boolean(options.allowComments) && !info.comment_disabled, (value) => setOption('tiktok', { allowComments: value }, refresh)),
-      toggle(info.duet_disabled ? 'Duette (im Konto abgeschaltet)' : 'Duette erlauben', Boolean(options.allowDuet) && !info.duet_disabled, (value) => setOption('tiktok', { allowDuet: value }, refresh)),
-      toggle(info.stitch_disabled ? 'Stitches (im Konto abgeschaltet)' : 'Stitches erlauben', Boolean(options.allowStitch) && !info.stitch_disabled, (value) => setOption('tiktok', { allowStitch: value }, refresh)),
-      toggle('Werblicher Inhalt', Boolean(options.commercial), (value) => { setOption('tiktok', { commercial: value }, refresh); renderCommercial(); }),
+            h('option', { value, text: TIKTOK_PRIVACY[value] ? t(TIKTOK_PRIVACY[value]) : value, selected: options.privacy === value })))),
+      toggle(info.comment_disabled ? t('Kommentare (im Konto abgeschaltet)') : t('Kommentare erlauben'), Boolean(options.allowComments) && !info.comment_disabled, (value) => setOption('tiktok', { allowComments: value }, refresh)),
+      toggle(info.duet_disabled ? t('Duette (im Konto abgeschaltet)') : t('Duette erlauben'), Boolean(options.allowDuet) && !info.duet_disabled, (value) => setOption('tiktok', { allowDuet: value }, refresh)),
+      toggle(info.stitch_disabled ? t('Stitches (im Konto abgeschaltet)') : t('Stitches erlauben'), Boolean(options.allowStitch) && !info.stitch_disabled, (value) => setOption('tiktok', { allowStitch: value }, refresh)),
+      toggle(t('Werblicher Inhalt'), Boolean(options.commercial), (value) => { setOption('tiktok', { commercial: value }, refresh); renderCommercial(); }),
       commercialHost,
       info.max_video_post_duration_sec
-        ? h('p.text-xs.faint', { text: `Dein Konto erlaubt Videos bis ${fmt.duration(info.max_video_post_duration_sec)}.` })
+        ? h('p.text-xs.faint', { text: t('Dein Konto erlaubt Videos bis {duration}.', { duration: fmt.duration(info.max_video_post_duration_sec) }) })
         : null);
 
     // Abgeschaltete Schalter sperren, wie TikTok es verlangt.
@@ -412,14 +421,14 @@ function tiktokOptions(refresh) {
 }
 
 const STATE_LABEL = {
-  waiting: 'wartet auf den Termin',
-  uploading: 'wird hochgeladen',
-  processing: 'wird von der Plattform verarbeitet',
-  scheduled: 'hochgeladen – geht zum Termin von selbst live',
-  published: 'veröffentlicht',
-  retry: 'neuer Versuch folgt',
-  failed: 'fehlgeschlagen',
-  cancelled: 'bei der Plattform zurückgezogen',
+  waiting: mark('wartet auf den Termin'),
+  uploading: mark('wird hochgeladen'),
+  processing: mark('wird von der Plattform verarbeitet'),
+  scheduled: mark('hochgeladen – geht zum Termin von selbst live'),
+  published: mark('veröffentlicht'),
+  retry: mark('neuer Versuch folgt'),
+  failed: mark('fehlgeschlagen'),
+  cancelled: mark('bei der Plattform zurückgezogen'),
 };
 
 function deliveryLine(post, platformId, refresh) {
@@ -430,21 +439,21 @@ function deliveryLine(post, platformId, refresh) {
 
   return h(`div.delivery.is-${delivery.state}`, { dataset: { delivery: `${post.id}:${platformId}` } },
     h('div.row.between', null,
-      h('span.strong', { text: STATE_LABEL[delivery.state] || delivery.state }),
+      h('span.strong', { text: STATE_LABEL[delivery.state] ? t(STATE_LABEL[delivery.state]) : delivery.state }),
       delivery.state === 'uploading' ? h('span.text-xs.faint.delivery__share', { text: `${share} %` }) : null),
     ['uploading', 'processing', 'published', 'scheduled', 'failed'].includes(delivery.state) ? h('div.delivery__bar', null, bar) : null,
     delivery.message ? h('div.text-xs', { style: { color: delivery.state === 'failed' ? 'var(--danger)' : 'var(--text-muted, inherit)' }, text: delivery.message }) : null,
-    delivery.state === 'retry' && delivery.nextTryAt ? h('div.text-xs.faint', { text: `Nächster Versuch ${fmt.relative(delivery.nextTryAt)}.` }) : null,
+    delivery.state === 'retry' && delivery.nextTryAt ? h('div.text-xs.faint', { text: t('Nächster Versuch {when}.', { when: fmt.relative(delivery.nextTryAt) }) }) : null,
     h('div.row.gap-sm', null,
-      delivery.url ? h('button.btn.btn--sm.btn--ghost', { text: 'Ansehen', onClick: () => window.ch.system.openExternal(delivery.url) }) : null,
+      delivery.url ? h('button.btn.btn--sm.btn--ghost', { text: t('Ansehen'), onClick: () => window.ch.system.openExternal(delivery.url) }) : null,
       ['failed', 'retry'].includes(delivery.state)
         ? h('button.btn.btn--sm', {
-            text: 'Erneut versuchen',
+            text: t('Erneut versuchen'),
             onClick: async () => {
               const result = await window.ch.publish.retry(post.id, platformId);
-              if (!result?.ok) return toast(result?.error || 'Das ging nicht.', 'danger');
+              if (!result?.ok) return toast(result?.error || t('Das ging nicht.'), 'danger');
               await store.reload('posts');
-              toast('Wird erneut versucht.', 'ok');
+              toast(t('Wird erneut versucht.'), 'ok');
               refresh();
             },
           })
@@ -462,7 +471,7 @@ function publishCard(info, { refresh, goto }) {
     fill(host,
       targets.length
         ? null
-        : h('p.text-sm.muted', { text: 'Wähle links mindestens einen Kanal.' }),
+        : h('p.text-sm.muted', { text: t('Wähle links mindestens einen Kanal.') }),
       ...targets.map((platformId) => {
         const provider = providerFor(info, platformId);
         const p = platform(platformId);
@@ -471,15 +480,15 @@ function publishCard(info, { refresh, goto }) {
             glyph(platformId, 18),
             h('span.strong.grow', { text: p?.name || platformId }),
             provider
-              ? h('span.badge.badge--ok', { text: provider.nativeSchedule ? 'automatisch · plant selbst' : 'automatisch' })
-              : h('span.badge', { text: 'selbst posten' })),
+              ? h('span.badge.badge--ok', { text: provider.nativeSchedule ? t('automatisch · plant selbst') : t('automatisch') })
+              : h('span.badge', { text: t('selbst posten') })),
           provider && platformId.startsWith('youtube') ? youtubeOptions(platformId, refresh) : null,
           provider && platformId === 'tiktok' ? tiktokOptions(refresh) : null,
           provider && platformId === 'instagram_reels'
-            ? toggle('Reel auch im Profil-Raster zeigen', optionsOf(platformId).shareToFeed !== false, (value) => setOption(platformId, { shareToFeed: value }, refresh))
+            ? toggle(t('Reel auch im Profil-Raster zeigen'), optionsOf(platformId).shareToFeed !== false, (value) => setOption(platformId, { shareToFeed: value }, refresh))
             : null,
           !provider && info.providers?.some((entry) => entry.platformIds.includes(platformId))
-            ? h('button.btn.btn--sm.btn--ghost', { text: `Bei ${p?.name || platformId} anmelden`, onClick: () => goto('publishing') })
+            ? h('button.btn.btn--sm.btn--ghost', { text: t('Bei {platform} anmelden', { platform: p?.name || platformId }), onClick: () => goto('publishing') })
             : null,
           deliveryLine(post, platformId, refresh));
       }),
@@ -487,25 +496,25 @@ function publishCard(info, { refresh, goto }) {
       automatic.some((id) => !['scheduled', 'published', 'uploading', 'processing'].includes(post?.delivery?.[id]?.state))
         && draft.id && !['published', 'publishing'].includes(post?.status)
         ? h('button.btn.btn--sm', {
-            text: 'Jetzt veröffentlichen',
+            text: t('Jetzt veröffentlichen'),
             onClick: async () => {
               if (!(await confirm({
-                title: 'Jetzt veröffentlichen?',
-                message: `Der Beitrag geht sofort auf ${automatic.map((id) => platform(id)?.name || id).join(', ')} raus – ohne auf den Termin zu warten.`,
-                confirmLabel: 'Jetzt veröffentlichen',
+                title: t('Jetzt veröffentlichen?'),
+                message: t('Der Beitrag geht sofort auf {platforms} raus – ohne auf den Termin zu warten.', { platforms: automatic.map((id) => platform(id)?.name || id).join(', ') }),
+                confirmLabel: t('Jetzt veröffentlichen'),
               }))) return;
               clearTimeout(saveTimer);
               await store.patch('posts', draft.id, editable(draft));
               const result = await window.ch.publish.now(draft.id);
-              if (!result?.ok) return toast(result?.error || 'Das ging nicht.', 'danger', 7000);
+              if (!result?.ok) return toast(result?.error || t('Das ging nicht.'), 'danger', 7000);
               await store.reload('posts');
-              toast('Geht jetzt raus.', 'ok');
+              toast(t('Geht jetzt raus.'), 'ok');
               refresh();
             },
           })
         : null,
       info.primary === false
-        ? h('p.text-xs.faint', { text: 'Veröffentlicht wird auf deinem anderen PC – dem, der auch YouTube und Twitch abholt.' })
+        ? h('p.text-xs.faint', { text: t('Veröffentlicht wird auf deinem anderen PC – dem, der auch YouTube und Twitch abholt.') })
         : null);
   };
   renderPublishRows();
@@ -529,7 +538,7 @@ function publishCard(info, { refresh, goto }) {
   window.addEventListener('ch:publish-changed', publishListener);
   window.addEventListener('ch:publish-progress', progressListener);
 
-  return card('Veröffentlichen', { hint: 'je Kanal' }, host);
+  return card(t('Veröffentlichen'), { hint: t('je Kanal') }, host);
 }
 
 // ------------------------------------------------------------------ Ansicht
@@ -551,24 +560,24 @@ export async function render({ params, goto, setActions, refresh }) {
   setActions(
     h('span.badge', { text: posts.statusLabel(draft.status) }),
     h('button.btn.btn--sm', {
-      text: 'Speichern',
+      text: t('Speichern'),
       onClick: async () => {
         clearTimeout(saveTimer);
         if (draft.id) await store.patch('posts', draft.id, editable(draft));
         else draft = await store.add('posts', draft);
-        toast('Gespeichert.', 'ok');
+        toast(t('Gespeichert.'), 'ok');
         refresh();
       },
     }),
-    h('button.btn.btn--sm.btn--primary', { text: 'Einplanen', onClick: () => openScheduler() }),
+    h('button.btn.btn--sm.btn--primary', { text: t('Einplanen'), onClick: () => openScheduler() }),
     draft.id
       ? h('button.btn.btn--sm.btn--danger', {
-          text: 'Löschen',
+          text: t('Löschen'),
           onClick: async () => {
-            if (!(await confirm({ title: 'Beitrag löschen?', message: 'Das lässt sich nicht rückgängig machen.', confirmLabel: 'Löschen', tone: 'danger' }))) return;
+            if (!(await confirm({ title: t('Beitrag löschen?'), message: t('Das lässt sich nicht rückgängig machen.'), confirmLabel: t('Löschen'), tone: 'danger' }))) return;
             await store.remove('posts', draft.id);
             draft = null;
-            toast('Gelöscht.', 'ok');
+            toast(t('Gelöscht.'), 'ok');
             goto('calendar');
           },
         })
@@ -578,7 +587,7 @@ export async function render({ params, goto, setActions, refresh }) {
   // ---------------------------------------------------------------- Editor
   const titleInput = h('input.input', {
     value: draft.title || '',
-    placeholder: 'Titel – das Versprechen an die Zuschauer',
+    placeholder: t('Titel – das Versprechen an die Zuschauer'),
     oninput: (event) => {
       draft.title = event.target.value;
       updateChecks();
@@ -589,7 +598,7 @@ export async function render({ params, goto, setActions, refresh }) {
 
   const bodyInput = h('textarea.textarea.textarea--tall', {
     value: draft.body || '',
-    placeholder: 'Text, Beschreibung oder Skript …',
+    placeholder: t('Text, Beschreibung oder Skript …'),
     oninput: (event) => {
       draft.body = event.target.value;
       updateChecks();
@@ -600,7 +609,7 @@ export async function render({ params, goto, setActions, refresh }) {
 
   const tagsInput = h('input.input', {
     value: (draft.hashtags || []).join(' '),
-    placeholder: '#thema #kanal',
+    placeholder: t('#thema #kanal'),
     onchange: (event) => {
       draft.hashtags = event.target.value.split(/[\s,]+/).map((tag) => tag.replace(/^#/, '')).filter(Boolean);
       rerenderPreviews();
@@ -623,7 +632,7 @@ export async function render({ params, goto, setActions, refresh }) {
       ? notes.map((note) => h(`div.notice.notice--${note.tone === 'ok' ? 'ok' : note.tone}`, null,
           h('span.notice__icon', { text: note.tone === 'danger' ? '✕' : note.tone === 'warn' ? '!' : note.tone === 'ok' ? '✓' : 'ℹ' }),
           h('span', { text: note.message })))
-      : [h('div.text-sm.faint', { text: 'Schreib etwas – die Prüfung meldet sich, sobald es etwas zu sagen gibt.' })]));
+      : [h('div.text-sm.faint', { text: t('Schreib etwas – die Prüfung meldet sich, sobald es etwas zu sagen gibt.') })]));
   }
   updateChecks();
 
@@ -665,13 +674,13 @@ export async function render({ params, goto, setActions, refresh }) {
       .slice(0, 8);
 
     modal({
-      title: 'Termin festlegen',
+      title: t('Termin festlegen'),
       size: 'narrow',
       body: h('div.col.gap-lg', null,
-        h('label.field', null, h('span.field__label', { text: 'Datum und Uhrzeit' }), input),
+        h('label.field', null, h('span.field__label', { text: t('Datum und Uhrzeit') }), input),
         slots.length
           ? h('div.col.gap-sm', null,
-              h('div.field__label', { text: 'Empfohlene Zeitfenster deiner Kanäle' }),
+              h('div.field__label', { text: t('Empfohlene Zeitfenster deiner Kanäle') }),
               h('div.chips', null,
                 ...slots.map((slot) =>
                   h('span.chip', {
@@ -683,20 +692,20 @@ export async function render({ params, goto, setActions, refresh }) {
         h('p.text-xs.faint', { text: scheduleNote(draft, publishInfo) })),
       actions: [
         {
-          label: 'Termin entfernen',
+          label: t('Termin entfernen'),
           action: async () => {
             draft.scheduledAt = null;
             draft.status = 'ready';
             if (draft.id) await store.patch('posts', draft.id, { scheduledAt: null, status: 'ready' });
-            toast('Termin entfernt.', 'ok');
+            toast(t('Termin entfernt.'), 'ok');
             refresh();
           },
         },
         {
-          label: 'Einplanen',
+          label: t('Einplanen'),
           primary: true,
           action: async () => {
-            if (!input.value) return toast('Bitte einen Zeitpunkt wählen.', 'warn');
+            if (!input.value) return toast(t('Bitte einen Zeitpunkt wählen.'), 'warn');
             draft.scheduledAt = new Date(input.value).toISOString();
             draft.status = 'scheduled';
             draft.preNotifiedAt = null;
@@ -711,7 +720,7 @@ export async function render({ params, goto, setActions, refresh }) {
             } else {
               draft = await store.add('posts', draft);
             }
-            toast(`Eingeplant für ${fmt.dateTime(draft.scheduledAt)}.`, 'ok');
+            toast(t('Eingeplant für {when}.', { when: fmt.dateTime(draft.scheduledAt) }), 'ok');
             refresh();
           },
         },
@@ -744,9 +753,9 @@ export async function render({ params, goto, setActions, refresh }) {
           },
         }))),
       h('button.btn.btn--sm.btn--ghost', {
-        text: '＋ Punkt hinzufügen',
+        text: t('＋ Punkt hinzufügen'),
         onClick: async () => {
-          const text = await prompt({ title: 'Checklistenpunkt', label: 'Was fehlt noch?', placeholder: 'z. B. Thumbnail bauen' });
+          const text = await prompt({ title: t('Checklistenpunkt'), label: t('Was fehlt noch?'), placeholder: t('z. B. Thumbnail bauen') });
           if (!text) return;
           draft.checklist = [...(draft.checklist || []), { text, done: false }];
           renderChecklist();
@@ -755,7 +764,7 @@ export async function render({ params, goto, setActions, refresh }) {
       }),
       !items.length
         ? h('button.btn.btn--sm.btn--ghost', {
-            text: 'Standard-Checkliste einsetzen',
+            text: t('Standard-Checkliste einsetzen'),
             onClick: () => {
               draft.checklist = defaultChecklist(draft.platforms || []);
               renderChecklist();
@@ -769,101 +778,101 @@ export async function render({ params, goto, setActions, refresh }) {
   // ---------------------------------------------------------------- Aufbau
   return h('div.split', null,
     h('div.col.gap-lg', null,
-      card('Inhalt', { hint: isNew ? 'neuer Beitrag' : `zuletzt geändert ${fmt.relative(draft.updatedAt)}` },
+      card(t('Inhalt'), { hint: isNew ? t('neuer Beitrag') : t('zuletzt geändert {when}', { when: fmt.relative(draft.updatedAt) }) },
         h('div.col.gap-lg', null,
           h('label.field', null,
-            h('div.row.between', null, h('span.field__label', { text: 'Titel' }), counter(draft.title, platform(draft.platforms?.[0])?.limits?.title || 0)),
+            h('div.row.between', null, h('span.field__label', { text: t('Titel') }), counter(draft.title, platform(draft.platforms?.[0])?.limits?.title || 0)),
             titleInput),
           h('label.field', null,
             h('div.row.between', null,
-              h('span.field__label', { text: 'Text' }),
-              h('span.text-xs.faint', { text: `${fmt.wordCount(draft.body)} Wörter · gesprochen ${fmt.duration(fmt.speakingSeconds(draft.body))}` })),
+              h('span.field__label', { text: t('Text') }),
+              h('span.text-xs.faint', { text: t('{words} Wörter · gesprochen {duration}', { words: fmt.wordCount(draft.body), duration: fmt.duration(fmt.speakingSeconds(draft.body)) }) })),
             bodyInput),
           h('div.row.gap-sm', null,
             h('button.btn.btn--sm', {
-              text: '✦ Titel vorschlagen',
+              text: t('✦ Titel vorschlagen'),
               onClick: () => suggestTitles(titleInput, () => { draft.title = titleInput.value; updateChecks(); rerenderPreviews(); markDirty(refresh); }),
             }),
             h('button.btn.btn--sm', {
-              text: '⚑ Hook vorschlagen',
+              text: t('⚑ Hook vorschlagen'),
               onClick: () => suggestHooks(bodyInput, () => { draft.body = bodyInput.value; updateChecks(); rerenderPreviews(); markDirty(refresh); }),
             }),
             h('button.btn.btn--sm', {
-              text: '# Hashtags ableiten',
+              text: t('# Hashtags ableiten'),
               onClick: () => {
                 const suggested = writing.suggestHashtags(`${draft.title} ${draft.body}`);
-                if (!suggested.length) return toast('Zu wenig Text für Vorschläge.', 'warn');
+                if (!suggested.length) return toast(t('Zu wenig Text für Vorschläge.'), 'warn');
                 draft.hashtags = [...new Set([...(draft.hashtags || []), ...suggested])];
                 tagsInput.value = draft.hashtags.join(' ');
                 rerenderPreviews();
                 markDirty(refresh);
-                toast(`${suggested.length} Vorschläge übernommen.`, 'ok');
+                toast(t('{count} Vorschläge übernommen.', { count: suggested.length }), 'ok');
               },
             })),
-          h('label.field', null, h('span.field__label', { text: 'Hashtags' }), tagsInput))),
+          h('label.field', null, h('span.field__label', { text: t('Hashtags') }), tagsInput))),
 
       mediaCard(refresh),
 
-      card('Prüfung', { hint: 'aktualisiert sich beim Tippen' }, checksHost),
+      card(t('Prüfung'), { hint: t('aktualisiert sich beim Tippen') }, checksHost),
 
-      card('Kanäle', { hint: `${(draft.platforms || []).length} ausgewählt` },
-        h('p.text-sm.muted.mb', { text: 'Nur aktive Kanäle erscheinen hier. Weitere schaltest du in den Einstellungen frei.' }),
+      card(t('Kanäle'), { hint: t('{count} ausgewählt', { count: (draft.platforms || []).length }) },
+        h('p.text-sm.muted.mb', { text: t('Nur aktive Kanäle erscheinen hier. Weitere schaltest du in den Einstellungen frei.') }),
         platformHost)),
 
     h('div.col.gap-lg', null,
-      card('Termin', {},
+      card(t('Termin'), {},
         draft.scheduledAt
           ? h('div.col.gap-sm', null,
               h('div.text-lg.strong', { text: fmt.dateTime(draft.scheduledAt) }),
               h('div.text-sm.muted', { text: `${fmt.relative(draft.scheduledAt)} · ${posts.statusLabel(draft.status)}` }),
               h('div.row.gap-sm', null,
-                h('button.btn.btn--sm', { text: 'Ändern', onClick: openScheduler }),
+                h('button.btn.btn--sm', { text: t('Ändern'), onClick: openScheduler }),
                 h('button.btn.btn--sm.btn--primary', {
-                  text: 'Als veröffentlicht markieren',
+                  text: t('Als veröffentlicht markieren'),
                   onClick: async () => {
                     draft.status = 'published';
                     draft.publishedAt = new Date().toISOString();
                     if (draft.id) await store.patch('posts', draft.id, { status: 'published', publishedAt: draft.publishedAt });
-                    toast('Abgehakt. Trag später die Zahlen nach, dann lernt der Coach mit.', 'ok');
+                    toast(t('Abgehakt. Trag später die Zahlen nach, dann lernt der Coach mit.'), 'ok');
                     refresh();
                   },
                 })))
           : h('div.col.gap-sm', null,
-              h('p.text-sm.muted', { text: 'Noch kein Termin gesetzt.' }),
-              h('button.btn.btn--primary.btn--block', { text: 'Termin festlegen', onClick: openScheduler })))
+              h('p.text-sm.muted', { text: t('Noch kein Termin gesetzt.') }),
+              h('button.btn.btn--primary.btn--block', { text: t('Termin festlegen'), onClick: openScheduler })))
       ,
       publishCard(publishInfo, { refresh, goto }),
 
-      card('Format', { hint: 'für die Auswertung' },
+      card(t('Format'), { hint: t('für die Auswertung') },
         h('select.select', {
           onChange: (event) => { draft.format = event.target.value; markDirty(refresh); },
         },
-          h('option', { value: '', text: '– kein Format –', selected: !draft.format }),
+          h('option', { value: '', text: t('– kein Format –'), selected: !draft.format }),
           ...[...new Set((draft.platforms || []).flatMap((id) => platform(id)?.formats || []))].map((format) =>
             h('option', { value: format, text: format, selected: draft.format === format })))),
 
-      card('Checkliste', { hint: 'was vor dem Hochladen fertig sein muss' }, checklistHost),
+      card(t('Checkliste'), { hint: t('was vor dem Hochladen fertig sein muss') }, checklistHost),
 
       h('section.section.mt-0', null,
         h('div.section__head', null,
-          h('div.section__title', { text: 'Vorschau je Kanal' }),
-          h('div.section__hint', { text: 'so kommt es dort an' })),
+          h('div.section__title', { text: t('Vorschau je Kanal') }),
+          h('div.section__hint', { text: t('so kommt es dort an') })),
         (draft.platforms || []).length
           ? previewHost
-          : card(null, { class: 'card--quiet' }, h('p.text-sm.muted', { text: 'Wähle links mindestens einen Kanal aus.' })))));
+          : card(null, { class: 'card--quiet' }, h('p.text-sm.muted', { text: t('Wähle links mindestens einen Kanal aus.') })))));
 }
 
 // ------------------------------------------------------------------ Vorschläge
 
 function suggestTitles(input, onPick) {
-  const topic = input.value.trim() || 'dein Thema';
+  const topic = input.value.trim() || t('dein Thema');
   let offset = 0;
   const list = h('div.col.gap-sm');
 
   const renderList = () => {
     fill(list, ...writing.titles(topic, 8, offset).map((item) =>
       h('div.post-row', {
-        onClick: () => { input.value = item.text; onPick(); toast('Titel übernommen.', 'ok'); instance.close(); },
+        onClick: () => { input.value = item.text; onPick(); toast(t('Titel übernommen.'), 'ok'); instance.close(); },
       },
         h('span.badge', { text: item.kind }),
         h('span.grow', { text: item.text }))));
@@ -871,16 +880,16 @@ function suggestTitles(input, onPick) {
   renderList();
 
   const instance = modal({
-    title: 'Titelvorschläge',
+    title: t('Titelvorschläge'),
     body: h('div.col.gap-lg', null,
-      h('p.text-sm.muted', { text: `Muster, die auf Video- und Kurzvideoplattformen zuverlässig tragen – angewandt auf „${topic}“. Als Ausgangspunkt gedacht, nicht als fertiger Titel.` }),
+      h('p.text-sm.muted', { text: t('Muster, die auf Video- und Kurzvideoplattformen zuverlässig tragen – angewandt auf „{topic}“. Als Ausgangspunkt gedacht, nicht als fertiger Titel.', { topic }) }),
       list),
-    actions: [{ label: 'Andere Vorschläge', action: () => { offset += 5; renderList(); return false; }, closeAfter: false }],
+    actions: [{ label: t('Andere Vorschläge'), action: () => { offset += 5; renderList(); return false; }, closeAfter: false }],
   });
 }
 
 function suggestHooks(textarea, onPick) {
-  const topic = (textarea.value.split('\n')[0] || '').trim().slice(0, 60) || 'dein Thema';
+  const topic = (textarea.value.split('\n')[0] || '').trim().slice(0, 60) || t('dein Thema');
   let offset = 0;
   const list = h('div.col.gap-sm');
 
@@ -890,7 +899,7 @@ function suggestHooks(textarea, onPick) {
         onClick: () => {
           textarea.value = `${hook}\n\n${textarea.value}`;
           onPick();
-          toast('Hook vorangestellt.', 'ok');
+          toast(t('Hook vorangestellt.'), 'ok');
           instance.close();
         },
       }, h('span.grow', { text: hook }))));
@@ -898,21 +907,21 @@ function suggestHooks(textarea, onPick) {
   renderList();
 
   const instance = modal({
-    title: 'Einstiegssätze',
+    title: t('Einstiegssätze'),
     body: h('div.col.gap-lg', null,
-      h('p.text-sm.muted', { text: 'Die ersten Sekunden entscheiden über alles Weitere. Ein Satz, der eine Lücke öffnet, schlägt jede Begrüßung.' }),
+      h('p.text-sm.muted', { text: t('Die ersten Sekunden entscheiden über alles Weitere. Ein Satz, der eine Lücke öffnet, schlägt jede Begrüßung.') }),
       list),
-    actions: [{ label: 'Andere Vorschläge', action: () => { offset += 3; renderList(); return false; }, closeAfter: false }],
+    actions: [{ label: t('Andere Vorschläge'), action: () => { offset += 3; renderList(); return false; }, closeAfter: false }],
   });
 }
 
 /** Sinnvolle Standardpunkte, abhängig von den gewählten Kanälen. */
 function defaultChecklist(platformIds) {
   const kinds = new Set(platformIds.map((id) => platform(id)?.kind));
-  const items = ['Text gegengelesen', 'Rechte an Musik und Material geklärt'];
-  if (kinds.has('video')) items.unshift('Thumbnail gebaut', 'Kapitelmarken gesetzt', 'Beschreibung mit Links gefüllt');
-  if (kinds.has('short')) items.unshift('Untertitel eingebrannt', 'Hook in Sekunde 1 geprüft', 'Cover-Frame gewählt');
-  if (kinds.has('live')) items.unshift('Titel und Kategorie gesetzt', 'Technik getestet', 'Ankündigung verschickt');
-  if (kinds.has('image')) items.unshift('Bildformat geprüft', 'Alt-Text geschrieben');
+  const items = [t('Text gegengelesen'), t('Rechte an Musik und Material geklärt')];
+  if (kinds.has('video')) items.unshift(t('Thumbnail gebaut'), t('Kapitelmarken gesetzt'), t('Beschreibung mit Links gefüllt'));
+  if (kinds.has('short')) items.unshift(t('Untertitel eingebrannt'), t('Hook in Sekunde 1 geprüft'), t('Cover-Frame gewählt'));
+  if (kinds.has('live')) items.unshift(t('Titel und Kategorie gesetzt'), t('Technik getestet'), t('Ankündigung verschickt'));
+  if (kinds.has('image')) items.unshift(t('Bildformat geprüft'), t('Alt-Text geschrieben'));
   return items.map((text) => ({ text, done: false }));
 }

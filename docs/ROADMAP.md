@@ -46,6 +46,7 @@ Der Ausbau erfolgt in Stufen. Jede Stufe ist für sich benutzbar – die App ist
 - [x] Handy-Begleiter für iPhone und Android über das eigene WLAN
 - [x] Eigenes Erscheinungsbild: Akzentfarben, Hintergründe, eigenes Bild
 - [x] Mehrere PCs per Code verbinden, verschlüsselt über den eigenen Cloud-Ordner ([#2](https://github.com/MoinMornhart/content-helper/issues/2))
+- [x] Englische Oberfläche, umschaltbar, dazu README auf Englisch ([#3](https://github.com/MoinMornhart/content-helper/issues/3))
 - [ ] Freigabe-Workflow (Entwurf → Review → geplant)
 - [ ] Globale Suche über alle Inhalte, Ideen und Notizen
 

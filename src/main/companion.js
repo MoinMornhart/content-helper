@@ -19,8 +19,11 @@ const os = require('os');
 const path = require('path');
 const crypto = require('crypto');
 
+const { t, language, loadDictionary } = require('./i18n');
+
 const MOBILE_DIR = path.join(__dirname, '..', 'mobile');
 const DEFAULT_PORT = 7788;
+const MOBILE_DICTIONARY = path.join(__dirname, '..', 'shared', 'i18n', 'en', 'mobile.json');
 
 const MIME = {
   '.html': 'text/html; charset=utf-8',
@@ -106,7 +109,7 @@ class Companion {
         this.server = null;
         reject(new Error(
           error.code === 'EADDRINUSE'
-            ? `Der Anschluss ${port} ist belegt. Wähle in den Einstellungen einen anderen.`
+            ? t('Der Anschluss {port} ist belegt. Wähle in den Einstellungen einen anderen.', { port })
             : error.message
         ));
       });
@@ -157,7 +160,7 @@ class Companion {
 
     if (!target.startsWith(MOBILE_DIR) || !fs.existsSync(target) || !fs.statSync(target).isFile()) {
       response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
-      return response.end('Nicht gefunden');
+      return response.end(t('Nicht gefunden'));
     }
 
     response.writeHead(200, { 'Content-Type': MIME[path.extname(target)] || 'application/octet-stream' });
@@ -174,7 +177,7 @@ class Companion {
   serveCalendar(request, response, url) {
     if (!this.authorized(request, url)) {
       response.writeHead(401, { 'Content-Type': 'text/plain; charset=utf-8' });
-      return response.end('Nicht verbunden.');
+      return response.end(t('Nicht verbunden.'));
     }
 
     const { buildCalendar } = require('./calendar');
@@ -208,10 +211,10 @@ class Companion {
       response.end(JSON.stringify(payload));
     };
 
-    if (!this.authorized(request, url)) return send(401, { error: 'Nicht verbunden. Bitte den QR-Code erneut scannen.' });
+    if (!this.authorized(request, url)) return send(401, { error: t('Nicht verbunden. Bitte den QR-Code erneut scannen.') });
 
     // Gerät merken, damit die Desktop-App zeigen kann, wer verbunden ist.
-    const agent = String(request.headers['user-agent'] || 'Unbekanntes Gerät');
+    const agent = String(request.headers['user-agent'] || 'unknown');
     const key = crypto.createHash('sha1').update(agent).digest('hex').slice(0, 8);
     this.devices.set(key, {
       id: key,
@@ -222,7 +225,7 @@ class Companion {
     try {
       const body = ['POST', 'PUT'].includes(request.method) ? await readJson(request) : null;
       const result = await this.route(request.method, url.pathname, body);
-      if (result === undefined) return send(404, { error: 'Unbekannter Aufruf' });
+      if (result === undefined) return send(404, { error: t('Unbekannter Aufruf') });
       return send(200, result);
     } catch (error) {
       return send(400, { error: error.message });
@@ -264,6 +267,11 @@ class Companion {
       };
     }
 
+    if (method === 'GET' && pathname === '/api/i18n') {
+      // Die Handy-App folgt der Sprache der Desktop-App.
+      return { language: language(), dictionary: mobileDictionary() };
+    }
+
     if (method === 'GET' && pathname === '/api/catalog') {
       // Nur die Felder, die das Handy tatsächlich anzeigt.
       return require('../shared/platforms.json').map((platform) => ({
@@ -277,14 +285,14 @@ class Companion {
     }
 
     if (method === 'POST' && pathname === '/api/ideas') {
-      if (!body?.title?.trim()) throw new Error('Ohne Titel geht es nicht.');
+      if (!body?.title?.trim()) throw new Error(t('Ohne Titel geht es nicht.'));
       const created = store.insert('ideas', {
         title: body.title.trim(),
         notes: body.notes || '',
         status: 'inbox',
         score: 0,
         platforms: [],
-        source: 'Handy',
+        source: 'Handy', // i18n-ignore – gespeicherter Wert
       });
       this.notifyDesktop();
       return { ok: true, id: created.id };
@@ -292,7 +300,7 @@ class Companion {
 
     if (method === 'POST' && pathname === '/api/post-status') {
       const post = store.get('posts', body?.id);
-      if (!post) throw new Error('Der Beitrag ist nicht mehr da.');
+      if (!post) throw new Error(t('Der Beitrag ist nicht mehr da.'));
       const patch = { status: body.status };
       if (body.status === 'published') patch.publishedAt = new Date().toISOString();
       store.update('posts', post.id, patch);
@@ -302,7 +310,7 @@ class Companion {
 
     if (method === 'POST' && pathname === '/api/checklist') {
       const post = store.get('posts', body?.id);
-      if (!post) throw new Error('Der Beitrag ist nicht mehr da.');
+      if (!post) throw new Error(t('Der Beitrag ist nicht mehr da.'));
       const checklist = (post.checklist || []).map((item, index) =>
         index === body.index ? { ...item, done: Boolean(body.done) } : item);
       store.update('posts', post.id, { checklist });
@@ -311,7 +319,7 @@ class Companion {
     }
 
     if (method === 'POST' && pathname === '/api/analytics') {
-      if (!body?.platformId) throw new Error('Kanal fehlt.');
+      if (!body?.platformId) throw new Error(t('Kanal fehlt.'));
       store.insert('analytics', {
         platformId: body.platformId,
         date: body.date || new Date().toISOString().slice(0, 10),
@@ -325,8 +333,8 @@ class Companion {
     }
 
     if (method === 'POST' && pathname === '/api/note') {
-      if (!body?.text?.trim()) throw new Error('Kein Text übergeben.');
-      store.insert('notes', { type: 'quick', title: body.text.trim().slice(0, 80), text: body.text.trim(), source: 'Handy' });
+      if (!body?.text?.trim()) throw new Error(t('Kein Text übergeben.'));
+      store.insert('notes', { type: 'quick', title: body.text.trim().slice(0, 80), text: body.text.trim(), source: 'Handy' }); // i18n-ignore – gespeicherter Wert
       this.notifyDesktop();
       return { ok: true };
     }
@@ -341,13 +349,28 @@ class Companion {
   }
 }
 
+/**
+ * Die Übersetzungen, die die Handy-App braucht: alle Schlüssel aus
+ * mobile.json, mit den Werten aus dem zusammengeführten Wörterbuch.
+ */
+function mobileDictionary() {
+  const merged = loadDictionary();
+  let keys = [];
+  try {
+    keys = Object.keys(JSON.parse(fs.readFileSync(MOBILE_DICTIONARY, 'utf8')));
+  } catch {
+    return {};
+  }
+  return Object.fromEntries(keys.filter((key) => key in merged).map((key) => [key, merged[key]]));
+}
+
 function readJson(request) {
   return new Promise((resolve, reject) => {
     let raw = '';
     request.on('data', (chunk) => {
       raw += chunk;
       if (raw.length > 512_000) {
-        reject(new Error('Die Anfrage ist zu groß.'));
+        reject(new Error(t('Die Anfrage ist zu groß.')));
         request.destroy();
       }
     });
@@ -356,7 +379,7 @@ function readJson(request) {
       try {
         resolve(JSON.parse(raw));
       } catch {
-        reject(new Error('Die Anfrage war kein gültiges JSON.'));
+        reject(new Error(t('Die Anfrage war kein gültiges JSON.')));
       }
     });
     request.on('error', reject);
@@ -367,10 +390,10 @@ function readJson(request) {
 function shortDeviceName(agent) {
   if (/iPhone/i.test(agent)) return 'iPhone';
   if (/iPad/i.test(agent)) return 'iPad';
-  if (/Android/i.test(agent)) return 'Android-Gerät';
+  if (/Android/i.test(agent)) return t('Android-Gerät');
   if (/Macintosh/i.test(agent)) return 'Mac';
-  if (/Windows/i.test(agent)) return 'Windows-Gerät';
-  return 'Gerät im Netzwerk';
+  if (/Windows/i.test(agent)) return t('Windows-Gerät');
+  return t('Gerät im Netzwerk');
 }
 
 module.exports = { Companion, localAddresses, DEFAULT_PORT };

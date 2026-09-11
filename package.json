@@ -18,10 +18,12 @@
     "test:calendar": "node scripts/test-calendar.js",
     "test:sync": "node scripts/test-sync.js",
     "test:publish": "node scripts/test-publish.js && node scripts/test-providers.js",
-    "pretest": "node scripts/check-syntax.js && node scripts/test-companion.js && node scripts/test-connectors.js && node scripts/test-calendar.js && node scripts/test-sync.js && node scripts/test-publish.js && node scripts/test-providers.js",
+    "pretest": "node scripts/check-syntax.js && node scripts/test-i18n.js --strict &&node scripts/test-companion.js && node scripts/test-connectors.js && node scripts/test-calendar.js && node scripts/test-sync.js && node scripts/test-publish.js && node scripts/test-providers.js",
     "test": "electron scripts/smoke-test.js",
     "icons": "node scripts/make-icon.js",
-    "screenshots": "electron scripts/screenshots.js"
+    "screenshots": "electron scripts/screenshots.js",
+    "screenshots:en": "electron scripts/screenshots.js --en",
+    "test:i18n": "node scripts/test-i18n.js"
   },
   "build": {
     "appId": "de.mornhart.contenthelper",

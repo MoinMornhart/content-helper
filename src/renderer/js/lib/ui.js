@@ -1,6 +1,7 @@
 /** Hinweise, Dialoge und kleine Interaktionsbausteine. */
 
 import { h, fill } from './dom.js';
+import { t } from './i18n.js';
 
 // ------------------------------------------------------------------ Kurzhinweise
 
@@ -64,7 +65,7 @@ export function modal({ title, body, actions = [], size = '', onClose }) {
   dialog.append(
     h('div.modal__head', null,
       h('h2.modal__title', { text: title }),
-      h('button.btn.btn--ghost.btn--icon', { text: '✕', title: 'Schliessen', onClick: () => close(null) })),
+      h('button.btn.btn--ghost.btn--icon', { text: '✕', title: t('Schliessen'), onClick: () => close(null) })),
     h('div.modal__body', null, content),
     actions.length
       ? h('div.modal__foot', null,
@@ -93,7 +94,7 @@ export function modal({ title, body, actions = [], size = '', onClose }) {
 }
 
 /** Rueckfrage mit Ja/Nein, liefert ein Versprechen auf true/false. */
-export function confirm({ title, message, confirmLabel = 'Bestätigen', tone = '' }) {
+export function confirm({ title, message, confirmLabel = t('Bestätigen'), tone = '' }) {
   return new Promise((resolve) => {
     let decided = false;
     modal({
@@ -101,7 +102,7 @@ export function confirm({ title, message, confirmLabel = 'Bestätigen', tone = '
       size: 'narrow',
       body: h('p', { text: message }),
       actions: [
-        { label: 'Abbrechen', action: () => { decided = true; resolve(false); } },
+        { label: t('Abbrechen'), action: () => { decided = true; resolve(false); } },
         {
           label: confirmLabel,
           primary: tone !== 'danger',
@@ -141,8 +142,8 @@ export function prompt({ title, label, value = '', placeholder = '', multiline =
       size: 'narrow',
       body: h('div.field', null, label ? h('span.field__label', { text: label }) : null, input),
       actions: [
-        { label: 'Abbrechen', action: () => { decided = true; resolve(null); } },
-        { label: 'Übernehmen', primary: true, action: submit },
+        { label: t('Abbrechen'), action: () => { decided = true; resolve(null); } },
+        { label: t('Übernehmen'), primary: true, action: submit },
       ],
       onClose: () => { if (!decided) resolve(null); },
     });
@@ -176,7 +177,7 @@ export function toggle(label, checked, onChange) {
 }
 
 /** Kopiert Text und meldet es kurz zurueck. */
-export async function copy(text, message = 'In die Zwischenablage kopiert') {
+export async function copy(text, message = t('In die Zwischenablage kopiert')) {
   await window.ch.system.copy(text);
   toast(message, 'ok', 1800);
 }

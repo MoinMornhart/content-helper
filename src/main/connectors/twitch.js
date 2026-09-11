@@ -20,6 +20,7 @@
 const http = require('./http');
 const { TwitchAuth } = require('./twitch-auth');
 const { upsertAnalytics, upsertPublishedPost, linkAnalyticsToPost } = require('./shared');
+const { t } = require('../i18n');
 
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
 const API = 'https://api.twitch.tv/helix';
@@ -72,7 +73,7 @@ class TwitchConnector {
     if (this.token && Date.now() < this.tokenExpires - 60_000) return this.token;
 
     const { clientId, clientSecret } = this.config();
-    if (!clientId || !clientSecret) throw new Error('Kennung und Geheimnis der Twitch-Anwendung fehlen.');
+    if (!clientId || !clientSecret) throw new Error(t('Kennung und Geheimnis der Twitch-Anwendung fehlen.'));
 
     const body = new URLSearchParams({
       client_id: clientId,
@@ -87,8 +88,8 @@ class TwitchConnector {
     }).catch((error) => {
       throw new Error(
         /invalid client/i.test(error.message)
-          ? 'Kennung oder Geheimnis stimmen nicht. Beides steht in deiner Anwendung auf dev.twitch.tv.'
-          : `Twitch meldet: ${error.message}`
+          ? t('Kennung oder Geheimnis stimmen nicht. Beides steht in deiner Anwendung auf dev.twitch.tv.')
+          : t('Twitch meldet: {message}', { message: error.message })
       );
     });
 
@@ -122,11 +123,11 @@ class TwitchConnector {
   /** Prüft die Zugangsdaten und liefert den gefundenen Kanal zurück. */
   async verify(login = this.config().login) {
     const name = String(login || '').trim().replace(/^@/, '').toLowerCase();
-    if (!name) throw new Error('Bitte den Twitch-Kanalnamen angeben.');
+    if (!name) throw new Error(t('Bitte den Twitch-Kanalnamen angeben.'));
 
     const payload = await this.call('users', { login: name });
     const user = payload.data?.[0];
-    if (!user) throw new Error(`Den Kanal „${name}“ gibt es auf Twitch nicht.`);
+    if (!user) throw new Error(t('Den Kanal „{name}“ gibt es auf Twitch nicht.', { name }));
 
     this.saveConfig({
       login: user.login,
@@ -203,7 +204,7 @@ class TwitchConnector {
    * @returns {Promise<{added: number, updated: number, live: object|null, clips: number}>}
    */
   async sync() {
-    if (!this.isConfigured()) throw new Error('Die Twitch-Verbindung ist noch nicht eingerichtet.');
+    if (!this.isConfigured()) throw new Error(t('Die Twitch-Verbindung ist noch nicht eingerichtet.'));
 
     const result = { added: 0, updated: 0, live: null, clips: 0, ideas: 0, posts: 0 };
     const createPosts = this.config().createPosts !== false;
@@ -257,8 +258,13 @@ class TwitchConnector {
         // Nur Clips, die tatsächlich Zuspruch hatten, werden zur Idee.
         if (clip.views < 20) continue;
         this.store.insert('ideas', {
-          title: `Kurzvideo aus Clip: ${clip.title}`,
-          notes: `Clip mit ${clip.views} Aufrufen, ${clip.durationSeconds} Sekunden.\n${clip.url}\n\nZuschnitt auf 9:16, Untertitel einbrennen, Hook in Sekunde 1 prüfen.`,
+          title: t('Kurzvideo aus Clip: {title}', { title: clip.title }),
+          notes: [
+            t('Clip mit {views} Aufrufen, {seconds} Sekunden.', { views: clip.views, seconds: clip.durationSeconds }),
+            clip.url,
+            '',
+            t('Zuschnitt auf 9:16, Untertitel einbrennen, Hook in Sekunde 1 prüfen.'),
+          ].join('\n'),
           status: 'inbox',
           score: clip.views >= 200 ? 4 : 3,
           platforms: ['youtube_shorts', 'tiktok', 'instagram_reels'],
@@ -318,10 +324,10 @@ class TwitchConnector {
       externalId,
       platformId: 'twitch',
       date: today,
-      title: `Kanalstand ${this.config().displayName || this.config().login || ''}`.trim(),
+      title: t('Kanalstand {name}', { name: this.config().displayName || this.config().login || '' }).trim(),
       metrics,
       source: 'twitch',
-      note: previous ? `Zuwachs gegenüber ${previous.date}.` : 'Erster erfasster Stand.',
+      note: previous ? t('Zuwachs gegenüber {date}.', { date: previous.date }) : t('Erster erfasster Stand.'),
     });
 
     return { followers, subs };
@@ -395,7 +401,10 @@ class TwitchConnector {
         hoursWatched: Math.round((average * minutes / 60) * 10) / 10,
       },
       source: 'twitch',
-      note: `Aus ${session.samples.length} Stichproben während des Streams${session.game ? ` · ${session.game}` : ''}.`,
+      note: t('Aus {count} Stichproben während des Streams{game}.', {
+        count: session.samples.length,
+        game: session.game ? ` · ${session.game}` : '',
+      }),
     });
 
     return { saved: true, minutes, average: Math.round(average), peak: Math.max(...viewers) };

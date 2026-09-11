@@ -20,6 +20,7 @@
 
 const http = require('http');
 const crypto = require('crypto');
+const { t, language } = require('../i18n');
 
 const TIMEOUT_MS = 5 * 60_000;
 
@@ -39,7 +40,7 @@ const newState = () => base64url(crypto.randomBytes(16));
 
 /** Antwortseite im Browser – der Nutzer soll sehen, dass es geklappt hat. */
 function resultPage(title, message, ok = true) {
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8">
+  return `<!doctype html><html lang="${language()}"><head><meta charset="utf-8">
 <title>${title}</title><style>
 body{margin:0;height:100vh;display:grid;place-items:center;background:#0b0912;color:#f1eefb;
 font:16px/1.6 "Segoe UI",system-ui,sans-serif}
@@ -79,14 +80,14 @@ function loopback({ key, name, buildUrl, port = 0, callbackPath = '/', openExter
 
     server.on('error', (error) => reject(new Error(
       error.code === 'EADDRINUSE'
-        ? `Der Anschluss ${port} ist belegt. Bitte das Programm schließen, das ihn nutzt, und erneut versuchen.`
+        ? t('Der Anschluss {port} ist belegt. Bitte das Programm schließen, das ihn nutzt, und erneut versuchen.', { port })
         : error.message
     )));
 
     server.listen(port, '127.0.0.1', () => {
       const redirectUri = `http://127.0.0.1:${server.address().port}${callbackPath}`;
-      timer = setTimeout(() => finish(reject, new Error('Die Anmeldung wurde nicht innerhalb von fünf Minuten abgeschlossen.')), TIMEOUT_MS);
-      pending.set(key, () => finish(reject, new Error('Die Anmeldung wurde abgebrochen.')));
+      timer = setTimeout(() => finish(reject, new Error(t('Die Anmeldung wurde nicht innerhalb von fünf Minuten abgeschlossen.'))), TIMEOUT_MS);
+      pending.set(key, () => finish(reject, new Error(t('Die Anmeldung wurde abgebrochen.'))));
 
       server.on('request', (request, response) => {
         const url = new URL(request.url, 'http://127.0.0.1');
@@ -98,8 +99,8 @@ function loopback({ key, name, buildUrl, port = 0, callbackPath = '/', openExter
         const failed = params.get('error');
         response.writeHead(failed ? 400 : 200, { 'Content-Type': 'text/html; charset=utf-8' });
         response.end(failed
-          ? resultPage('Anmeldung abgebrochen', 'Du kannst dieses Fenster schließen.', false)
-          : resultPage('Verbunden', `Der Content Helper ist jetzt mit ${name} verbunden. Du kannst dieses Fenster schließen.`));
+          ? resultPage(t('Anmeldung abgebrochen'), t('Du kannst dieses Fenster schließen.'), false)
+          : resultPage(t('Verbunden'), t('Der Content Helper ist jetzt mit {name} verbunden. Du kannst dieses Fenster schließen.', { name })));
         finish(resolve, { params, redirectUri });
       });
 
@@ -123,7 +124,7 @@ function appWindow({ key, name, url, redirectUri, parent = null }) {
       height: 720,
       parent: parent || undefined,
       modal: Boolean(parent),
-      title: `Bei ${name} anmelden`,
+      title: t('Bei {name} anmelden', { name }),
       autoHideMenuBar: true,
       backgroundColor: '#ffffff',
       webPreferences: {
@@ -160,12 +161,14 @@ function appWindow({ key, name, url, redirectUri, parent = null }) {
     win.webContents.on('did-navigate', (event, target) => inspect(null, target));
     win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
 
-    win.on('closed', () => finish(reject, new Error('Das Anmeldefenster wurde geschlossen.')));
-    pending.set(key, () => finish(reject, new Error('Die Anmeldung wurde abgebrochen.')));
+    win.on('closed', () => finish(reject, new Error(t('Das Anmeldefenster wurde geschlossen.'))));
+    pending.set(key, () => finish(reject, new Error(t('Die Anmeldung wurde abgebrochen.'))));
 
     win.loadURL(url).catch((error) => {
       // Ein Abbruch durch das Abfangen der Rückleitung ist kein Fehler.
-      if (!done && !/ERR_ABORTED/.test(error.message)) finish(reject, new Error(`Die Anmeldeseite von ${name} lädt nicht: ${error.message}`));
+      if (!done && !/ERR_ABORTED/.test(error.message)) {
+        finish(reject, new Error(t('Die Anmeldeseite von {name} lädt nicht: {message}', { name, message: error.message })));
+      }
     });
   });
 }
@@ -175,11 +178,11 @@ function codeFrom(params, expectedState, name) {
   const error = params.get('error');
   if (error) {
     const text = params.get('error_description') || params.get('error_message') || error;
-    throw new Error(/denied|cancel/i.test(error) ? 'Der Zugriff wurde abgelehnt.' : `${name} meldet: ${text}`);
+    throw new Error(/denied|cancel/i.test(error) ? t('Der Zugriff wurde abgelehnt.') : t('{name} meldet: {detail}', { name, detail: text }));
   }
-  if (expectedState && params.get('state') !== expectedState) throw new Error('Die Rückleitung passte nicht zur Anfrage. Bitte erneut versuchen.');
+  if (expectedState && params.get('state') !== expectedState) throw new Error(t('Die Rückleitung passte nicht zur Anfrage. Bitte erneut versuchen.'));
   const code = params.get('code');
-  if (!code) throw new Error(`${name} hat keinen Anmeldecode geschickt.`);
+  if (!code) throw new Error(t('{name} hat keinen Anmeldecode geschickt.', { name }));
   return code;
 }
 

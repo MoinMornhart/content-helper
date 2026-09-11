@@ -17,6 +17,7 @@ const { newState, appWindow, codeFrom, TokenStore, form } = require('../oauth');
 const { credentialsFor } = require('../credentials');
 const { probe } = require('../media-info');
 const { sleep, parseJson, permanent, statusError, poll, length, RELOGIN } = require('./common');
+const { t } = require('../../i18n');
 
 const AUTH_URL = 'https://www.linkedin.com/oauth/v2/authorization';
 const TOKEN_URL = 'https://www.linkedin.com/oauth/v2/accessToken';
@@ -52,7 +53,7 @@ class LinkedInPublisher {
 
   async signIn() {
     const creds = this.creds();
-    if (!creds.complete) throw new Error('Für LinkedIn ist die Anwendung noch nicht eingerichtet.');
+    if (!creds.complete) throw new Error(t('Für LinkedIn ist die Anwendung noch nicht eingerichtet.'));
 
     const state = newState();
     const { params } = await appWindow({
@@ -75,13 +76,15 @@ class LinkedInPublisher {
       }),
     });
     const tokens = parseJson(response.text) || {};
-    if (response.status >= 400) throw new Error(`LinkedIn meldet: ${tokens.error_description || tokens.error || response.status}`);
+    if (response.status >= 400) {
+      throw new Error(t('{name} meldet: {detail}', { name: 'LinkedIn', detail: tokens.error_description || tokens.error || response.status }));
+    }
 
     const me = await this.http.request(`${API}/v2/userinfo`, {
       headers: { Authorization: `Bearer ${tokens.access_token}`, Accept: 'application/json' },
     });
     const user = parseJson(me.text) || {};
-    if (!user.sub) throw new Error('LinkedIn hat das Profil nicht herausgegeben.');
+    if (!user.sub) throw new Error(t('LinkedIn hat das Profil nicht herausgegeben.'));
 
     this.tokens.save({
       accessToken: tokens.access_token,
@@ -98,7 +101,7 @@ class LinkedInPublisher {
 
   async token() {
     const config = this.tokens.get();
-    if (!config.accessToken) throw permanent(`Für LinkedIn besteht keine Anmeldung. ${RELOGIN}`);
+    if (!config.accessToken) throw permanent(t('Für LinkedIn besteht keine Anmeldung. {relogin}', { relogin: t(RELOGIN) }));
     if (Date.parse(config.expiresAt || 0) > Date.now() + 60_000) return config.accessToken;
 
     if (config.refreshToken) {
@@ -118,8 +121,8 @@ class LinkedInPublisher {
         return tokens.access_token;
       }
     }
-    this.tokens.save({ lastError: 'Die Anmeldung ist nach 60 Tagen abgelaufen.' });
-    throw permanent(`Die LinkedIn-Anmeldung ist nach 60 Tagen abgelaufen – LinkedIn verlangt dann eine neue Bestätigung. ${RELOGIN}`);
+    this.tokens.save({ lastError: t('Die Anmeldung ist nach 60 Tagen abgelaufen.') });
+    throw permanent(t('Die LinkedIn-Anmeldung ist nach 60 Tagen abgelaufen – LinkedIn verlangt dann eine neue Bestätigung. {relogin}', { relogin: t(RELOGIN) }));
   }
 
   signOut() {
@@ -145,12 +148,14 @@ class LinkedInPublisher {
 
   check(content) {
     const problems = [];
-    if (!content.text && !content.video) problems.push('Für LinkedIn fehlt Text oder Video.');
-    if (length(content.text) > 3000) problems.push(`Der Text ist ${length(content.text)} Zeichen lang, LinkedIn erlaubt 3000.`);
+    if (!content.text && !content.video) problems.push(t('Für LinkedIn fehlt Text oder Video.'));
+    if (length(content.text) > 3000) {
+      problems.push(t('Der Text ist {count} Zeichen lang, {name} erlaubt {max}.', { count: length(content.text), name: 'LinkedIn', max: 3000 }));
+    }
     if (content.video) {
-      if (content.video.ext !== 'mp4') problems.push('LinkedIn nimmt Videos nur als MP4.');
+      if (content.video.ext !== 'mp4') problems.push(t('LinkedIn nimmt Videos nur als MP4.'));
       const { durationSec } = probe(content.video.path);
-      if (durationSec && (durationSec < 3 || durationSec > 1800)) problems.push('LinkedIn-Videos müssen zwischen 3 Sekunden und 30 Minuten lang sein.');
+      if (durationSec && (durationSec < 3 || durationSec > 1800)) problems.push(t('LinkedIn-Videos müssen zwischen 3 Sekunden und 30 Minuten lang sein.'));
     }
     return problems;
   }
@@ -196,7 +201,7 @@ class LinkedInPublisher {
         if (payload?.status === 'PROCESSING_FAILED') return false;
         return null;
       }, { every: 5_000, times: 120, wait: this.sleep });
-      if (ready === false) throw permanent('LinkedIn konnte das Video nicht verarbeiten.');
+      if (ready === false) throw permanent(t('LinkedIn konnte das Video nicht verarbeiten.'));
       videoUrn = session.video;
     }
 

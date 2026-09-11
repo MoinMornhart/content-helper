@@ -1,7 +1,9 @@
 # Automatisch veröffentlichen – einmalige Einrichtung
 
+**Deutsch** · [English](PUBLISHING.md)
+
 Der Content Helper veröffentlicht geplante Beiträge von selbst auf **YouTube, TikTok, Instagram,
-Facebook, LinkedIn und X** – so wie Buffer. Damit das geht, verlangt jede Plattform eine bei ihr
+Facebook, LinkedIn und X**. Damit das geht, verlangt jede Plattform eine bei ihr
 **registrierte Anwendung**. Diese Anwendung legt der Herausgeber des Content Helpers **einmal** an.
 Danach meldet sich jeder Nutzer nur noch mit seinem eigenen Konto an und sieht davon nichts.
 

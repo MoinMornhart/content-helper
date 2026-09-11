@@ -36,6 +36,9 @@ jobs:
       - name: Syntax aller Module prüfen
         run: node scripts/check-syntax.js
 
+      - name: Übersetzung prüfen
+        run: node scripts/test-i18n.js --strict
+
       - name: Handy-Begleiter von aussen prüfen
         run: node scripts/test-companion.js
 

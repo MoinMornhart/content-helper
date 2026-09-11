@@ -16,6 +16,7 @@
 
 const http = require('./http');
 const { upsertAnalytics, upsertPublishedPost, linkAnalyticsToPost } = require('./shared');
+const { t } = require('../i18n');
 
 const FEED = 'https://www.youtube.com/feeds/videos.xml?channel_id=';
 
@@ -118,7 +119,7 @@ class YouTubeConnector {
    */
   async resolve(input) {
     const value = String(input || '').trim();
-    if (!value) throw new Error('Bitte Kanalname, @Handle, Adresse oder Kanal-Kennung angeben.');
+    if (!value) throw new Error(t('Bitte Kanalname, @Handle, Adresse oder Kanal-Kennung angeben.'));
 
     // Eine vollständige Kanal-Kennung braucht keine Suche.
     const direct = /(UC[\w-]{22})/.exec(value);
@@ -144,13 +145,13 @@ class YouTubeConnector {
       }
       const channelId = extractChannelId(page);
       if (channelId) return this.addChannel(channelId, { name: channelTitle(page) });
-      lastError = new Error('Auf dieser Seite war keine Kanal-Kennung zu finden.');
+      lastError = new Error(t('Auf dieser Seite war keine Kanal-Kennung zu finden.'));
     }
 
     throw new Error(
-      /Status 404/.test(lastError?.message || '')
-        ? `Unter „${name}“ war kein Kanal zu finden. Versuche es mit dem @Handle aus der Adresszeile deines Kanals oder mit der vollständigen Adresse.`
-        : `Die Kanalseite war nicht erreichbar: ${lastError?.message || 'unbekannter Fehler'}`
+      /Status 404/i.test(lastError?.message || '')
+        ? t('Unter „{name}“ war kein Kanal zu finden. Versuche es mit dem @Handle aus der Adresszeile deines Kanals oder mit der vollständigen Adresse.', { name })
+        : t('Die Kanalseite war nicht erreichbar: {message}', { message: lastError?.message || t('unbekannter Fehler') })
     );
   }
 
@@ -163,7 +164,7 @@ class YouTubeConnector {
    */
   async addChannel(channelId, { name = null } = {}) {
     const existing = this.channel(channelId);
-    if (existing) throw new Error(`„${existing.name}“ ist bereits verbunden.`);
+    if (existing) throw new Error(t('„{name}“ ist bereits verbunden.', { name: existing.name }));
 
     let xml = null;
     let warning = null;
@@ -178,9 +179,9 @@ class YouTubeConnector {
       if (page?.videos.length) {
         pageVideos = page.videos.length;
       } else if (page?.genuine) {
-        note = 'Der Kanal hat noch keine öffentlichen Videos. Sobald du etwas hochlädst, holt der Abgleich es automatisch.';
+        note = t('Der Kanal hat noch keine öffentlichen Videos. Sobald du etwas hochlädst, holt der Abgleich es automatisch.');
       } else {
-        warning = `Der Kanal wurde gefunden, aber YouTube gibt die Videoliste gerade nicht heraus (${error.message}). Die Verbindung steht trotzdem – der nächste Abgleich holt die Videos nach.`;
+        warning = t('Der Kanal wurde gefunden, aber YouTube gibt die Videoliste gerade nicht heraus ({message}). Die Verbindung steht trotzdem – der nächste Abgleich holt die Videos nach.', { message: error.message });
       }
     }
 
@@ -217,7 +218,8 @@ class YouTubeConnector {
         return await http.text(`${FEED}${channelId}`);
       } catch (error) {
         lastError = error;
-        if (!/Status 404|Status 429|Zeit/i.test(error.message)) break;
+        // Die Meldungen kommen aus http.js – deutsch oder englisch.
+        if (!/Status 404|Status 429|Zeit|Timed out/i.test(error.message)) break;
         if (attempt < attempts) await wait(attempt * 2500);
       }
     }
@@ -234,7 +236,7 @@ class YouTubeConnector {
    * @returns {Promise<{videos: object[], source: 'feed'|'seite'}>}
    */
   async recentVideos(channelId = this.channels()[0]?.channelId) {
-    if (!channelId) throw new Error('Es ist kein YouTube-Kanal verbunden.');
+    if (!channelId) throw new Error(t('Es ist kein YouTube-Kanal verbunden.'));
 
     try {
       return { videos: parseFeed(await this.fetchFeed(channelId)), source: 'feed', empty: false };
@@ -252,8 +254,8 @@ class YouTubeConnector {
       if (page?.genuine) return { videos: [], source: 'seite', empty: true };
 
       throw new Error(
-        /Status 404/.test(feedError.message)
-          ? 'YouTube gibt gerade weder den Feed noch die Kanalseite heraus. Das passiert bei vielen Abfragen kurz hintereinander und legt sich nach einigen Minuten von selbst.'
+        /Status 404/i.test(feedError.message)
+          ? t('YouTube gibt gerade weder den Feed noch die Kanalseite heraus. Das passiert bei vielen Abfragen kurz hintereinander und legt sich nach einigen Minuten von selbst.')
           : feedError.message
       );
     }
@@ -352,7 +354,7 @@ class YouTubeConnector {
     this.updateChannel(channel.channelId, {
       lastSync: new Date().toISOString(),
       lastError: null,
-      lastNote: empty ? 'Noch keine öffentlichen Videos – sobald du etwas hochlädst, erscheint es hier.' : null,
+      lastNote: empty ? t('Noch keine öffentlichen Videos – sobald du etwas hochlädst, erscheint es hier.') : null,
       lastSource: source,
     });
     return outcome;
@@ -571,7 +573,7 @@ function parseFeed(xml) {
 
     return {
       id,
-      title: tagText(entry, 'title') || 'Ohne Titel',
+      title: tagText(entry, 'title') || t('Ohne Titel'),
       description: tagText(entry, 'media:description') || '',
       published: (/<published>(.*?)<\/published>/.exec(entry) || [])[1] || new Date().toISOString(),
       url: id ? `https://www.youtube.com/watch?v=${id}` : null,

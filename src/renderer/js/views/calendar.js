@@ -6,9 +6,10 @@ import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
 import { platform } from '../lib/platforms.js';
 import { toast, segmented, modal, copy } from '../lib/ui.js';
+import { t, mark } from '../lib/i18n.js';
 
-export const title = 'Kalender';
-export const lead = 'Was wann wohin geht – auf einen Blick.';
+export const title = mark('Kalender');
+export const lead = mark('Was wann wohin geht – auf einen Blick.');
 
 let mode = 'month';
 let cursor = new Date();
@@ -27,7 +28,7 @@ async function moveTo(postId, day, hour = null) {
     status: post.status === 'missed' || post.status === 'due' ? 'scheduled' : post.status,
     preNotifiedAt: null,
   });
-  toast(`Verschoben auf ${fmt.dateTime(next)}.`, 'ok');
+  toast(t('Verschoben auf {when}.', { when: fmt.dateTime(next) }), 'ok');
 }
 
 /**
@@ -48,49 +49,51 @@ async function subscribeDialog() {
       h('div.text-sm.muted', { text: body })));
 
   modal({
-    title: 'Kalender verbinden',
+    title: t('Kalender verbinden'),
     body: h('div.col.gap-lg', null,
       // --- Abonnement
       h('div', null,
         h('div.row.between.mb-sm', null,
-          h('h3', { text: 'Abonnieren – bleibt aktuell' }),
-          h('span.badge', { class: info.running ? 'badge--ok' : 'badge--warn', text: info.running ? 'bereit' : 'Handy-Zugang aus' })),
+          h('h3', { text: t('Abonnieren – bleibt aktuell') }),
+          h('span.badge', { class: info.running ? 'badge--ok' : 'badge--warn', text: info.running ? t('bereit') : t('Handy-Zugang aus') })),
         info.running
           ? h('div.col.gap-sm', null,
-              h('p.text-sm.muted', { text: 'Dein Kalender holt sich diese Adresse regelmässig selbst. Änderungen am Plan erscheinen dadurch von allein – solange dieser Rechner läuft und im selben Netz erreichbar ist.' }),
+              h('p.text-sm.muted', { text: t('Dein Kalender holt sich diese Adresse regelmässig selbst. Änderungen am Plan erscheinen dadurch von allein – solange dieser Rechner läuft und im selben Netz erreichbar ist.') }),
               h('div.mono.text-xs.faint', { style: { wordBreak: 'break-all' }, text: info.url }),
               h('div.row.wrap.gap-sm', null,
-                h('button.btn.btn--sm.btn--primary', { text: 'Adresse kopieren', onClick: () => copy(info.url, 'Adresse kopiert – im Kalender einfügen.') }),
-                h('button.btn.btn--sm', { text: 'In Apple Kalender öffnen', onClick: () => window.ch.system.openExternal(info.webcal) })),
+                h('button.btn.btn--sm.btn--primary', { text: t('Adresse kopieren'), onClick: () => copy(info.url, t('Adresse kopiert – im Kalender einfügen.')) }),
+                h('button.btn.btn--sm', { text: t('In Apple Kalender öffnen'), onClick: () => window.ch.system.openExternal(info.webcal) })),
               h('hr.divider'),
               h('div.col.gap-lg', null,
-                step('A', 'Apple Kalender (Mac)', 'Ablage → Neues Kalenderabonnement → Adresse einfügen. Aktualisierung auf „alle 15 Minuten“ stellen.'),
-                step('I', 'iPhone und iPad', 'Einstellungen → Apps → Kalender → Accounts → Account hinzufügen → Andere → Kalenderabo hinzufügen.'),
-                step('G', 'Google Kalender', 'Andere Kalender → + → Per URL. Achtung: Google erreicht deinen Rechner nur, wenn er aus dem Internet erreichbar ist – im Heimnetz klappt nur Apple und Outlook auf demselben Netz.'),
-                step('O', 'Outlook', 'Kalender hinzufügen → Aus dem Internet abonnieren → Adresse einfügen.')))
+                step('A', t('Apple Kalender (Mac)'), t('Ablage → Neues Kalenderabonnement → Adresse einfügen. Aktualisierung auf „alle 15 Minuten“ stellen.')),
+                step('I', t('iPhone und iPad'), t('Einstellungen → Apps → Kalender → Accounts → Account hinzufügen → Andere → Kalenderabo hinzufügen.')),
+                step('G', t('Google Kalender'), t('Andere Kalender → + → Per URL. Achtung: Google erreicht deinen Rechner nur, wenn er aus dem Internet erreichbar ist – im Heimnetz klappt nur Apple und Outlook auf demselben Netz.')),
+                step('O', 'Outlook', t('Kalender hinzufügen → Aus dem Internet abonnieren → Adresse einfügen.'))))
           : h('div.notice.notice--warn', null,
               h('span.notice__icon', { text: '!' }),
               h('div', null,
-                h('div.strong.text-sm', { text: 'Dafür muss der Handy-Zugang laufen' }),
-                h('div.text-sm.muted', { text: 'Er stellt die Kalenderadresse im Heimnetz bereit. Einschalten unter „Handy“ – der Kalender läuft dann über dieselbe Verbindung.' })))),
+                h('div.strong.text-sm', { text: t('Dafür muss der Handy-Zugang laufen') }),
+                h('div.text-sm.muted', { text: t('Er stellt die Kalenderadresse im Heimnetz bereit. Einschalten unter „Handy“ – der Kalender läuft dann über dieselbe Verbindung.') })))),
 
       h('hr.divider'),
 
       // --- Datei
       h('div', null,
-        h('h3.mb-sm', { text: 'Als Datei – überall dabei' }),
-        h('p.text-sm.muted.mb', { text: 'Eine .ics-Datei lässt sich in jede Kalender-App einlesen, auch ohne Netzwerk. Sie ist eine Momentaufnahme: spätere Änderungen am Plan stehen nicht darin.' }),
+        h('h3.mb-sm', { text: t('Als Datei – überall dabei') }),
+        h('p.text-sm.muted.mb', { text: t('Eine .ics-Datei lässt sich in jede Kalender-App einlesen, auch ohne Netzwerk. Sie ist eine Momentaufnahme: spätere Änderungen am Plan stehen nicht darin.') }),
         h('button.btn', {
-          text: 'Kalenderdatei speichern',
+          text: t('Kalenderdatei speichern'),
           onClick: async () => {
             const saved = await window.ch.calendar.export(true);
-            if (!saved?.ok) return toast(saved?.error || 'Speichern fehlgeschlagen.', 'danger');
+            if (!saved?.ok) return toast(saved?.error || t('Speichern fehlgeschlagen.'), 'danger');
             if (saved.data.canceled) return;
-            toast(`${fmt.plural(saved.data.events, 'Termin', 'Termine')} gespeichert.`, 'ok');
+            toast(saved.data.events === 1
+              ? t('1 Termin gespeichert.')
+              : t('{count} Termine gespeichert.', { count: fmt.num(saved.data.events) }), 'ok');
           },
         })),
 
-      h('p.text-xs.faint', { text: 'Die Termine enthalten Titel, Kanäle, Text, Hashtags und Checkliste – und eine Erinnerung vor dem Termin.' })),
+      h('p.text-xs.faint', { text: t('Die Termine enthalten Titel, Kanäle, Text, Hashtags und Checkliste – und eine Erinnerung vor dem Termin.') })),
   });
 }
 
@@ -154,14 +157,14 @@ function monthGrid(goto, refresh) {
         dayPosts.length > 1 ? h('span.cal__count', { text: String(dayPosts.length) }) : null,
         h('span.add', {
           text: '＋',
-          title: 'Beitrag für diesen Tag',
+          title: t('Beitrag für diesen Tag'),
           onClick: (event) => {
             event.stopPropagation();
             goto('composer', { fresh: true, day: fmt.dayKey(day) });
           },
         })),
       ...dayPosts.slice(0, 4).map((post) => chip(post, goto)),
-      dayPosts.length > 4 ? h('div.text-xs.faint', { text: `+${dayPosts.length - 4} weitere` }) : null);
+      dayPosts.length > 4 ? h('div.text-xs.faint', { text: t('+{count} weitere', { count: dayPosts.length - 4 }) }) : null);
 
     grid.append(dropTarget(cell, day, null, refresh));
   }
@@ -173,11 +176,11 @@ function weekGrid(goto, refresh) {
   const start = fmt.startOfWeek(cursor, settings.startOfWeek ?? 1);
   const grid = h('div.week');
 
-  grid.append(h('div.cal__head', { text: `KW ${fmt.isoWeek(start)}` }));
+  grid.append(h('div.cal__head', { text: t('KW {week}', { week: fmt.isoWeek(start) }) }));
   for (let i = 0; i < 7; i += 1) {
     const day = fmt.addDays(start, i);
     grid.append(h(`div.cal__head${fmt.isToday(day) ? '.is-today' : ''}`, {
-      text: `${fmt.weekdayShort(day.getDay())} ${day.getDate()}.`,
+      text: t('{weekday} {day}.', { weekday: fmt.weekdayShort(day.getDay()), day: day.getDate() }),
     }));
   }
 
@@ -199,7 +202,7 @@ function weekGrid(goto, refresh) {
 export async function render({ goto, setActions, refresh }) {
   const label = mode === 'month'
     ? `${fmt.monthName(cursor.getMonth())} ${cursor.getFullYear()}`
-    : `KW ${fmt.isoWeek(cursor)} · ${fmt.date(fmt.startOfWeek(cursor, store.settings().startOfWeek ?? 1), 'short')}`;
+    : `${t('KW {week}', { week: fmt.isoWeek(cursor) })} · ${fmt.date(fmt.startOfWeek(cursor, store.settings().startOfWeek ?? 1), 'short')}`;
 
   const step = (direction) => {
     cursor = mode === 'month'
@@ -210,15 +213,15 @@ export async function render({ goto, setActions, refresh }) {
 
   setActions(
     segmented(
-      [{ value: 'month', label: 'Monat' }, { value: 'week', label: 'Woche' }],
+      [{ value: 'month', label: t('Monat') }, { value: 'week', label: t('Woche') }],
       mode,
       (value) => { mode = value; refresh(); }
     ),
-    h('button.btn.btn--sm.btn--icon', { text: '‹', title: 'Zurück', onClick: () => step(-1) }),
-    h('button.btn.btn--sm', { text: 'Heute', onClick: () => { cursor = new Date(); refresh(); } }),
-    h('button.btn.btn--sm.btn--icon', { text: '›', title: 'Weiter', onClick: () => step(1) }),
-    h('button.btn.btn--sm', { text: '⇱ Kalender verbinden', title: 'In Apple Kalender, Google oder Outlook übernehmen', onClick: subscribeDialog }),
-    h('button.btn.btn--sm.btn--primary', { text: '＋ Beitrag', onClick: () => goto('composer', { fresh: true }) })
+    h('button.btn.btn--sm.btn--icon', { text: '‹', title: t('Zurück'), onClick: () => step(-1) }),
+    h('button.btn.btn--sm', { text: t('Heute'), onClick: () => { cursor = new Date(); refresh(); } }),
+    h('button.btn.btn--sm.btn--icon', { text: '›', title: t('Weiter'), onClick: () => step(1) }),
+    h('button.btn.btn--sm', { text: t('⇱ Kalender verbinden'), title: t('In Apple Kalender, Google oder Outlook übernehmen'), onClick: subscribeDialog }),
+    h('button.btn.btn--sm.btn--primary', { text: t('＋ Beitrag'), onClick: () => goto('composer', { fresh: true }) })
   );
 
   const monthStart = mode === 'month'
@@ -236,10 +239,10 @@ export async function render({ goto, setActions, refresh }) {
 
   const legend = h('div.cal-legend', null,
     ...[
-      ['scheduled', 'Geplant'],
-      ['due', 'Jetzt fällig'],
-      ['published', 'Veröffentlicht'],
-      ['missed', 'Verpasst'],
+      ['scheduled', t('Geplant')],
+      ['due', t('Jetzt fällig')],
+      ['published', t('Veröffentlicht')],
+      ['missed', t('Verpasst')],
     ].map(([key, text]) =>
       h('span.cal-legend__item', null, h(`span.status-dot.is-${key}`), h('span', { text }))));
 
@@ -248,27 +251,27 @@ export async function render({ goto, setActions, refresh }) {
       h('div', null,
         h('h2.cal-head__title', { text: label }),
         h('div.text-sm.muted', {
-          text: `${fmt.plural(inRange.length, 'Beitrag', 'Beiträge')} im Zeitraum · ${published} bereits veröffentlicht`,
+          text: t('{posts} im Zeitraum · {published} bereits veröffentlicht', { posts: fmt.plural(inRange.length, 'Beitrag', 'Beiträge'), published }), // i18n-ignore
         })),
       legend),
 
     mode === 'month' ? monthGrid(goto, refresh) : weekGrid(goto, refresh),
 
-    h('p.text-xs.faint', { text: 'Beiträge lassen sich mit der Maus auf einen anderen Tag ziehen. In der Wochenansicht legt ein Doppelklick auf eine Zelle direkt einen Beitrag für diese Stunde an.' }),
+    h('p.text-xs.faint', { text: t('Beiträge lassen sich mit der Maus auf einen anderen Tag ziehen. In der Wochenansicht legt ein Doppelklick auf eine Zelle direkt einen Beitrag für diese Stunde an.') }),
 
     unscheduled.length
-      ? card('Wartet auf einen Termin', { hint: fmt.plural(unscheduled.length, 'Beitrag', 'Beiträge') },
+      ? card(t('Wartet auf einen Termin'), { hint: fmt.plural(unscheduled.length, 'Beitrag', 'Beiträge') }, // i18n-ignore
           h('div.col.gap-sm', null,
             ...unscheduled.slice(0, 8).map((post) =>
               posts.postRow(post, {
                 onClick: (item) => goto('composer', { id: item.id }),
                 actions: h('button.btn.btn--sm', {
-                  text: 'Nächstes Zeitfenster',
+                  text: t('Nächstes Zeitfenster'),
                   onClick: async (event) => {
                     event.stopPropagation();
                     const slot = nextFreeSlot();
                     await store.patch('posts', post.id, { scheduledAt: slot.toISOString(), status: 'scheduled' });
-                    toast(`Eingeplant für ${fmt.dateTime(slot)}.`, 'ok');
+                    toast(t('Eingeplant für {when}.', { when: fmt.dateTime(slot) }), 'ok');
                     refresh();
                   },
                 }),

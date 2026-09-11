@@ -22,6 +22,7 @@ const { newState, appWindow, codeFrom, TokenStore, form } = require('../oauth');
 const { credentialsFor } = require('../credentials');
 const { probe } = require('../media-info');
 const { sleep, parseJson, retryable, permanent, poll, clip, length, RELOGIN } = require('./common');
+const { t } = require('../../i18n');
 
 const VERSION = 'v25.0';
 const GRAPH = `https://graph.facebook.com/${VERSION}`;
@@ -61,13 +62,13 @@ class MetaAuth {
 
   selectPage(pageId) {
     const config = this.tokens.get();
-    if (!(config.pages || []).some((page) => page.id === pageId)) throw new Error('Diese Seite gehört nicht zur Anmeldung.');
+    if (!(config.pages || []).some((page) => page.id === pageId)) throw new Error(t('Diese Seite gehört nicht zur Anmeldung.'));
     this.tokens.save({ pageId });
   }
 
   async signIn() {
     const creds = this.creds();
-    if (!creds.complete) throw new Error('Für Instagram und Facebook ist die Meta-Anwendung noch nicht eingerichtet.');
+    if (!creds.complete) throw new Error(t('Für Instagram und Facebook ist die Meta-Anwendung noch nicht eingerichtet.'));
 
     const state = newState();
     const { params } = await appWindow({
@@ -119,7 +120,7 @@ class MetaAuth {
         : null,
     }));
     if (!pages.length) {
-      throw new Error('Zu diesem Facebook-Konto gibt es keine Seite, auf die der Content Helper zugreifen darf. Instagram- und Facebook-Posts laufen über eine Facebook-Seite.');
+      throw new Error(t('Zu diesem Facebook-Konto gibt es keine Seite, auf die der Content Helper zugreifen darf. Instagram- und Facebook-Posts laufen über eine Facebook-Seite.'));
     }
 
     const preferred = pages.find((page) => page.instagram) || pages[0];
@@ -178,13 +179,15 @@ class MetaAuth {
 function metaError(error, status) {
   const code = error.code;
   const sub = error.error_subcode;
-  const text = error.error_user_msg || error.message || `Status ${status}`;
-  if (code === 190) return permanent(`Meta: Die Anmeldung ist abgelaufen oder wurde zurückgezogen. ${RELOGIN}`);
-  if (code === 10 || code === 200) return permanent(`Meta verweigert das – der Content Helper hat dafür keine Berechtigung (${text}).`);
-  if (code === 9 && sub === 2207042) return permanent('Instagram erlaubt über die Schnittstelle höchstens 100 Posts in 24 Stunden.');
-  if ([4, 17, 32, 613].includes(code)) return retryable('Meta bremst gerade – zu viele Anfragen. Es geht gleich weiter.');
-  if (code === 1 || code === 2 || status >= 500 || error.is_transient) return retryable(`Meta hat gerade ein Problem: ${text}`);
-  return permanent(`Meta meldet: ${text}`);
+  const text = error.error_user_msg || error.message || t('Status {status}', { status });
+  if (code === 190) {
+    return permanent(t('{name}: Die Anmeldung ist abgelaufen oder wurde zurückgezogen. {relogin}', { name: 'Meta', relogin: t(RELOGIN) }));
+  }
+  if (code === 10 || code === 200) return permanent(t('Meta verweigert das – der Content Helper hat dafür keine Berechtigung ({detail}).', { detail: text }));
+  if (code === 9 && sub === 2207042) return permanent(t('Instagram erlaubt über die Schnittstelle höchstens 100 Posts in 24 Stunden.'));
+  if ([4, 17, 32, 613].includes(code)) return retryable(t('{name} bremst gerade – zu viele Anfragen. Es geht gleich weiter.', { name: 'Meta' }));
+  if (code === 1 || code === 2 || status >= 500 || error.is_transient) return retryable(t('Meta hat gerade ein Problem: {detail}', { detail: text }));
+  return permanent(t('{name} meldet: {detail}', { name: 'Meta', detail: text }));
 }
 
 /** Ein Video an Metas Upload-Server schicken – für Instagram und Facebook gleich. */
@@ -220,15 +223,17 @@ class InstagramPublisher {
 
   check(content) {
     const problems = [];
-    if (!content.video) problems.push('Für Instagram-Reels fehlt das Video – bitte im Composer eine Videodatei wählen.');
-    else if (!['mp4', 'mov'].includes(content.video.ext)) problems.push('Instagram nimmt nur MP4 oder MOV.');
+    if (!content.video) problems.push(t('Für Instagram-Reels fehlt das Video – bitte im Composer eine Videodatei wählen.'));
+    else if (!['mp4', 'mov'].includes(content.video.ext)) problems.push(t('Instagram nimmt nur MP4 oder MOV.'));
     else {
       const { durationSec } = probe(content.video.path);
-      if (durationSec && durationSec < 3) problems.push('Instagram-Reels müssen mindestens 3 Sekunden lang sein.');
-      if (durationSec && durationSec > 900) problems.push('Instagram-Reels dürfen über die Schnittstelle höchstens 15 Minuten lang sein.');
+      if (durationSec && durationSec < 3) problems.push(t('Instagram-Reels müssen mindestens 3 Sekunden lang sein.'));
+      if (durationSec && durationSec > 900) problems.push(t('Instagram-Reels dürfen über die Schnittstelle höchstens 15 Minuten lang sein.'));
     }
-    if (length(content.text) > 2200) problems.push(`Der Text ist ${length(content.text)} Zeichen lang, Instagram erlaubt 2200.`);
-    if ((content.hashtags || []).length > 30) problems.push('Instagram erlaubt höchstens 30 Hashtags.');
+    if (length(content.text) > 2200) {
+      problems.push(t('Der Text ist {count} Zeichen lang, {name} erlaubt {max}.', { count: length(content.text), name: 'Instagram', max: 2200 }));
+    }
+    if ((content.hashtags || []).length > 30) problems.push(t('Instagram erlaubt höchstens 30 Hashtags.'));
     return problems;
   }
 
@@ -260,17 +265,17 @@ class InstagramPublisher {
     const state = await poll(async () => {
       const info = await this.auth.graph('GET', `/${session.containerId}`, { fields: 'status_code,status' });
       if (info.status_code === 'FINISHED') return 'ok';
-      if (info.status_code === 'ERROR') return { error: info.status || 'Verarbeitung fehlgeschlagen' };
+      if (info.status_code === 'ERROR') return { error: info.status || t('Verarbeitung fehlgeschlagen') };
       if (info.status_code === 'EXPIRED') return { expired: true };
       return null;
     }, { every: 10_000, times: 60, wait: this.sleep });
 
     if (state?.expired) {
       job.saveSession(null);
-      throw retryable('Der Upload bei Instagram ist verfallen. Er beginnt beim nächsten Versuch neu.');
+      throw retryable(t('Der Upload bei Instagram ist verfallen. Er beginnt beim nächsten Versuch neu.'));
     }
-    if (state?.error) throw permanent(`Instagram konnte das Video nicht verarbeiten: ${state.error}`);
-    if (!state) throw retryable('Instagram verarbeitet das Video noch. Neuer Versuch folgt.');
+    if (state?.error) throw permanent(t('{name} konnte das Video nicht verarbeiten: {detail}', { name: 'Instagram', detail: state.error }));
+    if (!state) throw retryable(t('{name} verarbeitet das Video noch. Neuer Versuch folgt.', { name: 'Instagram' }));
 
     const published = await this.auth.graph('POST', `/${igId}/media_publish`, { creation_id: session.containerId });
     const link = await this.auth.graph('GET', `/${published.id}`, { fields: 'permalink' }).catch(() => ({}));
@@ -284,7 +289,7 @@ class InstagramPublisher {
       account: page?.instagram?.username ? `@${page.instagram.username}` : null,
       avatar: page?.instagram?.picture || null,
       hint: this.auth.isSignedIn() && !page?.instagram
-        ? 'Mit dieser Facebook-Seite ist kein Instagram-Profikonto verbunden.'
+        ? t('Mit dieser Facebook-Seite ist kein Instagram-Profikonto verbunden.')
         : null,
     };
   }
@@ -310,12 +315,14 @@ class FacebookPublisher {
   check(content) {
     const problems = [];
     if (content.video) {
-      if (!['mp4', 'mov'].includes(content.video.ext)) problems.push('Facebook-Reels gehen nur als MP4 oder MOV.');
+      if (!['mp4', 'mov'].includes(content.video.ext)) problems.push(t('Facebook-Reels gehen nur als MP4 oder MOV.'));
       const { durationSec } = probe(content.video.path);
-      if (durationSec && durationSec > 90) problems.push(`Das Video ist ${Math.round(durationSec)} Sekunden lang – Facebook nimmt über die Schnittstelle nur Reels bis 90 Sekunden.`);
-      if (durationSec && durationSec < 3) problems.push('Facebook-Reels müssen mindestens 3 Sekunden lang sein.');
+      if (durationSec && durationSec > 90) {
+        problems.push(t('Das Video ist {seconds} Sekunden lang – Facebook nimmt über die Schnittstelle nur Reels bis 90 Sekunden.', { seconds: Math.round(durationSec) }));
+      }
+      if (durationSec && durationSec < 3) problems.push(t('Facebook-Reels müssen mindestens 3 Sekunden lang sein.'));
     } else if (!content.text) {
-      problems.push('Für Facebook fehlt Text oder Video.');
+      problems.push(t('Für Facebook fehlt Text oder Video.'));
     }
     return problems;
   }

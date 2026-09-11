@@ -112,6 +112,16 @@ function request(method, pathname, { token = null, body = null } = {}) {
   const catalog = await request('GET', '/api/catalog', { token });
   check('Plattform-Katalog abrufbar', catalog.status === 200 && catalog.json?.length === 20, `${catalog.json?.length} Eintraege`);
 
+  const i18nDenied = await request('GET', '/api/i18n');
+  check('Sprachdaten ohne Schluessel abgewiesen', i18nDenied.status === 401, `Status ${i18nDenied.status}`);
+
+  const i18n = await request('GET', '/api/i18n', { token });
+  check('Sprachdaten abrufbar',
+    i18n.status === 200 && ['de', 'en'].includes(i18n.json?.language)
+      && i18n.json?.dictionary && typeof i18n.json.dictionary === 'object' && !Array.isArray(i18n.json.dictionary),
+    `Status ${i18n.status}`);
+  check('Woerterbuch fuer das Handy enthaelt Eintraege', Object.keys(i18n.json?.dictionary || {}).length > 0);
+
   // ---------------------------------------------------------------- Schreiben
   const idea = await request('POST', '/api/ideas', { token, body: { title: 'Idee vom Handy' } });
   check('Idee wird angelegt', idea.status === 200 && idea.json?.ok);

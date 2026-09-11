@@ -11,9 +11,10 @@ import * as fmt from '../lib/format.js';
 import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
 import { toast, confirm, prompt } from '../lib/ui.js';
+import { t, mark } from '../lib/i18n.js';
 
-export const title = 'Medien';
-export const lead = 'Videos, Bilder und Ton – mit Schlagwörtern statt Ordnerchaos.';
+export const title = mark('Medien');
+export const lead = mark('Videos, Bilder und Ton – mit Schlagwörtern statt Ordnerchaos.');
 
 let filterTag = null;
 let query = '';
@@ -25,7 +26,7 @@ const usedBy = (mediaId) => store.all('posts').filter((post) => (post.mediaIds |
 
 async function importFiles(refresh) {
   const result = await window.ch.media.pick();
-  if (!result?.ok) return toast('Auswahl fehlgeschlagen.', 'danger');
+  if (!result?.ok) return toast(t('Auswahl fehlgeschlagen.'), 'danger');
   const files = result.data || [];
   if (!files.length) return;
 
@@ -36,7 +37,7 @@ async function importFiles(refresh) {
     await store.add('media', { ...file, tags: [] });
     added += 1;
   }
-  toast(added ? `${fmt.plural(added, 'Datei', 'Dateien')} aufgenommen.` : 'Alles schon in der Bibliothek.', added ? 'ok' : 'info');
+  toast(added ? (added === 1 ? t('1 Datei aufgenommen.') : t('{n} Dateien aufgenommen.', { n: fmt.num(added) })) : t('Alles schon in der Bibliothek.'), added ? 'ok' : 'info');
   refresh();
 }
 
@@ -60,15 +61,15 @@ function mediaCard(item, refresh) {
       item.tags?.length
         ? h('div.chips.mt-sm', null, ...item.tags.slice(0, 3).map((tag) => h('span.badge', { text: tag })))
         : null,
-      uses.length ? h('div.text-xs.mt-sm', { style: { color: 'var(--accent)' }, text: `in ${fmt.plural(uses.length, 'Beitrag', 'Beiträgen')}` }) : null,
+      uses.length ? h('div.text-xs.mt-sm', { style: { color: 'var(--accent)' }, text: t('in {posts}', { posts: fmt.plural(uses.length, mark('Beitrag'), mark('Beiträgen')) }) }) : null,
       h('div.row.gap-xs.mt-sm', null,
         h('button.btn.btn--sm.btn--ghost', {
-          text: 'Schlagwörter',
+          text: t('Schlagwörter'),
           onClick: async (event) => {
             event.stopPropagation();
             const value = await prompt({
-              title: 'Schlagwörter',
-              label: 'Mit Leerzeichen getrennt',
+              title: t('Schlagwörter'),
+              label: t('Mit Leerzeichen getrennt'),
               value: (item.tags || []).join(' '),
             });
             if (value === null) return;
@@ -77,18 +78,18 @@ function mediaCard(item, refresh) {
           },
         }),
         h('button.btn.btn--sm.btn--ghost', {
-          text: 'Ordner',
+          text: t('Ordner'),
           onClick: (event) => { event.stopPropagation(); window.ch.media.reveal(item.filePath); },
         }),
         h('button.btn.btn--sm.btn--ghost', {
           text: '✕',
-          title: 'Aus der Bibliothek entfernen (Datei bleibt erhalten)',
+          title: t('Aus der Bibliothek entfernen (Datei bleibt erhalten)'),
           onClick: async (event) => {
             event.stopPropagation();
             if (!(await confirm({
-              title: 'Aus der Bibliothek entfernen?',
-              message: 'Die Datei auf der Festplatte bleibt unangetastet – nur der Eintrag hier verschwindet.',
-              confirmLabel: 'Entfernen',
+              title: t('Aus der Bibliothek entfernen?'),
+              message: t('Die Datei auf der Festplatte bleibt unangetastet – nur der Eintrag hier verschwindet.'),
+              confirmLabel: t('Entfernen'),
             }))) return;
             await store.remove('media', item.id);
             refresh();
@@ -103,12 +104,12 @@ export async function render({ params, setActions, refresh, goto }) {
   const tags = [...new Set(all.flatMap((item) => item.tags || []))].sort((a, b) => a.localeCompare(b, 'de'));
 
   setActions(
-    h('button.btn.btn--sm.btn--primary', { text: '＋ Dateien aufnehmen', onClick: () => importFiles(refresh) })
+    h('button.btn.btn--sm.btn--primary', { text: t('＋ Dateien aufnehmen'), onClick: () => importFiles(refresh) })
   );
 
   const searchInput = h('input.input', {
     type: 'search',
-    placeholder: 'Nach Name oder Schlagwort suchen …',
+    placeholder: t('Nach Name oder Schlagwort suchen …'),
     value: query,
     oninput: (event) => { query = event.target.value.toLowerCase(); renderGrid(); },
   });
@@ -122,7 +123,7 @@ export async function render({ params, setActions, refresh, goto }) {
     });
     fill(grid, ...(filtered.length
       ? filtered.map((item) => mediaCard(item, refresh))
-      : [h('div.text-sm.muted', { text: 'Nichts gefunden.' })]));
+      : [h('div.text-sm.muted', { text: t('Nichts gefunden.') })]));
   };
   renderGrid();
 
@@ -130,7 +131,7 @@ export async function render({ params, setActions, refresh, goto }) {
   const renderTags = () => {
     fill(tagRow,
       h(`span.chip${filterTag === null ? '.is-active' : ''}`, {
-        text: `Alle (${all.length})`,
+        text: t('Alle ({n})', { n: all.length }),
         onClick: () => { filterTag = null; renderTags(); renderGrid(); },
       }),
       ...tags.map((tag) =>
@@ -146,17 +147,17 @@ export async function render({ params, setActions, refresh, goto }) {
 
   if (!all.length) {
     return card(null, {},
-      empty('Die Bibliothek ist leer',
-        'Nimm Videos, Thumbnails und Tonspuren auf. Die App merkt sich nur, wo sie liegen – kopiert wird nichts.',
-        h('button.btn.btn--primary.mt', { text: 'Dateien auswählen', onClick: () => importFiles(refresh) })));
+      empty(t('Die Bibliothek ist leer'),
+        t('Nimm Videos, Thumbnails und Tonspuren auf. Die App merkt sich nur, wo sie liegen – kopiert wird nichts.'),
+        h('button.btn.btn--primary.mt', { text: t('Dateien auswählen'), onClick: () => importFiles(refresh) })));
   }
 
   return h('div.col.gap-lg', null,
     h('div.grid.grid-4', null,
-      card(null, {}, h('div.stat', null, h('div.stat__label', { text: 'Dateien' }), h('div.stat__value', { text: String(all.length) }))),
-      card(null, {}, h('div.stat', null, h('div.stat__label', { text: 'Gesamtgröße' }), h('div.stat__value', { text: fmt.bytes(totalSize) }))),
-      card(null, {}, h('div.stat', null, h('div.stat__label', { text: 'Schlagwörter' }), h('div.stat__value', { text: String(tags.length) }))),
-      card(null, {}, h('div.stat', null, h('div.stat__label', { text: 'Unverwendet' }), h('div.stat__value', { text: String(unused.length) }), h('div.stat__meta', { text: 'noch keinem Beitrag zugeordnet' })))),
+      card(null, {}, h('div.stat', null, h('div.stat__label', { text: t('Dateien') }), h('div.stat__value', { text: String(all.length) }))),
+      card(null, {}, h('div.stat', null, h('div.stat__label', { text: t('Gesamtgröße') }), h('div.stat__value', { text: fmt.bytes(totalSize) }))),
+      card(null, {}, h('div.stat', null, h('div.stat__label', { text: t('Schlagwörter') }), h('div.stat__value', { text: String(tags.length) }))),
+      card(null, {}, h('div.stat', null, h('div.stat__label', { text: t('Unverwendet') }), h('div.stat__value', { text: String(unused.length) }), h('div.stat__meta', { text: t('noch keinem Beitrag zugeordnet') })))),
 
     h('div.row.gap-sm', null, searchInput),
     tagRow,

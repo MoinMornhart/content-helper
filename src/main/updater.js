@@ -19,6 +19,7 @@
  */
 
 const { app, net, shell, Notification } = require('electron');
+const { t } = require('./i18n');
 
 const REPO = 'MoinMornhart/content-helper';
 const API_URL = `https://api.github.com/repos/${REPO}/releases/latest`;
@@ -127,8 +128,8 @@ class Updater {
   notifyReady(version) {
     if (this.store.settings().notifications === false || !Notification.isSupported()) return;
     const notification = new Notification({
-      title: `Version ${version} ist bereit`,
-      body: 'Sie wird beim nächsten Beenden eingespielt. Klicken, um jetzt neu zu starten.',
+      title: t('Version {version} ist bereit', { version }),
+      body: t('Sie wird beim nächsten Beenden eingespielt. Klicken, um jetzt neu zu starten.'),
     });
     notification.on('click', () => this.install());
     notification.show();
@@ -225,7 +226,7 @@ class Updater {
       available,
       current,
       latest,
-      name: release.name || `Version ${latest}`,
+      name: release.name || t('Version {version}', { version: latest }),
       notes: (release.body || '').slice(0, 4000),
       url: release.html_url || RELEASES_PAGE,
       publishedAt: release.published_at || null,
@@ -246,7 +247,7 @@ class Updater {
 
       const timeout = setTimeout(() => {
         request.abort();
-        reject(new Error('Zeitüberschreitung bei der Update-Prüfung.'));
+        reject(new Error(t('Zeitüberschreitung bei der Update-Prüfung.')));
       }, 12_000);
 
       request.on('response', (response) => {
@@ -256,12 +257,12 @@ class Updater {
           clearTimeout(timeout);
           if (response.statusCode === 404) return resolve(null);
           if (response.statusCode !== 200) {
-            return reject(new Error(`GitHub antwortete mit Status ${response.statusCode}.`));
+            return reject(new Error(t('GitHub antwortete mit Status {status}.', { status: response.statusCode })));
           }
           try {
             resolve(JSON.parse(body));
           } catch {
-            reject(new Error('Die Antwort von GitHub war nicht lesbar.'));
+            reject(new Error(t('Die Antwort von GitHub war nicht lesbar.')));
           }
         });
       });
@@ -285,8 +286,8 @@ class Updater {
 
     if (settings.notifications !== false && Notification.isSupported()) {
       const notification = new Notification({
-        title: `Content Helper ${result.latest} ist da`,
-        body: 'Klicken, um die Veröffentlichung zu öffnen.',
+        title: t('Content Helper {version} ist da', { version: result.latest }),
+        body: t('Klicken, um die Veröffentlichung zu öffnen.'),
       });
       notification.on('click', () => shell.openExternal(result.url || RELEASES_PAGE));
       notification.show();

@@ -18,6 +18,7 @@ const { pkcePair, newState, appWindow, codeFrom, TokenStore, form } = require('.
 const { credentialsFor } = require('../credentials');
 const { mimeOf, probe } = require('../media-info');
 const { sleep, parseJson, retryable, permanent, statusError, poll, length, RELOGIN } = require('./common');
+const { t } = require('../../i18n');
 
 const AUTH_URL = 'https://x.com/i/oauth2/authorize';
 const API = 'https://api.x.com';
@@ -49,7 +50,7 @@ class XPublisher {
 
   async signIn() {
     const creds = this.creds();
-    if (!creds.complete) throw new Error('Für X ist die Anwendung noch nicht eingerichtet.');
+    if (!creds.complete) throw new Error(t('Für X ist die Anwendung noch nicht eingerichtet.'));
 
     const { verifier, challenge } = pkcePair();
     const state = newState();
@@ -93,10 +94,10 @@ class XPublisher {
     const payload = parseJson(response.text) || {};
     if (response.status >= 400) {
       if (params.grant_type === 'refresh_token') {
-        this.tokens.save({ lastError: 'Die Anmeldung ist abgelaufen.' });
-        throw permanent(`X: Die Anmeldung ist abgelaufen. ${RELOGIN}`);
+        this.tokens.save({ lastError: t('Die Anmeldung ist abgelaufen.') });
+        throw permanent(t('{name}: Die Anmeldung ist abgelaufen. {relogin}', { name: 'X', relogin: t(RELOGIN) }));
       }
-      throw new Error(`X meldet: ${payload.error_description || payload.error || response.status}`);
+      throw new Error(t('{name} meldet: {detail}', { name: 'X', detail: payload.error_description || payload.error || response.status }));
     }
     // X gibt bei jedem Erneuern ein neues Erneuerungsmerkmal aus; das alte verfällt.
     this.tokens.save({
@@ -110,7 +111,7 @@ class XPublisher {
   async token() {
     const config = this.tokens.get();
     if (config.accessToken && Date.now() < (config.accessExpires || 0) - 60_000) return config.accessToken;
-    if (!config.refreshToken) throw permanent(`Für X besteht keine Anmeldung. ${RELOGIN}`);
+    if (!config.refreshToken) throw permanent(t('Für {name} besteht keine Anmeldung. {relogin}', { name: 'X', relogin: t(RELOGIN) }));
     return (await this.tokenRequest({ grant_type: 'refresh_token', refresh_token: config.refreshToken })).access_token;
   }
 
@@ -135,24 +136,24 @@ class XPublisher {
 
   error(response, payload) {
     const detail = payload.detail || payload.title || payload.errors?.[0]?.message || '';
-    if (response.status === 402 || /credit/i.test(detail)) return permanent('Das Guthaben des X-Entwicklerkontos ist aufgebraucht – X rechnet jeden Post einzeln ab.');
+    if (response.status === 402 || /credit/i.test(detail)) return permanent(t('Das Guthaben des X-Entwicklerkontos ist aufgebraucht – X rechnet jeden Post einzeln ab.'));
     if (response.status === 429) {
       const reset = Number(response.headers['x-rate-limit-reset']);
-      return retryable('X bremst gerade – zu viele Posts. Es geht weiter, sobald X wieder zulässt.', reset ? { retryAt: new Date(reset * 1000 + 5000).toISOString() } : {});
+      return retryable(t('X bremst gerade – zu viele Posts. Es geht weiter, sobald X wieder zulässt.'), reset ? { retryAt: new Date(reset * 1000 + 5000).toISOString() } : {});
     }
-    if (response.status === 403 && /duplicate/i.test(detail)) return permanent('X lehnt doppelte Posts ab – derselbe Text wurde schon gepostet.');
+    if (response.status === 403 && /duplicate/i.test(detail)) return permanent(t('X lehnt doppelte Posts ab – derselbe Text wurde schon gepostet.'));
     return statusError('X', response.status, detail);
   }
 
   check(content) {
     const problems = [];
     const text = content.text || content.title || '';
-    if (!text && !content.video) problems.push('Für X fehlt Text oder Video.');
-    if (length(text) > 280) problems.push(`Der Text ist ${length(text)} Zeichen lang, X erlaubt 280 (ohne Premium).`);
+    if (!text && !content.video) problems.push(t('Für X fehlt Text oder Video.'));
+    if (length(text) > 280) problems.push(t('Der Text ist {count} Zeichen lang, X erlaubt 280 (ohne Premium).', { count: length(text) }));
     if (content.video) {
-      if (!['mp4', 'mov'].includes(content.video.ext)) problems.push('X nimmt Videos als MP4 oder MOV.');
+      if (!['mp4', 'mov'].includes(content.video.ext)) problems.push(t('X nimmt Videos als MP4 oder MOV.'));
       const { durationSec } = probe(content.video.path);
-      if (durationSec && durationSec > 140 && !content.options?.premium) problems.push('Ohne X Premium dürfen Videos höchstens 2:20 Minuten lang sein.');
+      if (durationSec && durationSec > 140 && !content.options?.premium) problems.push(t('Ohne X Premium dürfen Videos höchstens 2:20 Minuten lang sein.'));
     }
     return problems;
   }
@@ -169,7 +170,7 @@ class XPublisher {
           media_category: 'tweet_video',
         });
         session = { mediaId: init.data?.id, next: 0 };
-        if (!session.mediaId) throw retryable('X hat den Upload nicht angenommen.');
+        if (!session.mediaId) throw retryable(t('X hat den Upload nicht angenommen.'));
         job.saveSession(session);
       }
 
@@ -202,11 +203,11 @@ class XPublisher {
           const status = await this.call('GET', `/2/media/upload?command=STATUS&media_id=${session.mediaId}`);
           info = status.data?.processing_info;
           if (!info || info.state === 'succeeded') return 'ok';
-          if (info.state === 'failed') return { error: info.error?.message || 'Verarbeitung fehlgeschlagen' };
+          if (info.state === 'failed') return { error: info.error?.message || t('Verarbeitung fehlgeschlagen') };
           return null;
         }, { every: 5_000, times: 120, wait: this.sleep });
-        if (outcome?.error) throw permanent(`X konnte das Video nicht verarbeiten: ${outcome.error}`);
-        if (!outcome) throw retryable('X verarbeitet das Video noch. Neuer Versuch folgt.');
+        if (outcome?.error) throw permanent(t('{name} konnte das Video nicht verarbeiten: {detail}', { name: 'X', detail: outcome.error }));
+        if (!outcome) throw retryable(t('{name} verarbeitet das Video noch. Neuer Versuch folgt.', { name: 'X' }));
       }
       mediaId = session.mediaId;
     }

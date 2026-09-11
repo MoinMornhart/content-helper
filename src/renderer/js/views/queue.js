@@ -12,9 +12,10 @@ import * as store from '../lib/store.js';
 import * as posts from '../lib/posts.js';
 import { active, glyph, platform } from '../lib/platforms.js';
 import { toast, confirm, modal } from '../lib/ui.js';
+import { t, mark } from '../lib/i18n.js';
 
-export const title = 'Warteschlange';
-export const lead = 'Feste Zeitfenster füllen sich der Reihe nach.';
+export const title = mark('Warteschlange');
+export const lead = mark('Feste Zeitfenster füllen sich der Reihe nach.');
 
 const WEEKDAYS = [1, 2, 3, 4, 5, 6, 0];
 
@@ -53,7 +54,7 @@ function slotEditor(refresh, existing = null, index = null) {
   const selectedDays = new Set(existing?.days || [1, 3, 5]);
   const timeInput = h('input.input', { type: 'time', value: existing?.time || '18:00' });
   const platformSelect = h('select.select', null,
-    h('option', { value: '', text: 'Alle Kanäle', selected: !existing?.platformId }),
+    h('option', { value: '', text: t('Alle Kanäle'), selected: !existing?.platformId }),
     ...active(store.settings()).map((p) =>
       h('option', { value: p.id, text: p.name, selected: existing?.platformId === p.id })));
 
@@ -72,34 +73,34 @@ function slotEditor(refresh, existing = null, index = null) {
   renderDays();
 
   modal({
-    title: existing ? 'Zeitfenster ändern' : 'Neues Zeitfenster',
+    title: existing ? t('Zeitfenster ändern') : t('Neues Zeitfenster'),
     size: 'narrow',
     body: h('div.col.gap-lg', null,
-      h('div.field', null, h('span.field__label', { text: 'Wochentage' }), dayChips),
-      h('label.field', null, h('span.field__label', { text: 'Uhrzeit' }), timeInput),
+      h('div.field', null, h('span.field__label', { text: t('Wochentage') }), dayChips),
+      h('label.field', null, h('span.field__label', { text: t('Uhrzeit') }), timeInput),
       h('label.field', null,
-        h('span.field__label', { text: 'Nur für einen Kanal (optional)' }),
+        h('span.field__label', { text: t('Nur für einen Kanal (optional)') }),
         platformSelect,
-        h('span.field__hint', { text: 'Leer lassen, wenn das Fenster für alles gilt.' }))),
+        h('span.field__hint', { text: t('Leer lassen, wenn das Fenster für alles gilt.') }))),
     actions: [
       existing
         ? {
-            label: 'Löschen',
+            label: t('Löschen'),
             tone: 'danger',
             action: async () => {
               const slots = [...(store.settings().queueSlots || [])];
               slots.splice(index, 1);
               await store.saveSettings({ queueSlots: slots });
-              toast('Zeitfenster entfernt.', 'ok');
+              toast(t('Zeitfenster entfernt.'), 'ok');
               refresh();
             },
           }
         : null,
       {
-        label: 'Speichern',
+        label: t('Speichern'),
         primary: true,
         action: async () => {
-          if (!selectedDays.size) return toast('Bitte mindestens einen Wochentag wählen.', 'warn');
+          if (!selectedDays.size) return toast(t('Bitte mindestens einen Wochentag wählen.'), 'warn');
           const slots = [...(store.settings().queueSlots || [])];
           const entry = {
             days: [...selectedDays].sort(),
@@ -110,7 +111,7 @@ function slotEditor(refresh, existing = null, index = null) {
           else slots[index] = entry;
           slots.sort((a, b) => a.time.localeCompare(b.time));
           await store.saveSettings({ queueSlots: slots });
-          toast('Zeitfenster gespeichert.', 'ok');
+          toast(t('Zeitfenster gespeichert.'), 'ok');
           refresh();
         },
       },
@@ -130,9 +131,9 @@ async function adoptRecommended(refresh) {
       slots.push({ days: slot.days, time: slot.time, platformId: null });
     }
   }
-  if (!slots.length) return toast('Für die aktiven Kanäle gibt es keine Empfehlungen.', 'warn');
+  if (!slots.length) return toast(t('Für die aktiven Kanäle gibt es keine Empfehlungen.'), 'warn');
   await store.saveSettings({ queueSlots: slots.sort((a, b) => a.time.localeCompare(b.time)) });
-  toast(`${slots.length} Zeitfenster übernommen.`, 'ok');
+  toast(t('{count} Zeitfenster übernommen.', { count: slots.length }), 'ok');
   refresh();
 }
 
@@ -141,10 +142,10 @@ async function fillQueue(refresh) {
   const ready = store.all('posts')
     .filter((post) => !post.scheduledAt && ['ready', 'draft'].includes(post.status))
     .reverse();
-  if (!ready.length) return toast('Es liegen keine fertigen Beiträge bereit.', 'warn');
+  if (!ready.length) return toast(t('Es liegen keine fertigen Beiträge bereit.'), 'warn');
 
   const free = slotsWithPosts(30).filter((entry) => !entry.post);
-  if (!free.length) return toast('Alle Zeitfenster der nächsten 30 Tage sind belegt.', 'warn');
+  if (!free.length) return toast(t('Alle Zeitfenster der nächsten 30 Tage sind belegt.'), 'warn');
 
   let count = 0;
   for (const entry of free) {
@@ -159,7 +160,7 @@ async function fillQueue(refresh) {
     });
     count += 1;
   }
-  toast(count ? `${fmt.plural(count, 'Beitrag', 'Beiträge')} eingeplant.` : 'Nichts Passendes gefunden.', count ? 'ok' : 'warn');
+  toast(count ? t('{posts} eingeplant.', { posts: fmt.plural(count, 'Beitrag', 'Beiträge') }) : t('Nichts Passendes gefunden.'), count ? 'ok' : 'warn'); // i18n-ignore
   refresh();
 }
 
@@ -174,28 +175,28 @@ export async function render({ goto, setActions, refresh }) {
   const waiting = all.filter((post) => !post.scheduledAt && ['draft', 'ready'].includes(post.status));
 
   setActions(
-    h('button.btn.btn--sm', { text: 'Warteschlange füllen', onClick: () => fillQueue(refresh) }),
-    h('button.btn.btn--sm.btn--primary', { text: '＋ Zeitfenster', onClick: () => slotEditor(refresh) })
+    h('button.btn.btn--sm', { text: t('Warteschlange füllen'), onClick: () => fillQueue(refresh) }),
+    h('button.btn.btn--sm.btn--primary', { text: t('＋ Zeitfenster'), onClick: () => slotEditor(refresh) })
   );
 
   const publish = async (post) => {
     await store.patch('posts', post.id, { status: 'published', publishedAt: new Date().toISOString() });
-    toast('Als veröffentlicht markiert.', 'ok');
+    toast(t('Als veröffentlicht markiert.'), 'ok');
     refresh();
   };
 
   const handoff = (post) => h('div.row.gap-xs', null,
     h('button.btn.btn--sm', {
-      text: 'Kopieren',
+      text: t('Kopieren'),
       onClick: async (event) => {
         event.stopPropagation();
         await window.ch.system.copy(posts.renderFor(post, post.platforms?.[0]));
-        toast('Text liegt in der Zwischenablage.', 'ok');
+        toast(t('Text liegt in der Zwischenablage.'), 'ok');
       },
     }),
     platform(post.platforms?.[0])?.uploadUrl
       ? h('button.btn.btn--sm', {
-          text: 'Upload öffnen',
+          text: t('Upload öffnen'),
           onClick: (event) => {
             event.stopPropagation();
             window.ch.system.openExternal(platform(post.platforms[0]).uploadUrl);
@@ -203,7 +204,7 @@ export async function render({ goto, setActions, refresh }) {
         })
       : null,
     h('button.btn.btn--sm.btn--primary', {
-      text: 'Erledigt',
+      text: t('Erledigt'),
       onClick: (event) => { event.stopPropagation(); publish(post); },
     }));
 
@@ -212,8 +213,8 @@ export async function render({ goto, setActions, refresh }) {
     due.length || missed.length
       ? h('section.section.mt-0', null,
           h('div.section__head', null,
-            h('div.section__title', { text: 'Braucht jetzt deine Hand' }),
-            h('div.section__hint', { text: 'kopieren, hochladen, abhaken' })),
+            h('div.section__title', { text: t('Braucht jetzt deine Hand') }),
+            h('div.section__hint', { text: t('kopieren, hochladen, abhaken') })),
           h('div.col.gap-sm', null,
             ...due.map((post) => posts.postRow(post, { showDate: true, onClick: (p) => goto('composer', { id: p.id }), actions: handoff(post) })),
             ...missed.map((post) =>
@@ -222,21 +223,21 @@ export async function render({ goto, setActions, refresh }) {
                 onClick: (p) => goto('composer', { id: p.id }),
                 actions: h('div.row.gap-xs', null,
                   h('button.btn.btn--sm', {
-                    text: 'Neu einplanen',
+                    text: t('Neu einplanen'),
                     onClick: async (event) => {
                       event.stopPropagation();
                       const free = slotsWithPosts(30).find((entry) => !entry.post);
                       const when = free?.when || fmt.addDays(new Date(), 1);
                       await store.patch('posts', post.id, { scheduledAt: when.toISOString(), status: 'scheduled', preNotifiedAt: null });
-                      toast(`Neuer Termin: ${fmt.dateTime(when)}.`, 'ok');
+                      toast(t('Neuer Termin: {when}.', { when: fmt.dateTime(when) }), 'ok');
                       refresh();
                     },
                   }),
                   h('button.btn.btn--sm.btn--ghost', {
-                    text: 'Verwerfen',
+                    text: t('Verwerfen'),
                     onClick: async (event) => {
                       event.stopPropagation();
-                      if (!(await confirm({ title: 'Beitrag verwerfen?', message: 'Der Beitrag bleibt als Entwurf erhalten, verliert aber seinen Termin.', confirmLabel: 'Verwerfen' }))) return;
+                      if (!(await confirm({ title: t('Beitrag verwerfen?'), message: t('Der Beitrag bleibt als Entwurf erhalten, verliert aber seinen Termin.'), confirmLabel: t('Verwerfen') }))) return;
                       await store.patch('posts', post.id, { status: 'draft', scheduledAt: null });
                       refresh();
                     },
@@ -248,8 +249,8 @@ export async function render({ goto, setActions, refresh }) {
     h('div.split', null,
       h('section.section.mt-0', null,
         h('div.section__head', null,
-          h('div.section__title', { text: 'Die nächsten Zeitfenster' }),
-          h('div.section__hint', { text: `${slots.length} Fenster pro Woche` })),
+          h('div.section__title', { text: t('Die nächsten Zeitfenster') }),
+          h('div.section__hint', { text: t('{count} Fenster pro Woche', { count: slots.length }) })),
         slots.length
           ? h('div.col.gap-sm', null,
               ...slotsWithPosts(14).slice(0, 14).map((entry) =>
@@ -259,23 +260,23 @@ export async function render({ goto, setActions, refresh }) {
                       posts.statusDot(entry.post.status),
                       h('span.grow.truncate', { text: posts.titleOf(entry.post) }),
                       entry.slot.platformId ? glyph(entry.slot.platformId, 16) : null,
-                      h('button.btn.btn--sm.btn--ghost', { text: 'Öffnen', onClick: () => goto('composer', { id: entry.post.id }) }))
+                      h('button.btn.btn--sm.btn--ghost', { text: t('Öffnen'), onClick: () => goto('composer', { id: entry.post.id }) }))
                   : h('div.queue-slot', null,
                       h('span.mono.text-sm.nowrap', { text: `${fmt.date(entry.when, 'day')} ${fmt.time(entry.when)}` }),
-                      h('span.grow', { text: entry.slot.platformId ? `frei · nur ${platform(entry.slot.platformId)?.name}` : 'frei' }),
+                      h('span.grow', { text: entry.slot.platformId ? t('frei · nur {channel}', { channel: platform(entry.slot.platformId)?.name }) : t('frei') }),
                       h('button.btn.btn--sm', {
-                        text: 'Beitrag anlegen',
+                        text: t('Beitrag anlegen'),
                         onClick: () => goto('composer', { fresh: true, at: entry.when.toISOString() }),
                       }))))
           : card(null, { class: 'card--quiet' },
-              empty('Noch keine Zeitfenster',
-                'Feste Termine nehmen dir die Frage „wann poste ich das?“ dauerhaft ab.',
+              empty(t('Noch keine Zeitfenster'),
+                t('Feste Termine nehmen dir die Frage „wann poste ich das?“ dauerhaft ab.'),
                 h('div.row.gap-sm.mt-sm', null,
-                  h('button.btn.btn--primary.btn--sm', { text: 'Empfehlungen übernehmen', onClick: () => adoptRecommended(refresh) }),
-                  h('button.btn.btn--sm', { text: 'Eigenes anlegen', onClick: () => slotEditor(refresh) }))))),
+                  h('button.btn.btn--primary.btn--sm', { text: t('Empfehlungen übernehmen'), onClick: () => adoptRecommended(refresh) }),
+                  h('button.btn.btn--sm', { text: t('Eigenes anlegen'), onClick: () => slotEditor(refresh) }))))),
 
       h('div.col.gap-lg', null,
-        card('Wochenplan', { hint: 'deine festen Fenster' },
+        card(t('Wochenplan'), { hint: t('deine festen Fenster') },
           slots.length
             ? h('div.col.gap-sm', null,
                 ...slots.map((slot, index) =>
@@ -284,17 +285,17 @@ export async function render({ goto, setActions, refresh }) {
                       h('span.mono.strong', { text: slot.time }),
                       h('span.text-sm.muted', { text: slot.days.map((day) => fmt.weekdayShort(day)).join(' ') }),
                       slot.platformId ? glyph(slot.platformId, 15) : null),
-                    h('button.btn.btn--ghost.btn--sm', { text: 'Ändern', onClick: () => slotEditor(refresh, slot, index) }))),
-                h('button.btn.btn--sm.btn--ghost.mt-sm', { text: 'Empfehlungen der Kanäle übernehmen', onClick: () => adoptRecommended(refresh) }))
-            : h('p.text-sm.muted', { text: 'Keine Zeitfenster angelegt.' })),
+                    h('button.btn.btn--ghost.btn--sm', { text: t('Ändern'), onClick: () => slotEditor(refresh, slot, index) }))),
+                h('button.btn.btn--sm.btn--ghost.mt-sm', { text: t('Empfehlungen der Kanäle übernehmen'), onClick: () => adoptRecommended(refresh) }))
+            : h('p.text-sm.muted', { text: t('Keine Zeitfenster angelegt.') })),
 
-        card('Wartet auf einen Platz', { hint: fmt.plural(waiting.length, 'Beitrag', 'Beiträge') },
+        card(t('Wartet auf einen Platz'), { hint: fmt.plural(waiting.length, 'Beitrag', 'Beiträge') }, // i18n-ignore
           waiting.length
             ? h('div.col.gap-sm', null,
                 ...waiting.slice(0, 10).map((post) =>
                   h('div.row.gap-sm', null,
                     posts.statusDot(post.status),
                     h('span.grow.truncate.text-sm', { text: posts.titleOf(post) }),
-                    h('button.btn.btn--sm.btn--ghost', { text: 'Öffnen', onClick: () => goto('composer', { id: post.id }) }))))
-            : h('p.text-sm.muted', { text: 'Alles eingeplant. Guter Zustand.' })))));
+                    h('button.btn.btn--sm.btn--ghost', { text: t('Öffnen'), onClick: () => goto('composer', { id: post.id }) }))))
+            : h('p.text-sm.muted', { text: t('Alles eingeplant. Guter Zustand.') })))));
 }

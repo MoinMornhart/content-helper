@@ -6,7 +6,7 @@
  * auf ihren eigenen Zwischenspeicher zurück und reicht Eingaben später nach.
  */
 
-const CACHE = 'content-helper-v1';
+const CACHE = 'content-helper-v2';
 const SHELL = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (event) => {

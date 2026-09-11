@@ -12,9 +12,10 @@ import * as an from '../lib/analytics.js';
 import * as chart from '../lib/chart.js';
 import { PLATFORMS, platform, glyph, metric, KIND_LABEL, suggestedSlots } from '../lib/platforms.js';
 import { toast, modal } from '../lib/ui.js';
+import { t, mark } from '../lib/i18n.js';
 
-export const title = 'Kanäle';
-export const lead = 'Regeln, Grenzen und dein Stand – Kanal für Kanal.';
+export const title = mark('Kanäle');
+export const lead = mark('Regeln, Grenzen und dein Stand – Kanal für Kanal.');
 
 /** Zahlenbild eines Kanals aus den erfassten Werten. */
 function summaryFor(platformId) {
@@ -45,13 +46,13 @@ function summaryFor(platformId) {
 function detailDialog(p) {
   const limits = p.limits || {};
   const rows = [
-    ['Titel', limits.title ? `${limits.title} Zeichen` : 'kein Titelfeld'],
-    ['Text', limits.body ? `${limits.body} Zeichen` : '–'],
-    ['Hashtags', limits.hashtags ? `bis ${limits.hashtags}` : '–'],
-    ['Medien je Beitrag', limits.mediaCount ? `bis ${limits.mediaCount}` : '–'],
-    ['Videolänge', limits.videoSecMax ? `${fmt.duration(limits.videoSecMin || 0)} bis ${fmt.duration(limits.videoSecMax)}` : '–'],
-    ['Seitenverhältnis', limits.aspect || '–'],
-    ['Art', KIND_LABEL[p.kind] || p.kind],
+    [t('Titel'), limits.title ? t('{n} Zeichen', { n: limits.title }) : t('kein Titelfeld')],
+    [t('Text'), limits.body ? t('{n} Zeichen', { n: limits.body }) : '–'],
+    [t('Hashtags'), limits.hashtags ? t('bis {n}', { n: limits.hashtags }) : '–'],
+    [t('Medien je Beitrag'), limits.mediaCount ? t('bis {n}', { n: limits.mediaCount }) : '–'],
+    [t('Videolänge'), limits.videoSecMax ? t('{min} bis {max}', { min: fmt.duration(limits.videoSecMin || 0), max: fmt.duration(limits.videoSecMax) }) : '–'],
+    [t('Seitenverhältnis'), limits.aspect || '–'],
+    [t('Art'), t(KIND_LABEL[p.kind] || p.kind)],
   ];
 
   modal({
@@ -63,11 +64,11 @@ function detailDialog(p) {
             h('tr', null, h('td.muted', { text: label }), h('td.strong', { text: value }))))),
 
       h('div', null,
-        h('div.field__label.mb-sm', { text: 'Typische Formate' }),
-        h('div.chips', null, ...(p.formats || []).map((format) => h('span.badge', { text: format })))),
+        h('div.field__label.mb-sm', { text: t('Typische Formate') }),
+        h('div.chips', null, ...(p.formats || []).map((format) => h('span.badge', { text: t(format) })))),
 
       h('div', null,
-        h('div.field__label.mb-sm', { text: 'Empfohlene Zeitfenster' }),
+        h('div.field__label.mb-sm', { text: t('Empfohlene Zeitfenster') }),
         h('div.chips', null,
           ...(p.bestSlots || []).map((slot) =>
             h('span.badge.badge--accent', {
@@ -75,23 +76,23 @@ function detailDialog(p) {
             })))),
 
       h('div', null,
-        h('div.field__label.mb-sm', { text: 'Worauf es ankommt' }),
+        h('div.field__label.mb-sm', { text: t('Worauf es ankommt') }),
         h('ul.text-sm.muted', { style: { margin: 0, paddingLeft: '18px' } },
-          ...(p.tips || []).map((tip) => h('li', { text: tip })))),
+          ...(p.tips || []).map((tip) => h('li', { text: t(tip) })))),
 
       p.csvHint
         ? h('div.notice.notice--accent', null,
             h('span.notice__icon', { text: '◫' }),
             h('div', null,
-              h('div.strong.text-sm', { text: 'Zahlen ohne Zugangsschlüssel holen' }),
-              h('div.text-sm.muted', { text: p.csvHint })))
+              h('div.strong.text-sm', { text: t('Zahlen ohne Zugangsschlüssel holen') }),
+              h('div.text-sm.muted', { text: t(p.csvHint) })))
         : null),
     actions: [
       p.studioUrl
-        ? { label: 'Studio öffnen', action: () => window.ch.system.openExternal(p.studioUrl), closeAfter: false }
+        ? { label: t('Studio öffnen'), action: () => window.ch.system.openExternal(p.studioUrl), closeAfter: false }
         : null,
       p.uploadUrl
-        ? { label: 'Upload-Seite öffnen', primary: true, action: () => window.ch.system.openExternal(p.uploadUrl) }
+        ? { label: t('Upload-Seite öffnen'), primary: true, action: () => window.ch.system.openExternal(p.uploadUrl) }
         : null,
     ].filter(Boolean),
   });
@@ -108,40 +109,40 @@ function channelCard(p, { refresh, goto }) {
         glyph(p.id, 26),
         h('div', null,
           h('div.strong', { text: p.name }),
-          h('div.text-xs.faint', { text: KIND_LABEL[p.kind] || p.kind }))),
+          h('div.text-xs.faint', { text: t(KIND_LABEL[p.kind] || p.kind) }))),
       h('button.btn.btn--sm', {
-        text: isActive ? 'Aktiv' : 'Aktivieren',
+        text: isActive ? t('Aktiv') : t('Aktivieren'),
         class: isActive ? 'btn--primary' : '',
         onClick: async () => {
           const set = new Set(store.settings().activePlatforms || []);
           if (set.has(p.id)) set.delete(p.id);
           else set.add(p.id);
           await store.saveSettings({ activePlatforms: [...set] });
-          toast(set.has(p.id) ? `${p.name} aktiviert.` : `${p.name} abgeschaltet.`, 'ok');
+          toast(set.has(p.id) ? t('{name} aktiviert.', { name: p.name }) : t('{name} abgeschaltet.', { name: p.name }), 'ok');
           refresh();
         },
       })),
 
     h('div.row.gap-lg.mb', null,
       h('div.stat', null,
-        h('div.stat__label', { text: 'Beiträge' }),
+        h('div.stat__label', { text: t('Beiträge') }),
         h('div.text-lg.strong', { text: String(summary.posts) })),
       h('div.stat', null,
-        h('div.stat__label', { text: 'Zuletzt' }),
-        h('div.text-sm', { text: summary.lastUse ? fmt.relative(summary.lastUse) : 'noch nie' })),
+        h('div.stat__label', { text: t('Zuletzt') }),
+        h('div.text-sm', { text: summary.lastUse ? fmt.relative(summary.lastUse) : t('noch nie') })),
       info
         ? h('div.stat', null,
-            h('div.stat__label', { text: `${info.short} (30 T.)` }),
+            h('div.stat__label', { text: t('{metric} (30 T.)', { metric: t(info.short) }) }),
             h('div.text-lg.strong', { text: fmt.metricValue(summary.current, info.type) }))
         : null),
 
     summary.series.some((value) => value)
       ? chart.sparkline(summary.series)
-      : h('div.text-xs.faint', { text: 'Noch keine Zahlen für diesen Kanal erfasst.' }),
+      : h('div.text-xs.faint', { text: t('Noch keine Zahlen für diesen Kanal erfasst.') }),
 
     h('div.row.gap-sm.mt', null,
-      h('button.btn.btn--sm', { text: 'Regeln ansehen', onClick: () => detailDialog(p) }),
-      h('button.btn.btn--sm.btn--ghost', { text: 'Beitrag anlegen', onClick: () => goto('composer', { fresh: true, platform: p.id }) })));
+      h('button.btn.btn--sm', { text: t('Regeln ansehen'), onClick: () => detailDialog(p) }),
+      h('button.btn.btn--sm.btn--ghost', { text: t('Beitrag anlegen'), onClick: () => goto('composer', { fresh: true, platform: p.id }) })));
 }
 
 export async function render({ goto, setActions, refresh }) {
@@ -153,8 +154,8 @@ export async function render({ goto, setActions, refresh }) {
   });
 
   setActions(
-    h('button.btn.btn--sm', { text: 'Zeitfenster verwalten', onClick: () => goto('queue') }),
-    h('button.btn.btn--sm.btn--primary', { text: 'Zahlen erfassen', onClick: () => goto('analytics') })
+    h('button.btn.btn--sm', { text: t('Zeitfenster verwalten'), onClick: () => goto('queue') }),
+    h('button.btn.btn--sm.btn--primary', { text: t('Zahlen erfassen'), onClick: () => goto('analytics') })
   );
 
   const nextSlots = [...activeIds]
@@ -166,11 +167,11 @@ export async function render({ goto, setActions, refresh }) {
     h('div.notice.notice--accent', null,
       h('span.notice__icon', { text: '⬡' }),
       h('div', null,
-        h('div.strong', { text: 'Verknüpft ohne Anmeldung' }),
-        h('div.text-sm.muted', { text: 'Die App kennt Limits, Formate und Empfehlungen jeder Plattform und stellt sie neben deine eigenen Zahlen. Dafür ist keine Anmeldung, kein Zugangsschlüssel und keine Developer-App nötig – die Werte kommen per CSV-Export oder Handeingabe herein.' }))),
+        h('div.strong', { text: t('Verknüpft ohne Anmeldung') }),
+        h('div.text-sm.muted', { text: t('Die App kennt Limits, Formate und Empfehlungen jeder Plattform und stellt sie neben deine eigenen Zahlen. Dafür ist keine Anmeldung, kein Zugangsschlüssel und keine Developer-App nötig – die Werte kommen per CSV-Export oder Handeingabe herein.') }))),
 
     nextSlots.length
-      ? card('Nächste empfohlene Zeitfenster', { hint: 'aus den Standardwerten deiner aktiven Kanäle' },
+      ? card(t('Nächste empfohlene Zeitfenster'), { hint: t('aus den Standardwerten deiner aktiven Kanäle') },
           h('div.chips', null,
             ...nextSlots.map((slot) =>
               h('span.chip', {

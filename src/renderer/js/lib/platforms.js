@@ -1,12 +1,34 @@
 /**
  * Zugriff auf den Plattform-Katalog und das Kennzahlen-Woerterbuch.
  * Die Daten kommen ueber die Preload-Bruecke und sind sofort verfuegbar.
+ *
+ * Tipps, Export-Hinweise und Kennzahl-Namen stehen im Katalog auf Deutsch.
+ * Sie werden erst beim Lesen uebersetzt (Getter), weil die Sprache beim Laden
+ * dieses Moduls noch nicht feststeht. Formatnamen bleiben unveraendert – sie
+ * werden als Werte in Beitraegen gespeichert.
  */
 
 import { h } from './dom.js';
+import { t, mark } from './i18n.js';
 
-export const PLATFORMS = window.ch.catalog.platforms;
-export const METRICS = window.ch.catalog.metrics;
+/** Legt Getter an, die den deutschen Wert bei jedem Lesen uebersetzen. */
+function translated(target, raw, fields) {
+  for (const field of fields) {
+    const value = raw[field];
+    if (typeof value === 'string') {
+      Object.defineProperty(target, field, { enumerable: true, configurable: true, get: () => t(value) });
+    } else if (Array.isArray(value)) {
+      Object.defineProperty(target, field, { enumerable: true, configurable: true, get: () => value.map((entry) => t(entry)) });
+    }
+  }
+  return target;
+}
+
+export const PLATFORMS = (window.ch.catalog.platforms || []).map((raw) =>
+  translated({ ...raw }, raw, ['tips', 'csvHint']));
+
+export const METRICS = Object.fromEntries(Object.entries(window.ch.catalog.metrics || {}).map(([id, raw]) =>
+  [id, translated({ ...raw }, raw, ['label', 'short'])]));
 
 const byIdMap = new Map(PLATFORMS.map((platform) => [platform.id, platform]));
 
@@ -23,15 +45,18 @@ export function active(settings) {
   return ids.map((id) => byIdMap.get(id)).filter(Boolean);
 }
 
-export const KIND_LABEL = {
-  video: 'Langvideo',
-  short: 'Kurzvideo',
-  text: 'Text',
-  image: 'Bild',
-  story: 'Story',
-  live: 'Live',
-  community: 'Community',
+const KIND_TEXT = {
+  video: mark('Langvideo'),
+  short: mark('Kurzvideo'),
+  text: mark('Text'),
+  image: mark('Bild'),
+  story: mark('Story'),
+  live: mark('Live'),
+  community: mark('Community'),
 };
+
+/** Anzeigename je Art – wird beim Lesen uebersetzt. */
+export const KIND_LABEL = translated({}, KIND_TEXT, Object.keys(KIND_TEXT));
 
 /**
  * Das Textlimit einer Plattform fuer ein bestimmtes Feld.

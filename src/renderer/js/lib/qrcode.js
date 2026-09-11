@@ -11,6 +11,8 @@
  * mit der geringsten Strafpunktzahl wählen.
  */
 
+import { t } from './i18n.js';
+
 // ------------------------------------------------------------------ Tabellen
 
 /** Je Version (1–9) bei Stufe M: Gesamt-Codewörter, EC je Block, Blockgrößen. */
@@ -105,7 +107,7 @@ function chooseVersion(byteLength) {
     const capacityBits = VERSIONS[version].blocks.reduce((sum, size) => sum + size, 0) * 8;
     if (4 + 8 + byteLength * 8 <= capacityBits) return version;
   }
-  throw new Error('Der Inhalt ist zu lang für einen QR-Code dieser Größe.');
+  throw new Error(t('Der Inhalt ist zu lang für einen QR-Code dieser Größe.'));
 }
 
 // ------------------------------------------------------------------ Raster
@@ -386,7 +388,7 @@ export function svg(text, { size = 220, quiet = 3, dark = '#0b0912', light = '#f
   node.setAttribute('width', size);
   node.setAttribute('height', size);
   node.setAttribute('role', 'img');
-  node.setAttribute('aria-label', 'QR-Code zum Verbinden');
+  node.setAttribute('aria-label', t('QR-Code zum Verbinden'));
   node.style.borderRadius = '10px';
   node.style.display = 'block';
 

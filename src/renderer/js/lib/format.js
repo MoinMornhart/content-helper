@@ -1,29 +1,40 @@
-/** Einheitliche Darstellung von Zahlen, Zeiten und Datumsangaben (deutsch). */
+/** Einheitliche Darstellung von Zahlen, Zeiten und Datumsangaben – deutsch oder englisch. */
 
-const LOCALE = 'de-DE';
+import { language, locale, t } from './i18n.js';
 
-const WEEKDAYS = ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'];
-const WEEKDAYS_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-const MONTHS = ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'];
+const NAMES = {
+  de: {
+    weekdays: ['Sonntag', 'Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag'],
+    weekdaysShort: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
+    months: ['Januar', 'Februar', 'März', 'April', 'Mai', 'Juni', 'Juli', 'August', 'September', 'Oktober', 'November', 'Dezember'], // i18n-ignore
+  },
+  en: {
+    weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    weekdaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+    months: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+  },
+};
 
-export const weekdayName = (index) => WEEKDAYS[((index % 7) + 7) % 7];
-export const weekdayShort = (index) => WEEKDAYS_SHORT[((index % 7) + 7) % 7];
-export const monthName = (index) => MONTHS[((index % 12) + 12) % 12];
+const names = () => NAMES[language()] || NAMES.de;
+
+export const weekdayName = (index) => names().weekdays[((index % 7) + 7) % 7];
+export const weekdayShort = (index) => names().weekdaysShort[((index % 7) + 7) % 7];
+export const monthName = (index) => names().months[((index % 12) + 12) % 12];
 
 /** 12.400 statt 12400, ab 10.000 gekuerzt auf 12,4 Tsd. */
 export function num(value, { compact = false, decimals = 0 } = {}) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '–';
   if (compact && Math.abs(n) >= 10000) {
-    return new Intl.NumberFormat(LOCALE, { notation: 'compact', maximumFractionDigits: 1 }).format(n);
+    return new Intl.NumberFormat(locale(), { notation: 'compact', maximumFractionDigits: 1 }).format(n);
   }
-  return new Intl.NumberFormat(LOCALE, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(n);
+  return new Intl.NumberFormat(locale(), { minimumFractionDigits: decimals, maximumFractionDigits: decimals }).format(n);
 }
 
 export function percent(value, decimals = 1) {
   const n = Number(value);
   if (!Number.isFinite(n)) return '–';
-  return `${num(n, { decimals })} %`;
+  return language() === 'en' ? `${num(n, { decimals })}%` : `${num(n, { decimals })} %`;
 }
 
 /** Sekunden als 1:23 bzw. 1:02:03. */
@@ -65,20 +76,27 @@ export const toDate = (value) => (value instanceof Date ? value : new Date(value
 export function date(value, style = 'medium') {
   const d = toDate(value);
   if (Number.isNaN(d.getTime())) return '–';
-  if (style === 'day') return `${weekdayShort(d.getDay())}, ${d.getDate()}. ${monthName(d.getMonth()).slice(0, 3)}`;
-  return new Intl.DateTimeFormat(LOCALE, { dateStyle: style }).format(d);
+  if (style === 'day') {
+    const month = monthName(d.getMonth()).slice(0, 3);
+    return language() === 'en'
+      ? `${weekdayShort(d.getDay())}, ${month} ${d.getDate()}`
+      : `${weekdayShort(d.getDay())}, ${d.getDate()}. ${month}`;
+  }
+  return new Intl.DateTimeFormat(locale(), { dateStyle: style }).format(d);
 }
 
 export function time(value) {
   const d = toDate(value);
   if (Number.isNaN(d.getTime())) return '–';
-  return new Intl.DateTimeFormat(LOCALE, { hour: '2-digit', minute: '2-digit' }).format(d);
+  return new Intl.DateTimeFormat(locale(), { hour: '2-digit', minute: '2-digit' }).format(d);
 }
 
 export function dateTime(value) {
   const d = toDate(value);
   if (Number.isNaN(d.getTime())) return '–';
-  return `${date(d, 'short')}, ${time(d)} Uhr`;
+  return language() === 'en'
+    ? `${date(d, 'medium')}, ${time(d)}`
+    : `${date(d, 'short')}, ${time(d)} Uhr`;
 }
 
 /** „in 3 Std.“, „vor 2 Tagen“, „gerade eben“. */
@@ -91,8 +109,8 @@ export function relative(value) {
   const hour = 3600000;
   const day = 86400000;
 
-  if (abs < minute) return 'gerade eben';
-  const rtf = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto' });
+  if (abs < minute) return t('gerade eben');
+  const rtf = new Intl.RelativeTimeFormat(locale(), { numeric: 'auto' });
   if (abs < hour) return rtf.format(Math.round(diff / minute), 'minute');
   if (abs < day) return rtf.format(Math.round(diff / hour), 'hour');
   if (abs < day * 30) return rtf.format(Math.round(diff / day), 'day');
@@ -151,7 +169,17 @@ export function truncate(text, length = 80) {
   return value.length > length ? `${value.slice(0, length - 1)}…` : value;
 }
 
-export const plural = (count, one, many) => `${num(count)} ${count === 1 ? one : many}`;
+/**
+ * „3 Beiträge“. Die Wortformen sind deutsche Schlüssel und werden übersetzt –
+ * sie müssen deshalb wie jeder andere Text im Wörterbuch stehen.
+ */
+export function plural(count, one, many) {
+  let word = t(count === 1 ? one : many);
+  // Deutsche Hauptwörter sind groß, im englischen Satz nicht: „3 channels“.
+  // Abkürzungen (CSV, PC) und Eigennamen mit zweitem Großbuchstaben bleiben.
+  if (language() === 'en' && /^[A-Z][a-z]/.test(word)) word = word[0].toLowerCase() + word.slice(1);
+  return `${num(count)} ${word}`;
+}
 
 /** Grobe Lesezeit in Sekunden – Grundlage fuer Skript-Laengen. */
 export function speakingSeconds(text, wordsPerMinute = 145) {

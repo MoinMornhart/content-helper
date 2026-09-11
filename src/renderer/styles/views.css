@@ -55,7 +55,9 @@
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   font-size: 13px;
-  width: 46px;
+  /* Englische Uhrzeiten („05:00 PM“) sind breiter – nicht umbrechen. */
+  min-width: 46px;
+  white-space: nowrap;
   flex: none;
   color: var(--text-muted);
 }

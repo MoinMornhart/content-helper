@@ -25,6 +25,7 @@
 
 const { shell } = require('electron');
 const http = require('./http');
+const { t } = require('../i18n');
 
 const DEVICE_URL = 'https://id.twitch.tv/oauth2/device';
 const TOKEN_URL = 'https://id.twitch.tv/oauth2/token';
@@ -93,8 +94,8 @@ class TwitchAuth {
    */
   async begin(onUpdate = () => {}) {
     const clientId = this.clientId();
-    if (!clientId) throw new Error('Es ist keine Twitch-Client-ID hinterlegt.');
-    if (this.pending) throw new Error('Es läuft bereits eine Anmeldung.');
+    if (!clientId) throw new Error(t('Es ist keine Twitch-Client-ID hinterlegt.'));
+    if (this.pending) throw new Error(t('Es läuft bereits eine Anmeldung.'));
 
     const start = await http.json(DEVICE_URL, {
       method: 'POST',
@@ -103,8 +104,8 @@ class TwitchAuth {
     }).catch((error) => {
       throw new Error(
         /invalid client/i.test(error.message)
-          ? 'Diese Client-ID kennt Twitch nicht. Bitte im Entwicklerbereich prüfen.'
-          : `Twitch meldet: ${error.message}`
+          ? t('Diese Client-ID kennt Twitch nicht. Bitte im Entwicklerbereich prüfen.')
+          : t('Twitch meldet: {message}', { message: error.message })
       );
     });
 
@@ -155,7 +156,7 @@ class TwitchAuth {
         if (/authorization_pending|pending/i.test(error.message)) continue;
         if (/slow ?down/i.test(error.message)) { await wait(interval); continue; }
         this.pending = null;
-        throw new Error(`Twitch meldet: ${error.message}`);
+        throw new Error(t('Twitch meldet: {message}', { message: error.message }));
       }
 
       this.pending = null;
@@ -181,7 +182,7 @@ class TwitchAuth {
     }
 
     this.pending = null;
-    throw new Error('Die Anmeldung wurde nicht rechtzeitig bestätigt.');
+    throw new Error(t('Die Anmeldung wurde nicht rechtzeitig bestätigt.'));
   }
 
   cancel() {
@@ -195,7 +196,7 @@ class TwitchAuth {
     if (this.accessToken && Date.now() < this.accessExpires - 60_000) return this.accessToken;
 
     const { refreshToken, clientSecret } = this.config();
-    if (!refreshToken) throw new Error('Für Twitch ist keine Anmeldung hinterlegt.');
+    if (!refreshToken) throw new Error(t('Für Twitch ist keine Anmeldung hinterlegt.'));
 
     const params = {
       client_id: this.clientId(),
@@ -211,8 +212,8 @@ class TwitchAuth {
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams(params).toString(),
     }).catch((error) => {
-      this.saveConfig({ lastError: 'Die Anmeldung bei Twitch ist abgelaufen. Bitte erneut anmelden.' });
-      throw new Error(`Die Anmeldung bei Twitch ist abgelaufen (${error.message}). Bitte erneut anmelden.`);
+      this.saveConfig({ lastError: t('Die Anmeldung bei Twitch ist abgelaufen. Bitte erneut anmelden.') });
+      throw new Error(t('Die Anmeldung bei Twitch ist abgelaufen ({message}). Bitte erneut anmelden.', { message: error.message }));
     });
 
     this.accessToken = tokens.access_token;

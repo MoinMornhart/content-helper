@@ -7,21 +7,27 @@ import { h } from './dom.js';
 import * as fmt from './format.js';
 import { glyphRow, platform } from './platforms.js';
 import * as store from './store.js';
+import { t, mark } from './i18n.js';
 
-/** Der Lebensweg eines Beitrags, in dieser Reihenfolge. */
+/**
+ * Der Lebensweg eines Beitrags, in dieser Reihenfolge.
+ * Beschriftungen sind nur gekennzeichnet – übersetzt wird in statusLabel()/statusHint().
+ */
 export const STATUS = {
-  idea:      { label: 'Idee',           tone: 'idea',      hint: 'Noch nicht ausgearbeitet' },
-  draft:     { label: 'Entwurf',        tone: 'draft',     hint: 'In Arbeit' },
-  ready:     { label: 'Fertig',         tone: 'ready',     hint: 'Bereit zum Einplanen' },
-  scheduled: { label: 'Geplant',        tone: 'scheduled', hint: 'Termin steht' },
-  publishing:{ label: 'Wird veröffentlicht', tone: 'publishing', hint: 'Geht gerade automatisch raus' },
-  due:       { label: 'Jetzt fällig',   tone: 'due',       hint: 'Sollte jetzt raus' },
-  published: { label: 'Veröffentlicht', tone: 'published', hint: 'Erledigt' },
-  failed:    { label: 'Fehlgeschlagen', tone: 'failed',    hint: 'Automatisches Veröffentlichen hat nicht geklappt' },
-  missed:    { label: 'Verpasst',       tone: 'missed',    hint: 'Termin verstrichen' },
+  idea:      { label: mark('Idee'),           tone: 'idea',      hint: mark('Noch nicht ausgearbeitet') },
+  draft:     { label: mark('Entwurf'),        tone: 'draft',     hint: mark('In Arbeit') },
+  ready:     { label: mark('Fertig'),         tone: 'ready',     hint: mark('Bereit zum Einplanen') },
+  scheduled: { label: mark('Geplant'),        tone: 'scheduled', hint: mark('Termin steht') },
+  publishing:{ label: mark('Wird veröffentlicht'), tone: 'publishing', hint: mark('Geht gerade automatisch raus') },
+  due:       { label: mark('Jetzt fällig'),   tone: 'due',       hint: mark('Sollte jetzt raus') },
+  published: { label: mark('Veröffentlicht'), tone: 'published', hint: mark('Erledigt') },
+  failed:    { label: mark('Fehlgeschlagen'), tone: 'failed',    hint: mark('Automatisches Veröffentlichen hat nicht geklappt') },
+  missed:    { label: mark('Verpasst'),       tone: 'missed',    hint: mark('Termin verstrichen') },
 };
 
-export const statusLabel = (status) => STATUS[status]?.label || status;
+export const statusLabel = (status) => (STATUS[status] ? t(STATUS[status].label) : status);
+
+export const statusHint = (status) => (STATUS[status] ? t(STATUS[status].hint) : '');
 
 export const OPEN_STATUSES = ['idea', 'draft', 'ready', 'scheduled', 'publishing', 'due', 'failed', 'missed'];
 
@@ -44,7 +50,7 @@ export function blankPost(overrides = {}) {
 }
 
 export const titleOf = (post) =>
-  post.title?.trim() || fmt.truncate(post.body, 60) || 'Ohne Titel';
+  post.title?.trim() || fmt.truncate(post.body, 60) || t('Ohne Titel');
 
 /** Nach Termin sortiert, Beitraege ohne Termin ans Ende. */
 export function bySchedule(a, b) {
@@ -121,7 +127,7 @@ export function postRow(post, { onClick, showDate = false, actions } = {}) {
         text: [
           showDate && when ? fmt.date(when, 'day') : null,
           statusLabel(post.status),
-          progress !== null ? `Checkliste ${Math.round(progress * 100)} %` : null,
+          progress !== null ? t('Checkliste {percent} %', { percent: Math.round(progress * 100) }) : null,
         ].filter(Boolean).join(' · '),
       })),
     glyphRow(post.platforms || []),

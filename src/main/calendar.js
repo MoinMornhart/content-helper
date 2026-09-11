@@ -17,6 +17,8 @@
  * Termine aktualisiert statt sie zu verdoppeln.
  */
 
+const { t } = require('./i18n');
+
 const PRODID = '-//Content Helper//Creator-Plan//DE';
 
 /** Zeitangabe in UTC, wie sie im Format erwartet wird: 20260910T170000Z */
@@ -91,7 +93,7 @@ function buildCalendar(posts, {
     'METHOD:PUBLISH',
     line('X-WR-CALNAME', escape(name)),
     line('NAME', escape(name)),
-    line('X-WR-CALDESC', escape('Geplante Veröffentlichungen aus dem Content Helper')),
+    line('X-WR-CALDESC', escape(t('Geplante Veröffentlichungen aus dem Content Helper'))),
     'X-PUBLISHED-TTL:PT30M',
     'REFRESH-INTERVAL;VALUE=DURATION:PT30M',
   ];
@@ -107,21 +109,21 @@ function buildCalendar(posts, {
       .map((id) => platforms.get(id)?.name || id)
       .join(', ');
 
-    const title = post.title?.trim() || (post.body || '').slice(0, 60).trim() || 'Beitrag ohne Titel';
+    const title = post.title?.trim() || (post.body || '').slice(0, 60).trim() || t('Beitrag ohne Titel');
     const statusLabel = {
-      idea: 'Idee', draft: 'Entwurf', ready: 'Fertig', scheduled: 'Geplant',
-      due: 'Jetzt fällig', published: 'Veröffentlicht', missed: 'Verpasst',
+      idea: t('Idee'), draft: t('Entwurf'), ready: t('Fertig'), scheduled: t('Geplant'),
+      due: t('Jetzt fällig'), published: t('Veröffentlicht'), missed: t('Verpasst'),
     }[post.status] || post.status;
 
     // Die Beschreibung soll auch auf dem Handy allein tragen.
     const description = [
-      names ? `Kanäle: ${names}` : null,
-      `Status: ${statusLabel}`,
-      post.format ? `Format: ${post.format}` : null,
+      names ? t('Kanäle: {names}', { names }) : null,
+      t('Status: {status}', { status: statusLabel }),
+      post.format ? t('Format: {format}', { format: post.format }) : null,
       post.body ? `\n${post.body}` : null,
       (post.hashtags || []).length ? `\n${post.hashtags.map((tag) => `#${tag}`).join(' ')}` : null,
       (post.checklist || []).length
-        ? `\nCheckliste:\n${post.checklist.map((item) => `${item.done ? '[x]' : '[ ]'} ${item.text}`).join('\n')}`
+        ? `\n${t('Checkliste:')}\n${post.checklist.map((item) => `${item.done ? '[x]' : '[ ]'} ${item.text}`).join('\n')}`
         : null,
     ].filter(Boolean).join('\n');
 
@@ -150,7 +152,7 @@ function buildCalendar(posts, {
       out.push(
         'BEGIN:VALARM',
         'ACTION:DISPLAY',
-        line('DESCRIPTION', escape(`Gleich fällig: ${title}`)),
+        line('DESCRIPTION', escape(t('Gleich fällig: {title}', { title }))),
         line('TRIGGER', `-PT${reminderMinutes}M`),
         'END:VALARM'
       );

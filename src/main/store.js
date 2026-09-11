@@ -13,6 +13,7 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { t } = require('./i18n');
 
 const SCHEMA_VERSION = 1;
 
@@ -38,6 +39,8 @@ const DEFAULT_SETTINGS = {
   accentColor: null,
   appearance: { background: 'none', backgroundPath: null, dim: 55 },
   locale: 'de-DE',
+  /** Sprache der Oberfläche: auto (folgt Windows), de oder en. */
+  language: 'auto',
   startOfWeek: 1,
   notifications: true,
   leadTimeMinutes: 15,
@@ -198,7 +201,7 @@ class Store {
   // ---------------------------------------------------------------- Sammlungen
 
   list(collection) {
-    if (!this.cache.has(collection)) throw new Error(`Unbekannte Sammlung: ${collection}`);
+    if (!this.cache.has(collection)) throw new Error(t('Unbekannte Sammlung: {name}', { name: collection }));
     return this.cache.get(collection);
   }
 
@@ -242,7 +245,7 @@ class Store {
 
   /** Ersetzt eine ganze Sammlung (Import, Sortierung, Massenbearbeitung). */
   replace(collection, items) {
-    if (!this.cache.has(collection)) throw new Error(`Unbekannte Sammlung: ${collection}`);
+    if (!this.cache.has(collection)) throw new Error(t('Unbekannte Sammlung: {name}', { name: collection }));
     const before = new Map(this.cache.get(collection).map((entry) => [entry.id, entry]));
     this.cache.set(collection, items);
     this._scheduleWrite(collection);
@@ -348,7 +351,7 @@ class Store {
 
   importAll(bundle, { merge = false } = {}) {
     if (!bundle || typeof bundle !== 'object' || !bundle.collections) {
-      throw new Error('Die Datei enthaelt kein gueltiges Content-Helper-Backup.');
+      throw new Error(t('Die Datei enthaelt kein gueltiges Content-Helper-Backup.'));
     }
     for (const name of Object.keys(COLLECTIONS)) {
       const incoming = Array.isArray(bundle.collections[name]) ? bundle.collections[name] : [];

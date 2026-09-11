@@ -5,6 +5,7 @@
  */
 
 const { PermanentError } = require('../publisher');
+const { t, mark } = require('../../i18n');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -26,14 +27,17 @@ function permanent(message) {
   return new PermanentError(message);
 }
 
-const RELOGIN = 'Bitte unter „Einrichten → Veröffentlichen“ neu anmelden.';
+/** Wird erst beim Melden übersetzt: t(RELOGIN). */
+const RELOGIN = mark('Bitte unter „Einrichten → Veröffentlichen“ neu anmelden.');
 
 /** Übersetzt einen HTTP-Status in die passende Fehlerart. */
 function statusError(name, status, detail) {
-  if (status === 401) return permanent(`${name}: Die Anmeldung ist abgelaufen oder wurde zurückgezogen. ${RELOGIN}`);
-  if (status === 429) return retryable(`${name} bremst gerade – zu viele Anfragen. Es geht gleich weiter.`);
-  if (status >= 500) return retryable(`${name} hat gerade ein Problem (Status ${status}). Neuer Versuch folgt.`);
-  return permanent(`${name} meldet: ${detail || `Status ${status}`}`);
+  if (status === 401) {
+    return permanent(t('{name}: Die Anmeldung ist abgelaufen oder wurde zurückgezogen. {relogin}', { name, relogin: t(RELOGIN) }));
+  }
+  if (status === 429) return retryable(t('{name} bremst gerade – zu viele Anfragen. Es geht gleich weiter.', { name }));
+  if (status >= 500) return retryable(t('{name} hat gerade ein Problem (Status {status}). Neuer Versuch folgt.', { name, status }));
+  return permanent(t('{name} meldet: {detail}', { name, detail: detail || t('Status {status}', { status }) }));
 }
 
 /** Wartet, bis eine Bedingung erfüllt ist – für „wird verarbeitet“ auf Plattformseite. */

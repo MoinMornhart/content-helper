@@ -15,6 +15,7 @@
  */
 
 const { Notification, clipboard, shell } = require('electron');
+const { t } = require('./i18n');
 
 const TICK_MS = 30_000;
 const MISSED_AFTER_MS = 6 * 60 * 60 * 1000;
@@ -76,8 +77,11 @@ class Scheduler {
         if (post.status === 'scheduled' && due > now && due - now <= lead && !post.preNotifiedAt) {
           this.store.update('posts', post.id, { preNotifiedAt: new Date().toISOString() });
           this.notify(
-            `Geht gleich raus: ${this.titleOf(post)}`,
-            `In ${Math.max(1, Math.round((due - now) / 60000))} Minuten automatisch auf ${this.platformNames(post)}.`,
+            t('Geht gleich raus: {title}', { title: this.titleOf(post) }),
+            t('In {minutes} Minuten automatisch auf {channels}.', {
+              minutes: Math.max(1, Math.round((due - now) / 60000)),
+              channels: this.platformNames(post),
+            }),
             settings
           );
           changed.push(post.id);
@@ -93,8 +97,11 @@ class Scheduler {
         } else if (due - now <= lead && !post.preNotifiedAt) {
           this.store.update('posts', post.id, { preNotifiedAt: new Date().toISOString() });
           this.notify(
-            `Gleich faellig: ${this.titleOf(post)}`,
-            `In ${Math.max(1, Math.round((due - now) / 60000))} Minuten fuer ${this.platformNames(post)}.`,
+            t('Gleich faellig: {title}', { title: this.titleOf(post) }),
+            t('In {minutes} Minuten fuer {channels}.', {
+              minutes: Math.max(1, Math.round((due - now) / 60000)),
+              channels: this.platformNames(post),
+            }),
             settings
           );
           changed.push(post.id);
@@ -126,10 +133,13 @@ class Scheduler {
 
     const names = (ids) => ids.map((id) => this.platforms.get(id)?.name || id).join(', ');
     this.notify(
-      `Jetzt faellig: ${this.titleOf(post)}`,
+      t('Jetzt faellig: {title}', { title: this.titleOf(post) }),
       [
-        automatic.length ? `${names(automatic)} geht automatisch raus.` : null,
-        manual.length ? `Selbst posten: ${names(manual)}${settings.copyToClipboardOnDue ? ' – Text liegt in der Zwischenablage.' : ''}` : null,
+        automatic.length ? t('{channels} geht automatisch raus.', { channels: names(automatic) }) : null,
+        manual.length
+          ? t('Selbst posten: {channels}', { channels: names(manual) })
+            + (settings.copyToClipboardOnDue ? t(' – Text liegt in der Zwischenablage.') : '')
+          : null,
       ].filter(Boolean).join(' '),
       settings
     );
@@ -165,14 +175,14 @@ class Scheduler {
   }
 
   titleOf(post) {
-    return post.title?.trim() || post.body?.slice(0, 60).trim() || 'Beitrag ohne Titel';
+    return post.title?.trim() || post.body?.slice(0, 60).trim() || t('Beitrag ohne Titel');
   }
 
   platformNames(post) {
     const names = (post.platforms || []).map((id) => this.platforms.get(id)?.name || id);
-    if (!names.length) return 'ohne Kanal';
+    if (!names.length) return t('ohne Kanal');
     if (names.length <= 3) return names.join(', ');
-    return `${names.slice(0, 3).join(', ')} und ${names.length - 3} weitere`;
+    return t('{names} und {count} weitere', { names: names.slice(0, 3).join(', '), count: names.length - 3 });
   }
 
   notify(title, body, settings = this.store.settings()) {

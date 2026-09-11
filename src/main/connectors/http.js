@@ -10,6 +10,7 @@
 
 const https = require('https');
 const { URL } = require('url');
+const { t } = require('../i18n');
 
 const TIMEOUT_MS = 15_000;
 const MAX_REDIRECTS = 3;
@@ -30,10 +31,10 @@ function request(url, options = {}) {
     try {
       target = new URL(url);
     } catch {
-      return reject(new Error(`Ungültige Adresse: ${url}`));
+      return reject(new Error(t('Ungültige Adresse: {url}', { url })));
     }
     if (target.protocol !== 'https:') {
-      return reject(new Error('Nur verschlüsselte Verbindungen sind erlaubt.'));
+      return reject(new Error(t('Nur verschlüsselte Verbindungen sind erlaubt.')));
     }
 
     const req = https.request(
@@ -53,7 +54,7 @@ function request(url, options = {}) {
         // Weiterleitungen selbst verfolgen, damit die Zeitgrenze erhalten bleibt.
         if ([301, 302, 303, 307, 308].includes(response.statusCode) && response.headers.location) {
           response.resume();
-          if (redirects >= MAX_REDIRECTS) return reject(new Error('Zu viele Weiterleitungen.'));
+          if (redirects >= MAX_REDIRECTS) return reject(new Error(t('Zu viele Weiterleitungen.')));
           const next = new URL(response.headers.location, url).toString();
           return resolve(request(next, { ...options, redirects: redirects + 1 }));
         }
@@ -65,7 +66,7 @@ function request(url, options = {}) {
           size += Buffer.byteLength(chunk);
           if (size > MAX_BYTES) {
             response.destroy();
-            return reject(new Error('Die Antwort war unerwartet gross.'));
+            return reject(new Error(t('Die Antwort war unerwartet gross.')));
           }
           text += chunk;
         });
@@ -75,13 +76,13 @@ function request(url, options = {}) {
 
     req.on('timeout', () => {
       req.destroy();
-      reject(new Error('Zeitüberschreitung – die Gegenstelle hat nicht geantwortet.'));
+      reject(new Error(t('Zeitüberschreitung – die Gegenstelle hat nicht geantwortet.')));
     });
 
     req.on('error', (error) => {
       reject(new Error(
         error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN'
-          ? 'Keine Verbindung zum Internet.'
+          ? t('Keine Verbindung zum Internet.')
           : error.message
       ));
     });
@@ -120,9 +121,9 @@ function uploadFile(url, options) {
     try {
       target = new URL(url);
     } catch {
-      return reject(new Error(`Ungültige Adresse: ${url}`));
+      return reject(new Error(t('Ungültige Adresse: {url}', { url })));
     }
-    if (target.protocol !== 'https:') return reject(new Error('Nur verschlüsselte Verbindungen sind erlaubt.'));
+    if (target.protocol !== 'https:') return reject(new Error(t('Nur verschlüsselte Verbindungen sind erlaubt.')));
 
     const req = https.request({
       method,
@@ -145,11 +146,11 @@ function uploadFile(url, options) {
 
     req.on('timeout', () => {
       req.destroy();
-      reject(Object.assign(new Error('Die Verbindung ist beim Hochladen stehen geblieben.'), { retryable: true }));
+      reject(Object.assign(new Error(t('Die Verbindung ist beim Hochladen stehen geblieben.')), { retryable: true }));
     });
     req.on('error', (error) => {
       reject(Object.assign(new Error(
-        error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN' ? 'Keine Verbindung zum Internet.' : error.message
+        error.code === 'ENOTFOUND' || error.code === 'EAI_AGAIN' ? t('Keine Verbindung zum Internet.') : error.message
       ), { retryable: true }));
     });
 
@@ -167,7 +168,7 @@ function uploadFile(url, options) {
     });
     stream.on('error', (error) => {
       req.destroy();
-      reject(new Error(`Die Videodatei ließ sich nicht lesen: ${error.message}`));
+      reject(new Error(t('Die Videodatei ließ sich nicht lesen: {message}', { message: error.message })));
     });
     stream.on('end', () => {
       if (suffix.length) req.write(suffix);
@@ -188,8 +189,8 @@ async function json(url, options = {}) {
   try {
     payload = JSON.parse(response.text);
   } catch {
-    if (response.status >= 400) throw new Error(`Die Gegenstelle antwortete mit Status ${response.status}.`);
-    throw new Error('Die Antwort war kein gültiges JSON.');
+    if (response.status >= 400) throw new Error(t('Die Gegenstelle antwortete mit Status {status}.', { status: response.status }));
+    throw new Error(t('Die Antwort war kein gültiges JSON.'));
   }
 
   if (response.status >= 400) {
@@ -202,7 +203,7 @@ async function json(url, options = {}) {
 /** Anfrage mit Textantwort, etwa für Feeds und Webseiten. */
 async function text(url, options = {}) {
   const response = await request(url, options);
-  if (response.status >= 400) throw new Error(`Die Gegenstelle antwortete mit Status ${response.status}.`);
+  if (response.status >= 400) throw new Error(t('Die Gegenstelle antwortete mit Status {status}.', { status: response.status }));
   return response.text;
 }
 

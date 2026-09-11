@@ -14,17 +14,18 @@ const { saveManual } = require('./publish/credentials');
 const oauth = require('./publish/oauth');
 const { probe } = require('./publish/media-info');
 const { detectKeys } = require('./publish/key-detect');
+const { t } = require('./i18n');
 
-const MEDIA_FILTERS = [
-  { name: 'Medien', extensions: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp3', 'wav', 'm4a'] },
-  { name: 'Videos', extensions: ['mp4', 'mov', 'mkv', 'webm', 'avi'] },
-  { name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
-  { name: 'Alle Dateien', extensions: ['*'] },
+const mediaFilters = () => [
+  { name: t('Medien'), extensions: ['mp4', 'mov', 'mkv', 'webm', 'avi', 'png', 'jpg', 'jpeg', 'gif', 'webp', 'mp3', 'wav', 'm4a'] },
+  { name: t('Videos'), extensions: ['mp4', 'mov', 'mkv', 'webm', 'avi'] },
+  { name: t('Bilder'), extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] },
+  { name: t('Alle Dateien'), extensions: ['*'] },
 ];
 
 function assertCollection(name) {
   if (!Object.prototype.hasOwnProperty.call(COLLECTIONS, name)) {
-    throw new Error(`Unbekannte Sammlung: ${name}`);
+    throw new Error(t('Unbekannte Sammlung: {name}', { name }));
   }
   return name;
 }
@@ -67,9 +68,9 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   handle('backup:export', async () => {
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
     const result = await dialog.showSaveDialog(getWindow(), {
-      title: 'Sicherung speichern',
+      title: t('Sicherung speichern'),
       defaultPath: path.join(app.getPath('documents'), `content-helper-backup-${stamp}.json`),
-      filters: [{ name: 'JSON-Sicherung', extensions: ['json'] }],
+      filters: [{ name: t('JSON-Sicherung'), extensions: ['json'] }],
     });
     if (result.canceled || !result.filePath) return { canceled: true };
     store.flush();
@@ -79,9 +80,9 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
 
   handle('backup:import', async ({ merge }) => {
     const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Sicherung einlesen',
+      title: t('Sicherung einlesen'),
       properties: ['openFile'],
-      filters: [{ name: 'JSON-Sicherung', extensions: ['json'] }],
+      filters: [{ name: t('JSON-Sicherung'), extensions: ['json'] }],
     });
     if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
     const bundle = JSON.parse(fs.readFileSync(result.filePaths[0], 'utf8'));
@@ -97,9 +98,9 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   // ------------------------------------------------------------- Medien
   handle('media:pick', async () => {
     const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Medien hinzufuegen',
+      title: t('Medien hinzufuegen'),
       properties: ['openFile', 'multiSelections'],
-      filters: MEDIA_FILTERS,
+      filters: mediaFilters(),
     });
     if (result.canceled) return [];
     return result.filePaths.map((filePath) => {
@@ -123,9 +124,9 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   /** Bild fuer den Hintergrund der Oberflaeche auswaehlen. */
   handle('media:pickImage', async () => {
     const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Hintergrundbild wählen',
+      title: t('Hintergrundbild wählen'),
       properties: ['openFile'],
-      filters: [{ name: 'Bilder', extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
+      filters: [{ name: t('Bilder'), extensions: ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp'] }],
     });
     if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
     const filePath = result.filePaths[0];
@@ -151,7 +152,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   // ------------------------------------------------------------- Dateien
   handle('files:readText', async ({ filters }) => {
     const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Datei einlesen',
+      title: t('Datei einlesen'),
       properties: ['openFile'],
       filters: filters?.length ? filters : [{ name: 'CSV', extensions: ['csv', 'tsv', 'txt'] }],
     });
@@ -164,9 +165,9 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
 
   handle('files:saveText', async ({ defaultName, text, filters }) => {
     const result = await dialog.showSaveDialog(getWindow(), {
-      title: 'Datei speichern',
+      title: t('Datei speichern'),
       defaultPath: path.join(app.getPath('documents'), defaultName || 'export.txt'),
-      filters: filters?.length ? filters : [{ name: 'Textdatei', extensions: ['txt'] }],
+      filters: filters?.length ? filters : [{ name: t('Textdatei'), extensions: ['txt'] }],
     });
     if (result.canceled || !result.filePath) return { canceled: true };
     fs.writeFileSync(result.filePath, text ?? '', 'utf8');
@@ -186,9 +187,9 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
     });
 
     const result = await dialog.showSaveDialog(getWindow(), {
-      title: 'Kalender speichern',
+      title: t('Kalender speichern'),
       defaultPath: path.join(app.getPath('documents'), 'content-helper.ics'),
-      filters: [{ name: 'Kalender', extensions: ['ics'] }],
+      filters: [{ name: t('Kalender'), extensions: ['ics'] }],
     });
     if (result.canceled || !result.filePath) return { canceled: true };
 
@@ -229,7 +230,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
       const channel = await connector.resolve(credentials.channel);
       return { channel, status: connector.status() };
     }
-    throw new Error(`Unbekannte Verbindung: ${name}`);
+    throw new Error(t('Unbekannte Verbindung: {name}', { name }));
   });
 
   // --- Anmeldung mit dem Twitch-Konto statt Kennung und Geheimnis
@@ -295,7 +296,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   handle('youtube:syncChannel', async ({ accountId }) => {
     connectors.assertFetchesHere();
     const channel = connectors.youtube.channel(accountId);
-    if (!channel) throw new Error('Dieser Kanal ist nicht mehr verbunden.');
+    if (!channel) throw new Error(t('Dieser Kanal ist nicht mehr verbunden.'));
     try {
       return await connectors.youtube.syncChannel(channel);
     } catch (error) {
@@ -316,12 +317,12 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
       const { videos, source } = await connectors.youtube.recentVideos(accountId || undefined);
       return { videos: videos.slice(0, 5), source };
     }
-    throw new Error(`Unbekannte Verbindung: ${name}`);
+    throw new Error(t('Unbekannte Verbindung: {name}', { name }));
   });
 
   // ------------------------------------------------------------- Veröffentlichen
   const needPublisher = () => {
-    if (!publisher) throw new Error('Das Veröffentlichen ist nicht gestartet.');
+    if (!publisher) throw new Error(t('Das Veröffentlichen ist nicht gestartet.'));
     return publisher;
   };
   const publishStatus = () => (publisher
@@ -330,7 +331,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   /** Instagram und Facebook teilen sich die Meta-Anmeldung. */
   const signInTarget = (id) => {
     const target = id === 'meta' ? needPublisher().meta : needPublisher().byId[id];
-    if (!target) throw new Error(`Unbekannte Plattform: ${id}`);
+    if (!target) throw new Error(t('Unbekannte Plattform: {id}', { id }));
     return target;
   };
 
@@ -370,13 +371,13 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
   /** Einrichten: heruntergeladene Datei mit den Kennungen einlesen (etwa Googles JSON). */
   handle('publish:importFile', async ({ provider }) => {
     const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Datei mit den Zugangsdaten wählen',
+      title: t('Datei mit den Zugangsdaten wählen'),
       properties: ['openFile'],
-      filters: [{ name: 'JSON oder Text', extensions: ['json', 'txt'] }, { name: 'Alle Dateien', extensions: ['*'] }],
+      filters: [{ name: t('JSON oder Text'), extensions: ['json', 'txt'] }, { name: t('Alle Dateien'), extensions: ['*'] }],
     });
     if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
     const file = result.filePaths[0];
-    if (fs.statSync(file).size > 1024 * 1024) throw new Error('Die Datei ist zu groß für Zugangsdaten.');
+    if (fs.statSync(file).size > 1024 * 1024) throw new Error(t('Die Datei ist zu groß für Zugangsdaten.'));
     return { canceled: false, found: detectKeys(provider, fs.readFileSync(file, 'utf8')) };
   });
 
@@ -386,7 +387,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
 
   handle('sync:pickFolder', async () => {
     const result = await dialog.showOpenDialog(getWindow(), {
-      title: 'Cloud-Ordner wählen',
+      title: t('Cloud-Ordner wählen'),
       properties: ['openDirectory', 'createDirectory'],
     });
     if (result.canceled || !result.filePaths?.[0]) return { canceled: true };
@@ -414,7 +415,7 @@ function registerIpc(store, scheduler, updater, companion, connectors, sync, get
 
   // ------------------------------------------------------------- System
   handle('system:openExternal', ({ url }) => {
-    if (!/^https?:\/\//i.test(url || '')) throw new Error('Nur http- und https-Adressen sind erlaubt.');
+    if (!/^https?:\/\//i.test(url || '')) throw new Error(t('Nur http- und https-Adressen sind erlaubt.'));
     return shell.openExternal(url);
   });
 

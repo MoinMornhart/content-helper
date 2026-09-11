@@ -23,6 +23,7 @@ import * as store from './store.js';
 import * as fmt from './format.js';
 import { platform, metric } from './platforms.js';
 import { titles as titleSuggestions, hooks as hookSuggestions } from './writing.js';
+import { t, mark } from './i18n.js';
 
 /** Ab so vielen gemessenen Beiträgen traut sich der Assistent eine Aussage zu. */
 const MIN_POSTS = 5;
@@ -34,15 +35,18 @@ const WINNER_FACTOR = 1.5;
 const LIFT_THRESHOLD = 1.4;
 
 const STOPWORDS = new Set([
-  'und', 'oder', 'aber', 'dass', 'weil', 'wenn', 'dann', 'noch', 'auch', 'schon', 'mehr', 'sehr',
-  'eine', 'einen', 'einem', 'eines', 'der', 'die', 'das', 'den', 'dem', 'des', 'ich', 'wir', 'ihr',
-  'sie', 'man', 'mit', 'ohne', 'für', 'fuer', 'vom', 'zum', 'zur', 'ist', 'sind', 'war', 'wird',
-  'hat', 'habe', 'haben', 'kann', 'muss', 'soll', 'nicht', 'nur', 'hier', 'dort', 'was', 'wie',
-  'warum', 'wer', 'alle', 'jede', 'jeder', 'sich', 'sein', 'ihre', 'euer', 'diese', 'dieser',
-  'mein', 'meine', 'dein', 'deine', 'euch', 'uns', 'von', 'auf', 'aus', 'bei', 'nach', 'über',
-  'unter', 'vor', 'durch', 'gegen', 'ohne', 'um', 'als', 'wie', 'so', 'sehr', 'ganz', 'immer',
-  'the', 'and', 'for', 'you', 'your', 'with', 'this', 'that', 'from', 'have', 'was', 'are', 'but',
-  'new', 'how', 'why', 'what', 'best', 'top', 'video', 'stream', 'part', 'folge', 'teil',
+  'und', 'oder', 'aber', 'dass', 'weil', 'wenn', 'dann', 'noch', 'auch', 'schon', 'mehr', 'sehr', // i18n-ignore
+  'eine', 'einen', 'einem', 'eines', 'der', 'die', 'das', 'den', 'dem', 'des', 'ich', 'wir', 'ihr', // i18n-ignore
+  'sie', 'man', 'mit', 'ohne', 'für', 'fuer', 'vom', 'zum', 'zur', 'ist', 'sind', 'war', 'wird', // i18n-ignore
+  'hat', 'habe', 'haben', 'kann', 'muss', 'soll', 'nicht', 'nur', 'hier', 'dort', 'was', 'wie', // i18n-ignore
+  'warum', 'wer', 'alle', 'jede', 'jeder', 'sich', 'sein', 'ihre', 'euer', 'diese', 'dieser', // i18n-ignore
+  'mein', 'meine', 'dein', 'deine', 'euch', 'uns', 'von', 'auf', 'aus', 'bei', 'nach', 'über', // i18n-ignore
+  'unter', 'vor', 'durch', 'gegen', 'ohne', 'um', 'als', 'wie', 'so', 'sehr', 'ganz', 'immer', // i18n-ignore
+  'the', 'and', 'for', 'you', 'your', 'with', 'this', 'that', 'from', 'have', 'was', 'are', 'but', // i18n-ignore
+  'new', 'how', 'why', 'what', 'best', 'top', 'video', 'stream', 'part', 'folge', 'teil', // i18n-ignore
+  'they', 'them', 'then', 'than', 'when', 'where', 'which', 'will', 'would', 'could', 'should', // i18n-ignore
+  'there', 'their', 'about', 'into', 'just', 'like', 'more', 'some', 'very', 'been', 'were', 'also', // i18n-ignore
+  'only', 'over', 'here', 'these', 'those', 'does', 'really', 'every', 'episode', // i18n-ignore
 ]);
 
 // ------------------------------------------------------------------ Werkzeuge
@@ -196,13 +200,14 @@ export function titleShapes({ platformId = null, accountId = null, days = 365 } 
   const rows = measured({ platformId, accountId, days });
   if (rows.length < MIN_POSTS) return [];
 
+  // Die Erkennung versteht deutsche und englische Titel („how to“, „I tried“).
   const shapes = [
-    { id: 'number', label: 'Zahl im Titel', test: (title) => /\d/.test(title), hint: 'Eine konkrete Zahl macht das Versprechen greifbar.' },
-    { id: 'question', label: 'Frage im Titel', test: (title) => title.includes('?'), hint: 'Eine Frage öffnet eine Lücke, die man schliessen will.' },
-    { id: 'howto', label: 'Anleitung („wie“, „so“)', test: (title) => /\b(wie|so)\b/i.test(title), hint: 'Anleitungen versprechen ein Ergebnis.' },
-    { id: 'versus', label: 'Vergleich („gegen“, „vs“)', test: (title) => /\b(gegen|vs\.?)\b/i.test(title), hint: 'Ein Vergleich erzeugt Spannung ohne Aufwand.' },
-    { id: 'personal', label: 'Ich-Form („ich habe“)', test: (title) => /\bich\b/i.test(title), hint: 'Selbsterlebtes wirkt glaubwürdiger als Allgemeinplätze.' },
-    { id: 'short', label: 'Kurzer Titel (unter 40 Zeichen)', test: (title) => title.length < 40, hint: 'Kurze Titel werden auf dem Handy vollständig gelesen.' },
+    { id: 'number', label: t('Zahl im Titel'), test: (title) => /\d/.test(title), hint: t('Eine konkrete Zahl macht das Versprechen greifbar.') },
+    { id: 'question', label: t('Frage im Titel'), test: (title) => title.includes('?'), hint: t('Eine Frage öffnet eine Lücke, die man schliessen will.') },
+    { id: 'howto', label: t('Anleitung („wie“, „so“)'), test: (title) => /\b(wie|so|how)\b/i.test(title), hint: t('Anleitungen versprechen ein Ergebnis.') },
+    { id: 'versus', label: t('Vergleich („gegen“, „vs“)'), test: (title) => /\b(gegen|vs\.?|versus)\b/i.test(title), hint: t('Ein Vergleich erzeugt Spannung ohne Aufwand.') },
+    { id: 'personal', label: t('Ich-Form („ich habe“)'), test: (title) => /\b(ich|i)\b/i.test(title), hint: t('Selbsterlebtes wirkt glaubwürdiger als Allgemeinplätze.') },
+    { id: 'short', label: t('Kurzer Titel (unter 40 Zeichen)'), test: (title) => title.length < 40, hint: t('Kurze Titel werden auf dem Handy vollständig gelesen.') },
   ];
 
   const results = [];
@@ -275,11 +280,17 @@ export function suggestions({ platformId = null, accountId = null, days = 365, l
     const example = topic.examples[0];
     out.push({
       id: `topic:${topic.word}`,
-      kind: 'Thema wiederholen',
+      kind: t('Thema wiederholen'),
       topic: topic.word,
       platformId: topic.platformId,
-      title: `Mehr zum Thema „${topic.label}“`,
-      why: `Beiträge mit „${topic.label}“ im Titel erreichen bei dir im Mittel ${show(topic.withMedian, topic.metricKey)} – das ist das ${factor(topic.lift)}-fache deiner übrigen Beiträge (${show(topic.withoutMedian, topic.metricKey)}). Das ist kein Zufallstreffer, sondern zieht sich durch ${fmt.plural(topic.count, 'Beitrag', 'Beiträge')}.`,
+      title: t('Mehr zum Thema „{topic}“', { topic: topic.label }),
+      why: t('Beiträge mit „{topic}“ im Titel erreichen bei dir im Mittel {value} – das ist das {factor}-fache deiner übrigen Beiträge ({others}). Das ist kein Zufallstreffer, sondern zieht sich durch {posts}.', {
+        topic: topic.label,
+        value: show(topic.withMedian, topic.metricKey),
+        factor: factor(topic.lift),
+        others: show(topic.withoutMedian, topic.metricKey),
+        posts: fmt.plural(topic.count, mark('Beitrag'), mark('Beiträge')),
+      }),
       evidence: topic.examples.map((row) => `${fmt.truncate(row.title, 60)} – ${show(row.value, row.metricKey)}`),
       titles: titleSuggestions(topic.label, 4),
       hook: hookSuggestions(topic.label, 1)[0],
@@ -295,12 +306,19 @@ export function suggestions({ platformId = null, accountId = null, days = 365, l
     const topic = keyword ? casingFrom(keyword, [top]) : top.title.split(/\s+/)[0];
     out.push({
       id: `winner:${top.entry.id}`,
-      kind: 'Erfolg fortsetzen',
+      kind: t('Erfolg fortsetzen'),
       topic,
       platformId: top.platformId,
-      title: `Nachfolger für „${fmt.truncate(top.title, 50)}“`,
-      why: `Dieser Beitrag liegt mit ${show(top.value, top.metricKey)} beim ${factor(top.lift)}-fachen deines Mittelwerts (${show(baseline, top.metricKey)}). Ein Publikum, das einmal zugegriffen hat, greift beim selben Thema wieder zu – der zweite Teil ist fast immer günstiger als ein neues Thema.`,
-      evidence: [`Veröffentlicht ${fmt.date(top.at, 'medium')}${top.format ? ` · Format: ${top.format}` : ''}`],
+      title: t('Nachfolger für „{title}“', { title: fmt.truncate(top.title, 50) }),
+      why: t('Dieser Beitrag liegt mit {value} beim {factor}-fachen deines Mittelwerts ({baseline}). Ein Publikum, das einmal zugegriffen hat, greift beim selben Thema wieder zu – der zweite Teil ist fast immer günstiger als ein neues Thema.', {
+        value: show(top.value, top.metricKey),
+        factor: factor(top.lift),
+        baseline: show(baseline, top.metricKey),
+      }),
+      evidence: [[
+        t('Veröffentlicht {date}', { date: fmt.date(top.at, 'medium') }),
+        top.format ? t('Format: {format}', { format: top.format }) : null,
+      ].filter(Boolean).join(' · ')],
       titles: titleSuggestions(topic, 4),
       hook: hookSuggestions(topic, 1)[0],
       format: top.format,
@@ -312,12 +330,17 @@ export function suggestions({ platformId = null, accountId = null, days = 365, l
   for (const shape of shapes.slice(0, 2)) {
     out.push({
       id: `shape:${shape.id}`,
-      kind: 'Verpackung ändern',
+      kind: t('Verpackung ändern'),
       topic: null,
       platformId,
-      title: `Häufiger: ${shape.label}`,
-      why: `Titel dieser Bauart erreichen bei dir ${show(shape.yesMedian, shape.metricKey)} gegenüber ${show(shape.noMedian, shape.metricKey)} bei den übrigen – das ${factor(shape.lift)}-fache. ${shape.hint}`,
-      evidence: [`Grundlage: ${fmt.plural(shape.count, 'Beitrag', 'Beiträge')} mit diesem Merkmal`],
+      title: t('Häufiger: {shape}', { shape: shape.label }),
+      why: t('Titel dieser Bauart erreichen bei dir {value} gegenüber {others} bei den übrigen – das {factor}-fache. {hint}', {
+        value: show(shape.yesMedian, shape.metricKey),
+        others: show(shape.noMedian, shape.metricKey),
+        factor: factor(shape.lift),
+        hint: shape.hint,
+      }),
+      evidence: [t('Grundlage: {posts} mit diesem Merkmal', { posts: fmt.plural(shape.count, mark('Beitrag'), mark('Beiträge')) })],
       titles: [],
       hook: null,
       format: null,

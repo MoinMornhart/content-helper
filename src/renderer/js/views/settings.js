@@ -13,42 +13,43 @@ import * as store from '../lib/store.js';
 import { PLATFORMS, glyph } from '../lib/platforms.js';
 import { toast, confirm, toggle } from '../lib/ui.js';
 import { applyTheme } from '../app.js';
+import { t, mark } from '../lib/i18n.js';
 
-export const title = 'Einstellungen';
-export const lead = 'Deine Daten liegen auf deinen eigenen Geräten. Kein Konto bei uns, kein Abo.';
+export const title = mark('Einstellungen');
+export const lead = mark('Deine Daten liegen auf deinen eigenen Geräten. Kein Konto bei uns, kein Abo.');
 
 const TABS = [
-  { id: 'look', label: 'Erscheinungsbild' },
-  { id: 'channels', label: 'Kanäle' },
-  { id: 'goals', label: 'Ziele' },
-  { id: 'reminders', label: 'Erinnerungen' },
-  { id: 'updates', label: 'Aktualisierung' },
-  { id: 'data', label: 'Daten' },
-  { id: 'about', label: 'Über' },
+  { id: 'look', label: mark('Erscheinungsbild') },
+  { id: 'channels', label: mark('Kanäle') },
+  { id: 'goals', label: mark('Ziele') },
+  { id: 'reminders', label: mark('Erinnerungen') },
+  { id: 'updates', label: mark('Aktualisierung') },
+  { id: 'data', label: mark('Daten') },
+  { id: 'about', label: mark('Über') },
 ];
 
 const ACCENTS = [
-  { id: 'violet', color: '#8b5cf6', label: 'Violett' },
-  { id: 'blue', color: '#3b82f6', label: 'Blau' },
-  { id: 'cyan', color: '#06b6d4', label: 'Türkis' },
-  { id: 'emerald', color: '#10b981', label: 'Grün' },
-  { id: 'lime', color: '#84cc16', label: 'Limette' },
-  { id: 'amber', color: '#f59e0b', label: 'Bernstein' },
-  { id: 'orange', color: '#f97316', label: 'Orange' },
-  { id: 'rose', color: '#f43f5e', label: 'Rot' },
-  { id: 'slate', color: '#94a3b8', label: 'Grau' },
+  { id: 'violet', color: '#8b5cf6', label: mark('Violett') },
+  { id: 'blue', color: '#3b82f6', label: mark('Blau') },
+  { id: 'cyan', color: '#06b6d4', label: mark('Türkis') },
+  { id: 'emerald', color: '#10b981', label: mark('Grün') },
+  { id: 'lime', color: '#84cc16', label: mark('Limette') },
+  { id: 'amber', color: '#f59e0b', label: mark('Bernstein') },
+  { id: 'orange', color: '#f97316', label: mark('Orange') },
+  { id: 'rose', color: '#f43f5e', label: mark('Rot') },
+  { id: 'slate', color: '#94a3b8', label: mark('Grau') },
 ];
 
 /** Vorgefertigte Hintergründe – reine Verläufe, also ohne Bilddateien. */
 const BACKGROUNDS = [
-  { id: 'none', label: 'Ohne', preview: 'linear-gradient(160deg,#14121c,#0b0912)' },
-  { id: 'aurora', label: 'Nordlicht', preview: 'radial-gradient(60% 60% at 20% 20%,#7c3aed,transparent),radial-gradient(60% 60% at 80% 30%,#ec4899,transparent),linear-gradient(160deg,#14102a,#060410)' },
-  { id: 'ocean', label: 'Tiefsee', preview: 'radial-gradient(70% 70% at 25% 80%,#0891b2,transparent),radial-gradient(60% 60% at 80% 15%,#1d4ed8,transparent),linear-gradient(180deg,#041225,#02060f)' },
-  { id: 'forest', label: 'Wald', preview: 'radial-gradient(65% 65% at 25% 25%,#15803d,transparent),radial-gradient(65% 65% at 75% 80%,#065f46,transparent),linear-gradient(170deg,#06140d,#020806)' },
-  { id: 'sunset', label: 'Abendrot', preview: 'radial-gradient(65% 65% at 20% 20%,#f97316,transparent),radial-gradient(65% 65% at 80% 80%,#be123c,transparent),linear-gradient(165deg,#1c0a10,#070305)' },
-  { id: 'studio', label: 'Studio', preview: 'radial-gradient(90% 45% at 50% 0%,rgba(255,255,255,.16),transparent),linear-gradient(180deg,#14131a,#08070c)' },
-  { id: 'grid', label: 'Raster', preview: 'linear-gradient(rgba(139,92,246,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.35) 1px,transparent 1px),linear-gradient(150deg,#0f0c1c,#06050c)' },
-  { id: 'mesh', label: 'Farbnebel', preview: 'radial-gradient(45% 45% at 15% 25%,rgba(139,92,246,.85),transparent),radial-gradient(45% 45% at 75% 20%,rgba(236,72,153,.8),transparent),radial-gradient(50% 50% at 30% 85%,rgba(6,182,212,.75),transparent),linear-gradient(150deg,#0d0b16,#07060d)' },
+  { id: 'none', label: mark('Ohne'), preview: 'linear-gradient(160deg,#14121c,#0b0912)' },
+  { id: 'aurora', label: mark('Nordlicht'), preview: 'radial-gradient(60% 60% at 20% 20%,#7c3aed,transparent),radial-gradient(60% 60% at 80% 30%,#ec4899,transparent),linear-gradient(160deg,#14102a,#060410)' },
+  { id: 'ocean', label: mark('Tiefsee'), preview: 'radial-gradient(70% 70% at 25% 80%,#0891b2,transparent),radial-gradient(60% 60% at 80% 15%,#1d4ed8,transparent),linear-gradient(180deg,#041225,#02060f)' },
+  { id: 'forest', label: mark('Wald'), preview: 'radial-gradient(65% 65% at 25% 25%,#15803d,transparent),radial-gradient(65% 65% at 75% 80%,#065f46,transparent),linear-gradient(170deg,#06140d,#020806)' },
+  { id: 'sunset', label: mark('Abendrot'), preview: 'radial-gradient(65% 65% at 20% 20%,#f97316,transparent),radial-gradient(65% 65% at 80% 80%,#be123c,transparent),linear-gradient(165deg,#1c0a10,#070305)' },
+  { id: 'studio', label: mark('Studio'), preview: 'radial-gradient(90% 45% at 50% 0%,rgba(255,255,255,.16),transparent),linear-gradient(180deg,#14131a,#08070c)' },
+  { id: 'grid', label: mark('Raster'), preview: 'linear-gradient(rgba(139,92,246,.35) 1px,transparent 1px),linear-gradient(90deg,rgba(139,92,246,.35) 1px,transparent 1px),linear-gradient(150deg,#0f0c1c,#06050c)' },
+  { id: 'mesh', label: mark('Farbnebel'), preview: 'radial-gradient(45% 45% at 15% 25%,rgba(139,92,246,.85),transparent),radial-gradient(45% 45% at 75% 20%,rgba(236,72,153,.8),transparent),radial-gradient(50% 50% at 30% 85%,rgba(6,182,212,.75),transparent),linear-gradient(150deg,#0d0b16,#07060d)' },
 ];
 
 let tab = 'look';
@@ -75,6 +76,18 @@ const look = () => store.settings().appearance || {};
 function tabLook(refresh) {
   const settings = store.settings();
 
+  // --- Sprache: fest zweisprachig beschriftet, damit man sie in jeder Sprache findet.
+  const languageSelect = h('select.select', {
+    style: { width: '220px' },
+    onChange: async (event) => {
+      await store.saveSettings({ language: event.target.value });
+      // Die ganze Oberfläche neu zeichnen – in der neuen Sprache.
+      location.reload();
+    },
+  },
+    ...[['auto', t('Automatisch (wie Windows)')], ['de', 'Deutsch'], ['en', 'English']].map(([value, label]) =>
+      h('option', { value, selected: (settings.language || 'auto') === value, text: label })));
+
   // --- Akzentfarbe
   const swatches = h('div.swatches');
   const customInput = h('input.input', {
@@ -92,7 +105,7 @@ function tabLook(refresh) {
     fill(swatches, ...ACCENTS.map((accent) =>
       h(`div.swatch${current === accent.id ? '.is-active' : ''}`, {
         style: { background: accent.color },
-        title: accent.label,
+        title: t(accent.label),
         onClick: async () => {
           await save({ accent: accent.id });
           renderSwatches();
@@ -100,7 +113,7 @@ function tabLook(refresh) {
       })),
       h(`div.swatch${current === 'custom' ? '.is-active' : ''}`, {
         style: { background: `conic-gradient(#f43f5e,#f59e0b,#84cc16,#06b6d4,#8b5cf6,#f43f5e)` },
-        title: 'Eigene Farbe',
+        title: t('Eigene Farbe'),
         onClick: async () => {
           await save({ accent: 'custom', accentColor: customInput.value });
           renderSwatches();
@@ -115,7 +128,7 @@ function tabLook(refresh) {
     const current = look().background || 'none';
     fill(grid, ...BACKGROUNDS.map((background) =>
       h(`div.bg-tile${current === background.id ? '.is-active' : ''}`, {
-        title: background.label,
+        title: t(background.label),
         onClick: async () => {
           await save({ appearance: { ...look(), background: background.id } });
           renderBackgrounds();
@@ -127,18 +140,18 @@ function tabLook(refresh) {
             backgroundSize: background.id === 'grid' ? '14px 14px, 14px 14px, cover' : 'cover',
           },
         }),
-        h('div.bg-tile__label', { text: background.label }))),
+        h('div.bg-tile__label', { text: t(background.label) }))),
 
       // Eigenes Bild als letzte Kachel
       h(`div.bg-tile${look().background === 'custom' ? '.is-active' : ''}`, {
-        title: look().backgroundPath || 'Eigenes Bild wählen',
+        title: look().backgroundPath || t('Eigenes Bild wählen'),
         onClick: async () => {
           const result = await window.ch.media.pickImage();
           if (!result?.ok || result.data.canceled) return;
           await save({
             appearance: { ...look(), background: 'custom', backgroundPath: result.data.filePath },
           });
-          toast(`„${result.data.name}“ als Hintergrund gesetzt.`, 'ok');
+          toast(t('„{name}“ als Hintergrund gesetzt.', { name: result.data.name }), 'ok');
           renderBackgrounds();
         },
       },
@@ -147,12 +160,12 @@ function tabLook(refresh) {
             ? { backgroundImage: `url("${fileUrlFor(look().backgroundPath)}")` }
             : {},
         }, look().backgroundPath ? null : h('span', { text: '＋' })),
-        h('div.bg-tile__label', { text: 'Eigenes Bild' })));
+        h('div.bg-tile__label', { text: t('Eigenes Bild') })));
   };
   renderBackgrounds();
 
   // --- Schleier
-  const dimValue = h('span.text-xs.faint', { text: `${look().dim ?? 55} %` });
+  const dimValue = h('span.text-xs.faint', { text: fmt.percent(look().dim ?? 55, 0) });
   const dimSlider = h('input', {
     type: 'range',
     min: 0,
@@ -162,17 +175,20 @@ function tabLook(refresh) {
     style: { width: '220px', accentColor: 'var(--accent)' },
     // Sofort sichtbar machen, gespeichert wird erst beim Loslassen.
     oninput: (event) => {
-      dimValue.textContent = `${event.target.value} %`;
+      dimValue.textContent = fmt.percent(event.target.value, 0);
       document.documentElement.style.setProperty('--bg-dim', String(event.target.value / 100));
     },
     onchange: (event) => save({ appearance: { ...look(), dim: Number(event.target.value) } }),
   });
 
   return h('div.col.gap-lg', null,
-    card('Farben', {},
-      row('Farbschema', 'Dunkel schont die Augen bei langen Schnittsessions.',
+    card(null, {},
+      row('Sprache · Language', t('Die App lädt dafür kurz neu.'), languageSelect)),
+
+    card(t('Farben'), {},
+      row(t('Farbschema'), t('Dunkel schont die Augen bei langen Schnittsessions.'),
         h('div.btn-group', null,
-          ...[['dark', 'Dunkel'], ['light', 'Hell']].map(([value, label]) =>
+          ...[['dark', t('Dunkel')], ['light', t('Hell')]].map(([value, label]) =>
             h(`button.btn${(settings.theme || 'dark') === value ? '.is-active' : ''}`, {
               text: label,
               onClick: async (event) => {
@@ -181,29 +197,29 @@ function tabLook(refresh) {
                 event.target.classList.add('is-active');
               },
             })))),
-      row('Akzentfarbe', 'Färbt Schaltflächen, Diagramme und Hervorhebungen.',
+      row(t('Akzentfarbe'), t('Färbt Schaltflächen, Diagramme und Hervorhebungen.'),
         h('div.row.gap-sm', null, swatches, customInput)),
-      row('Wochenbeginn', 'Bestimmt die Spaltenreihenfolge im Kalender.',
+      row(t('Wochenbeginn'), t('Bestimmt die Spaltenreihenfolge im Kalender.'),
         h('select.select', {
           style: { width: '160px' },
           onChange: (event) => save({ startOfWeek: Number(event.target.value) }),
         },
-          ...[[1, 'Montag'], [0, 'Sonntag']].map(([value, label]) =>
+          ...[[1, t('Montag')], [0, t('Sonntag')]].map(([value, label]) =>
             h('option', { value, selected: (settings.startOfWeek ?? 1) === value, text: label }))))),
 
-    card('Hintergrund', { hint: 'vorgefertigt oder eigenes Bild' },
-      h('p.text-sm.muted.mb', { text: 'Die vorgefertigten Hintergründe sind Farbverläufe und bleiben auf jedem Bildschirm scharf. Ein eigenes Bild bleibt dort liegen, wo es ist – die App merkt sich nur den Pfad und lädt es beim Start.' }),
+    card(t('Hintergrund'), { hint: t('vorgefertigt oder eigenes Bild') },
+      h('p.text-sm.muted.mb', { text: t('Die vorgefertigten Hintergründe sind Farbverläufe und bleiben auf jedem Bildschirm scharf. Ein eigenes Bild bleibt dort liegen, wo es ist – die App merkt sich nur den Pfad und lädt es beim Start.') }),
       grid,
       h('hr.divider'),
-      row('Schleier über dem Hintergrund', 'Je höher, desto ruhiger der Hintergrund. Bei hellen Bildern nötig, damit Text lesbar bleibt.',
+      row(t('Schleier über dem Hintergrund'), t('Je höher, desto ruhiger der Hintergrund. Bei hellen Bildern nötig, damit Text lesbar bleibt.'),
         h('div.row.gap-sm', null, dimSlider, dimValue)),
       look().background === 'custom' && look().backgroundPath
-        ? row('Gewähltes Bild', look().backgroundPath,
+        ? row(t('Gewähltes Bild'), look().backgroundPath,
             h('button.btn.btn--sm.btn--danger', {
-              text: 'Entfernen',
+              text: t('Entfernen'),
               onClick: async () => {
                 await save({ appearance: { ...look(), background: 'none', backgroundPath: null } });
-                toast('Hintergrundbild entfernt.', 'ok');
+                toast(t('Hintergrundbild entfernt.'), 'ok');
                 refresh();
               },
             }))
@@ -236,8 +252,8 @@ function tabChannels() {
   };
   renderPlatforms();
 
-  return card('Aktive Kanäle', { hint: `${(store.settings().activePlatforms || []).length} von ${PLATFORMS.length} ausgewählt` },
-    h('p.text-sm.muted.mb', { text: 'Nur ausgewählte Kanäle erscheinen im Composer, im Kalender und in der Auswertung. Was du nicht bespielst, gehört hier abgewählt – sonst verzerrt es jede Empfehlung.' }),
+  return card(t('Aktive Kanäle'), { hint: t('{count} von {total} ausgewählt', { count: (store.settings().activePlatforms || []).length, total: PLATFORMS.length }) },
+    h('p.text-sm.muted.mb', { text: t('Nur ausgewählte Kanäle erscheinen im Composer, im Kalender und in der Auswertung. Was du nicht bespielst, gehört hier abgewählt – sonst verzerrt es jede Empfehlung.') }),
     platformGrid);
 }
 
@@ -245,12 +261,12 @@ function tabChannels() {
 
 function tabGoals() {
   const settings = store.settings();
-  return card('Wochenziele', { hint: 'Grundlage für Fortschritt und Coach-Hinweise' },
+  return card(t('Wochenziele'), { hint: t('Grundlage für Fortschritt und Coach-Hinweise') },
     h('div.grid.grid-3', null,
       ...[
-        ['posts', 'Beiträge pro Woche'],
-        ['ideas', 'Neue Ideen pro Woche'],
-        ['streams', 'Streams pro Woche'],
+        ['posts', t('Beiträge pro Woche')],
+        ['ideas', t('Neue Ideen pro Woche')],
+        ['streams', t('Streams pro Woche')],
       ].map(([key, label]) =>
         h('label.field', null,
           h('span.field__label', { text: label }),
@@ -268,26 +284,26 @@ function tabGoals() {
 
 function tabReminders() {
   const settings = store.settings();
-  return card('Termine und Erinnerungen', {},
-    row('Desktop-Benachrichtigungen', 'Meldet sich, wenn ein Beitrag fällig wird.',
+  return card(t('Termine und Erinnerungen'), {},
+    row(t('Desktop-Benachrichtigungen'), t('Meldet sich, wenn ein Beitrag fällig wird.'),
       toggle('', settings.notifications !== false, (value) => save({ notifications: value }))),
-    row('Vorwarnzeit', 'So viele Minuten vor dem Termin kommt der erste Hinweis.',
+    row(t('Vorwarnzeit'), t('So viele Minuten vor dem Termin kommt der erste Hinweis.'),
       h('input.input', {
         type: 'number', min: 0, max: 240, style: { width: '92px' },
         value: settings.leadTimeMinutes ?? 15,
         onChange: (event) => save({ leadTimeMinutes: Number(event.target.value) || 0 }),
       })),
-    row('Text automatisch kopieren', 'Legt den fertigen Beitrag zum Termin in die Zwischenablage.',
+    row(t('Text automatisch kopieren'), t('Legt den fertigen Beitrag zum Termin in die Zwischenablage.'),
       toggle('', settings.copyToClipboardOnDue !== false, (value) => save({ copyToClipboardOnDue: value }))),
-    row('Upload-Seite öffnen', 'Öffnet zum Termin zusätzlich die passende Seite der Plattform im Browser.',
+    row(t('Upload-Seite öffnen'), t('Öffnet zum Termin zusätzlich die passende Seite der Plattform im Browser.'),
       toggle('', Boolean(settings.autoOpenUploadPage), (value) => save({ autoOpenUploadPage: value }))),
-    row('Im Infobereich weiterlaufen', 'Beim Schliessen läuft die App im Tray weiter, damit Termine nicht verpasst werden.',
+    row(t('Im Infobereich weiterlaufen'), t('Beim Schliessen läuft die App im Tray weiter, damit Termine nicht verpasst werden.'),
       toggle('', settings.minimizeToTray !== false, (value) => save({ minimizeToTray: value }))),
-    row('Mit Windows starten', 'Startet die App unsichtbar mit dem System.',
+    row(t('Mit Windows starten'), t('Startet die App unsichtbar mit dem System.'),
       toggle('', Boolean(settings.launchOnStartup), async (value) => {
         const result = await window.ch.system.setStartup(value);
         await save({ launchOnStartup: Boolean(result?.data) });
-        toast(value ? 'Startet künftig mit Windows.' : 'Startet nicht mehr automatisch.', 'ok');
+        toast(value ? t('Startet künftig mit Windows.') : t('Startet nicht mehr automatisch.'), 'ok');
       })));
 }
 
@@ -298,49 +314,50 @@ function tabUpdates(version, updateStatus) {
 
   const status = h('div.setting-row__hint', {
     text: settings.lastUpdateCheck
-      ? `Zuletzt geprüft ${fmt.relative(settings.lastUpdateCheck)}${settings.lastKnownVersion ? ` · neueste bekannte Version ${settings.lastKnownVersion}` : ''}`
-      : 'Noch nicht geprüft',
+      ? t('Zuletzt geprüft {when}', { when: fmt.relative(settings.lastUpdateCheck) })
+        + (settings.lastKnownVersion ? ` · ${t('neueste bekannte Version {version}', { version: settings.lastKnownVersion })}` : '')
+      : t('Noch nicht geprüft'),
   });
 
   const checkNow = h('button.btn.btn--sm', {
-    text: 'Jetzt prüfen',
+    text: t('Jetzt prüfen'),
     onClick: async () => {
       checkNow.disabled = true;
-      checkNow.textContent = 'Prüfe …';
+      checkNow.textContent = t('Prüfe …');
       const result = await window.ch.update.check(true);
       checkNow.disabled = false;
-      checkNow.textContent = 'Jetzt prüfen';
-      if (!result?.ok) return toast(`Prüfung fehlgeschlagen: ${result?.error}`, 'danger');
+      checkNow.textContent = t('Jetzt prüfen');
+      if (!result?.ok) return toast(t('Prüfung fehlgeschlagen: {error}', { error: result?.error }), 'danger');
 
       const info = result.data;
-      if (info.downloaded) status.textContent = `Version ${info.latest} liegt bereit und wird beim Neustart eingespielt.`;
-      else if (info.available) status.textContent = `Version ${info.latest} gefunden (installiert: ${info.current}).`;
-      else if (info.offline) status.textContent = 'Keine Verbindung zur Veröffentlichungsseite.';
-      else if (info.noReleases) status.textContent = 'Dort ist derzeit keine Veröffentlichung sichtbar.';
-      else status.textContent = `Alles aktuell (${info.current}).`;
+      if (info.downloaded) status.textContent = t('Version {version} liegt bereit und wird beim Neustart eingespielt.', { version: info.latest });
+      else if (info.available) status.textContent = t('Version {version} gefunden (installiert: {current}).', { version: info.latest, current: info.current });
+      else if (info.offline) status.textContent = t('Keine Verbindung zur Veröffentlichungsseite.');
+      else if (info.noReleases) status.textContent = t('Dort ist derzeit keine Veröffentlichung sichtbar.');
+      else status.textContent = t('Alles aktuell ({version}).', { version: info.current });
     },
   });
 
-  return card('Aktualisierung', { hint: `installiert: Version ${version.app || '–'}` },
+  return card(t('Aktualisierung'), { hint: t('installiert: Version {version}', { version: version.app || '–' }) },
     updateStatus.canSelfUpdate
       ? h('div.notice.notice--ok.mb', null,
           h('span.notice__icon', { text: '✓' }),
           h('div', null,
-            h('div.strong.text-sm', { text: 'Diese Fassung aktualisiert sich selbst' }),
-            h('div.text-sm.muted', { text: 'Neue Versionen werden im Hintergrund geladen und beim nächsten Beenden eingespielt – oder sofort, wenn du in der Seitenleiste auf „Neu starten und einspielen“ klickst. Es gibt nichts von Hand herunterzuladen.' })))
+            h('div.strong.text-sm', { text: t('Diese Fassung aktualisiert sich selbst') }),
+            h('div.text-sm.muted', { text: t('Neue Versionen werden im Hintergrund geladen und beim nächsten Beenden eingespielt – oder sofort, wenn du in der Seitenleiste auf „Neu starten und einspielen“ klickst. Es gibt nichts von Hand herunterzuladen.') })))
       : h('div.notice.notice--warn.mb', null,
           h('span.notice__icon', { text: '!' }),
           h('div', null,
-            h('div.strong.text-sm', { text: 'Diese Fassung läuft aus dem Quellordner' }),
-            h('div.text-sm.muted', { text: 'Sie kann sich nicht selbst ersetzen. Geprüft wird trotzdem – gefundene Versionen musst du selbst installieren. In der installierten Fassung läuft das von allein.' }))),
+            h('div.strong.text-sm', { text: t('Diese Fassung läuft aus dem Quellordner') }),
+            h('div.text-sm.muted', { text: t('Sie kann sich nicht selbst ersetzen. Geprüft wird trotzdem – gefundene Versionen musst du selbst installieren. In der installierten Fassung läuft das von allein.') }))),
 
-    row('Beim Start nach Updates suchen', 'Zusätzlich alle sechs Stunden, solange die App läuft.',
+    row(t('Beim Start nach Updates suchen'), t('Zusätzlich alle sechs Stunden, solange die App läuft.'),
       toggle('', settings.autoUpdateCheck !== false, (value) => save({ autoUpdateCheck: value }))),
 
     updateStatus.ready
-      ? row(`Version ${updateStatus.ready.version} liegt bereit`, 'Wird sonst beim nächsten Beenden eingespielt.',
+      ? row(t('Version {version} liegt bereit', { version: updateStatus.ready.version }), t('Wird sonst beim nächsten Beenden eingespielt.'),
           h('button.btn.btn--sm.btn--primary', {
-            text: 'Jetzt neu starten',
+            text: t('Jetzt neu starten'),
             onClick: () => window.ch.update.install(),
           }))
       : null,
@@ -349,13 +366,13 @@ function tabUpdates(version, updateStatus) {
       status,
       h('div.row.gap-sm', null,
         checkNow,
-        h('button.btn.btn--sm.btn--ghost', { text: 'Veröffentlichungen ansehen', onClick: () => window.ch.update.openReleasePage() }))));
+        h('button.btn.btn--sm.btn--ghost', { text: t('Veröffentlichungen ansehen'), onClick: () => window.ch.update.openReleasePage() }))));
 }
 
 // ------------------------------------------------------------------ Daten
 
 function tabData(paths, stats, refresh) {
-  return card('Daten und Sicherung', { hint: `${fmt.bytes(stats.bytes)} auf der Festplatte` },
+  return card(t('Daten und Sicherung'), { hint: t('{size} auf der Festplatte', { size: fmt.bytes(stats.bytes) }) },
     h('div.grid.grid-4.mb', null,
       ...Object.entries(stats.counts)
         .filter(([, count]) => count > 0)
@@ -366,49 +383,49 @@ function tabData(paths, stats, refresh) {
     h('p.mono.text-xs.faint.mb', { text: paths.data || '' }),
     h('div.row.wrap.gap-sm', null,
       h('button.btn', {
-        text: 'Sicherung exportieren',
+        text: t('Sicherung exportieren'),
         onClick: async () => {
           const result = await window.ch.backup.export();
-          if (result?.ok && !result.data.canceled) toast('Sicherung gespeichert.', 'ok');
+          if (result?.ok && !result.data.canceled) toast(t('Sicherung gespeichert.'), 'ok');
         },
       }),
       h('button.btn', {
-        text: 'Sicherung einlesen (ersetzen)',
+        text: t('Sicherung einlesen (ersetzen)'),
         onClick: async () => {
           if (!(await confirm({
-            title: 'Daten ersetzen?',
-            message: 'Der aktuelle Bestand wird vollständig durch die Sicherung ersetzt. Ein Tagesabbild der jetzigen Daten liegt im Sicherungsordner.',
-            confirmLabel: 'Ersetzen',
+            title: t('Daten ersetzen?'),
+            message: t('Der aktuelle Bestand wird vollständig durch die Sicherung ersetzt. Ein Tagesabbild der jetzigen Daten liegt im Sicherungsordner.'),
+            confirmLabel: t('Ersetzen'),
             tone: 'danger',
           }))) return;
           const result = await window.ch.backup.import(false);
           if (result?.ok && !result.data.canceled) {
             await store.reload();
-            toast('Sicherung eingelesen.', 'ok');
+            toast(t('Sicherung eingelesen.'), 'ok');
             refresh();
           }
         },
       }),
       h('button.btn', {
-        text: 'Sicherung zusammenführen',
+        text: t('Sicherung zusammenführen'),
         onClick: async () => {
           const result = await window.ch.backup.import(true);
           if (result?.ok && !result.data.canceled) {
             await store.reload();
-            toast('Einträge ergänzt.', 'ok');
+            toast(t('Einträge ergänzt.'), 'ok');
             refresh();
           }
         },
       }),
-      h('button.btn.btn--ghost', { text: 'Sicherungsordner öffnen', onClick: () => window.ch.backup.openFolder() })));
+      h('button.btn.btn--ghost', { text: t('Sicherungsordner öffnen'), onClick: () => window.ch.backup.openFolder() })));
 }
 
 // ------------------------------------------------------------------ Über
 
 function tabAbout(version) {
   const settings = store.settings();
-  return card('Über Content Helper', {},
-    h('p.text-sm.muted', { text: 'Ein Werkzeugkasten für Creator: planen, veröffentlichen, verstehen, verbessern. Ohne Abo, ohne Cloud, ohne Datenweitergabe.' }),
+  return card(t('Über Content Helper'), {},
+    h('p.text-sm.muted', { text: t('Ein Werkzeugkasten für Creator: planen, veröffentlichen, verstehen, verbessern. Ohne Abo, ohne Cloud, ohne Datenweitergabe.') }),
     h('div.row.wrap.gap-lg.mt', null,
       ...[
         ['App', version.app],
@@ -421,15 +438,15 @@ function tabAbout(version) {
           h('div.mono.text-sm', { text: value || '–' })))),
     h('div.row.gap-sm.mt', null,
       h('button.btn.btn--sm', {
-        text: 'Projekt auf GitHub',
+        text: t('Projekt auf GitHub'),
         onClick: () => window.ch.system.openExternal('https://github.com/MoinMornhart/content-helper'),
       }),
       !settings.onboardingDone
         ? h('button.btn.btn--sm.btn--primary', {
-            text: 'Einrichtung abschliessen',
+            text: t('Einrichtung abschliessen'),
             onClick: async () => {
               await save({ onboardingDone: true });
-              toast('Fertig – die App startet künftig im Dashboard.', 'ok');
+              toast(t('Fertig – die App startet künftig im Dashboard.'), 'ok');
             },
           })
         : null));
@@ -460,7 +477,7 @@ export async function render({ refresh, setActions }) {
   const bar = h('div.tabs', null,
     ...TABS.map((entry) =>
       h(`button.tab${tab === entry.id ? '.is-active' : ''}`, {
-        text: entry.label,
+        text: t(entry.label),
         onClick: (event) => {
           tab = entry.id;
           for (const button of event.target.parentElement.children) button.classList.remove('is-active');

@@ -20,6 +20,7 @@ const { pkcePair, newState, loopback, codeFrom, TokenStore, form } = require('..
 const { credentialsFor } = require('../credentials');
 const { mimeOf } = require('../media-info');
 const { sleep, parseJson, retryable, permanent, statusError, length, RELOGIN } = require('./common');
+const { t } = require('../../i18n');
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -67,7 +68,7 @@ class YouTubePublisher {
 
   async signIn() {
     const creds = this.creds();
-    if (!creds.complete) throw new Error('Für YouTube ist die Google-Anwendung noch nicht eingerichtet.');
+    if (!creds.complete) throw new Error(t('Für YouTube ist die Google-Anwendung noch nicht eingerichtet.'));
 
     const { verifier, challenge } = pkcePair();
     const state = newState();
@@ -95,7 +96,7 @@ class YouTubePublisher {
       redirect_uri: redirectUri,
     });
     if (!tokens.refresh_token) {
-      throw new Error('Google hat kein Erneuerungsmerkmal geschickt. Entziehe dem Content Helper unter myaccount.google.com/permissions den Zugriff und melde dich erneut an.');
+      throw new Error(t('Google hat kein Erneuerungsmerkmal geschickt. Entziehe dem Content Helper unter myaccount.google.com/permissions den Zugriff und melde dich erneut an.'));
     }
 
     this.access = { token: tokens.access_token, expires: Date.now() + (tokens.expires_in || 3600) * 1000 };
@@ -123,8 +124,8 @@ class YouTubePublisher {
     const payload = parseJson(response.text) || {};
     if (response.status >= 400) {
       if (payload.error === 'invalid_grant') {
-        this.tokens.save({ lastError: 'Die Anmeldung ist abgelaufen oder wurde zurückgezogen.' });
-        throw permanent(`YouTube: Die Anmeldung ist abgelaufen oder wurde zurückgezogen. ${RELOGIN}`);
+        this.tokens.save({ lastError: t('Die Anmeldung ist abgelaufen oder wurde zurückgezogen.') });
+        throw permanent(t('{name}: Die Anmeldung ist abgelaufen oder wurde zurückgezogen. {relogin}', { name: 'YouTube', relogin: t(RELOGIN) }));
       }
       throw statusError('Google', response.status, payload.error_description || payload.error);
     }
@@ -134,7 +135,7 @@ class YouTubePublisher {
   async token() {
     if (this.access && Date.now() < this.access.expires - 60_000) return this.access.token;
     const { refreshToken } = this.tokens.get();
-    if (!refreshToken) throw permanent(`Für YouTube besteht keine Anmeldung. ${RELOGIN}`);
+    if (!refreshToken) throw permanent(t('Für {name} besteht keine Anmeldung. {relogin}', { name: 'YouTube', relogin: t(RELOGIN) }));
     const tokens = await this.tokenRequest({ grant_type: 'refresh_token', refresh_token: refreshToken });
     this.access = { token: tokens.access_token, expires: Date.now() + (tokens.expires_in || 3600) * 1000 };
     return this.access.token;
@@ -181,14 +182,14 @@ class YouTubePublisher {
       const next = new Date();
       next.setUTCHours(8, 5, 0, 0);
       if (next.getTime() <= Date.now()) next.setUTCDate(next.getUTCDate() + 1);
-      return retryable('Das Tageskontingent von YouTube ist aufgebraucht. Der Upload läuft automatisch weiter, sobald es sich erneuert (9 Uhr deutscher Zeit).', { retryAt: next.toISOString() });
+      return retryable(t('Das Tageskontingent von YouTube ist aufgebraucht. Der Upload läuft automatisch weiter, sobald es sich erneuert (9 Uhr deutscher Zeit).'), { retryAt: next.toISOString() });
     }
-    if (reason === 'uploadLimitExceeded') return permanent('YouTube hat für diesen Kanal heute keine weiteren Uploads zugelassen. Bitte morgen erneut versuchen.');
-    if (reason === 'youtubeSignupRequired') return permanent('Zu diesem Google-Konto gibt es noch keinen YouTube-Kanal.');
-    if (reason === 'invalidTitle') return permanent('YouTube lehnt den Titel ab – höchstens 100 Zeichen, keine spitzen Klammern.');
-    if (reason === 'invalidDescription') return permanent('YouTube lehnt die Beschreibung ab – höchstens 5000 Zeichen, keine spitzen Klammern.');
-    if (reason === 'invalidPublishAt') return permanent('YouTube lehnt den Veröffentlichungstermin ab.');
-    if (reason === 'forbidden' || status === 403) return permanent(`YouTube verweigert das: ${message || 'keine Berechtigung'}.`);
+    if (reason === 'uploadLimitExceeded') return permanent(t('YouTube hat für diesen Kanal heute keine weiteren Uploads zugelassen. Bitte morgen erneut versuchen.'));
+    if (reason === 'youtubeSignupRequired') return permanent(t('Zu diesem Google-Konto gibt es noch keinen YouTube-Kanal.'));
+    if (reason === 'invalidTitle') return permanent(t('YouTube lehnt den Titel ab – höchstens 100 Zeichen, keine spitzen Klammern.'));
+    if (reason === 'invalidDescription') return permanent(t('YouTube lehnt die Beschreibung ab – höchstens 5000 Zeichen, keine spitzen Klammern.'));
+    if (reason === 'invalidPublishAt') return permanent(t('YouTube lehnt den Veröffentlichungstermin ab.'));
+    if (reason === 'forbidden' || status === 403) return permanent(t('YouTube verweigert das: {detail}.', { detail: message || t('keine Berechtigung') }));
     return statusError('YouTube', status, message);
   }
 
@@ -196,10 +197,10 @@ class YouTubePublisher {
 
   check(content) {
     const problems = [];
-    if (!content.video) problems.push('Für YouTube fehlt das Video – bitte im Composer eine Videodatei wählen.');
-    if (!content.title) problems.push('YouTube braucht einen Titel.');
-    if (length(content.title) > 100) problems.push(`Der Titel ist ${length(content.title)} Zeichen lang, YouTube erlaubt 100.`);
-    if (/[<>]/.test(content.title)) problems.push('YouTube erlaubt im Titel keine spitzen Klammern.');
+    if (!content.video) problems.push(t('Für YouTube fehlt das Video – bitte im Composer eine Videodatei wählen.'));
+    if (!content.title) problems.push(t('YouTube braucht einen Titel.'));
+    if (length(content.title) > 100) problems.push(t('Der Titel ist {count} Zeichen lang, YouTube erlaubt 100.', { count: length(content.title) }));
+    if (/[<>]/.test(content.title)) problems.push(t('YouTube erlaubt im Titel keine spitzen Klammern.'));
     return problems;
   }
 
@@ -304,13 +305,13 @@ class YouTubePublisher {
       }
       if (response.status === 404 || response.status === 410) {
         job.saveSession(null);
-        throw retryable('Die Upload-Sitzung bei YouTube ist abgelaufen. Der Upload beginnt beim nächsten Versuch neu.');
+        throw retryable(t('Die Upload-Sitzung bei YouTube ist abgelaufen. Der Upload beginnt beim nächsten Versuch neu.'));
       }
       throw this.error(response.status, parseJson(response.text));
     }
 
     const videoId = uploaded?.id;
-    if (!videoId) throw retryable('YouTube hat den Upload angenommen, aber keine Video-Kennung geliefert.');
+    if (!videoId) throw retryable(t('YouTube hat den Upload angenommen, aber keine Video-Kennung geliefert.'));
 
     let message = null;
     if (job.thumbnail) {
@@ -322,7 +323,7 @@ class YouTubePublisher {
       }).catch((error) => ({ status: 0, text: error.message }));
       if (response.status >= 400 || response.status === 0) {
         const reason = parseJson(response.text)?.error?.message || response.text;
-        message = `Das Video ist oben, das Thumbnail nicht: ${reason}. Eigene Thumbnails setzt YouTube erst nach Bestätigung des Kanals frei.`;
+        message = t('Das Video ist oben, das Thumbnail nicht: {reason}. Eigene Thumbnails setzt YouTube erst nach Bestätigung des Kanals frei.', { reason });
       }
     }
 
@@ -338,7 +339,7 @@ class YouTubePublisher {
   async reschedule({ remoteId, scheduledFor }) {
     const current = await this.api('GET', `/videos?part=status&id=${encodeURIComponent(remoteId)}`);
     const status = current?.items?.[0]?.status;
-    if (!status) throw permanent('Das Video gibt es bei YouTube nicht mehr.');
+    if (!status) throw permanent(t('Das Video gibt es bei YouTube nicht mehr.'));
     await this.api('PUT', '/videos?part=status', {
       id: remoteId,
       status: { ...status, privacyStatus: 'private', publishAt: new Date(scheduledFor).toISOString() },

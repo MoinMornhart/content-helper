@@ -9,12 +9,16 @@
  * - Nie raten. Eine Regel greift erst, wenn genug Daten da sind.
  * - Immer benennen, worauf sich der Hinweis stuetzt.
  * - Hoechstens ein Hinweis je Thema, sonst wird es Laerm.
+ *
+ * Alle Texte laufen ueber t(): Die Regeln werden erst beim Anzeigen
+ * ausgewertet, dann steht die Sprache fest.
  */
 
 import * as store from './store.js';
 import * as fmt from './format.js';
 import * as an from './analytics.js';
 import { platform, platformName, metric, PLATFORMS } from './platforms.js';
+import { t, mark } from './i18n.js';
 
 /** Gewicht eines Hinweises: bestimmt die Reihenfolge. */
 const PRIORITY = { danger: 3, warn: 2, ok: 1, info: 1 };
@@ -32,9 +36,9 @@ const RULES = [
     if (upcoming.length) return null;
     return insight(
       'nothing-scheduled', 'warn', '◷',
-      'Nichts steht im Kalender',
-      'Es ist kein Beitrag mehr eingeplant. Regelmässigkeit ist der stärkste Hebel überhaupt – wer nach einer Pause zurückkommt, startet bei fast jedem Kanal wieder von vorn.',
-      { label: 'Beitrag einplanen', view: 'composer' }
+      t('Nichts steht im Kalender'),
+      t('Es ist kein Beitrag mehr eingeplant. Regelmässigkeit ist der stärkste Hebel überhaupt – wer nach einer Pause zurückkommt, startet bei fast jedem Kanal wieder von vorn.'),
+      { label: t('Beitrag einplanen'), view: 'composer' }
     );
   },
 
@@ -43,9 +47,9 @@ const RULES = [
     if (!missed.length) return null;
     return insight(
       'missed', 'danger', '!',
-      `${fmt.plural(missed.length, 'verpasster Termin', 'verpasste Termine')}`,
-      'Diese Beiträge sind an ihrem Termin nicht rausgegangen. Entweder neu einplanen oder bewusst verwerfen – liegen bleiben ist die schlechteste Variante.',
-      { label: 'Zur Warteschlange', view: 'queue' }
+      fmt.plural(missed.length, mark('verpasster Termin'), mark('verpasste Termine')),
+      t('Diese Beiträge sind an ihrem Termin nicht rausgegangen. Entweder neu einplanen oder bewusst verwerfen – liegen bleiben ist die schlechteste Variante.'),
+      { label: t('Zur Warteschlange'), view: 'queue' }
     );
   },
 
@@ -62,10 +66,10 @@ const RULES = [
     if (daysSince <= expectedGap * 2) return null;
     return insight(
       'cadence', 'warn', '◔',
-      `Seit ${fmt.plural(daysSince, 'Tag', 'Tagen')} nichts veröffentlicht`,
-      `Dein Ziel sind ${goal} Beiträge pro Woche, das wären rund alle ${expectedGap} Tage einer. Eine kleinere, aber gehaltene Frequenz schlägt jeden Schub gefolgt von Funkstille.`,
-      { label: 'Ideen sichten', view: 'ideas' },
-      `Letzte Veröffentlichung: ${fmt.date(published[0].publishedAt)}`
+      t('Seit {days} nichts veröffentlicht', { days: fmt.plural(daysSince, mark('Tag'), mark('Tagen')) }),
+      t('Dein Ziel sind {goal} Beiträge pro Woche, das wären rund alle {gap} Tage einer. Eine kleinere, aber gehaltene Frequenz schlägt jeden Schub gefolgt von Funkstille.', { goal, gap: expectedGap }),
+      { label: t('Ideen sichten'), view: 'ideas' },
+      t('Letzte Veröffentlichung: {date}', { date: fmt.date(published[0].publishedAt) })
     );
   },
 
@@ -83,15 +87,15 @@ const RULES = [
       if (!done) return null;
       return insight(
         'weekly-goal-ok', 'ok', '✓',
-        'Wochenziel ist gedeckt',
-        `${done} veröffentlicht, ${planned} eingeplant – zusammen erreichst du dein Ziel von ${goal}. Gute Grundlage, um an der Qualität statt an der Menge zu arbeiten.`
+        t('Wochenziel ist gedeckt'),
+        t('{done} veröffentlicht, {planned} eingeplant – zusammen erreichst du dein Ziel von {goal}. Gute Grundlage, um an der Qualität statt an der Menge zu arbeiten.', { done, planned, goal })
       );
     }
     return insight(
       'weekly-goal', 'info', '◎',
-      `Noch ${goal - done - planned} bis zum Wochenziel`,
-      `Diese Woche: ${done} veröffentlicht, ${planned} eingeplant, Ziel ${goal}. Die Lücke schliesst sich am schnellsten, indem du eine bestehende Idee auf einen freien Termin ziehst.`,
-      { label: 'Warteschlange füllen', view: 'queue' }
+      t('Noch {left} bis zum Wochenziel', { left: goal - done - planned }),
+      t('Diese Woche: {done} veröffentlicht, {planned} eingeplant, Ziel {goal}. Die Lücke schliesst sich am schnellsten, indem du eine bestehende Idee auf einen freien Termin ziehst.', { done, planned, goal }),
+      { label: t('Warteschlange füllen'), view: 'queue' }
     );
   },
 
@@ -100,9 +104,9 @@ const RULES = [
     if (open.length >= 8) return null;
     return insight(
       'idea-pipeline', open.length < 3 ? 'warn' : 'info', '✦',
-      open.length < 3 ? 'Der Ideenvorrat ist fast leer' : 'Der Ideenvorrat wird dünn',
-      `Nur ${fmt.plural(open.length, 'offene Idee', 'offene Ideen')} liegen bereit. Ein Vorrat von zehn bis fünfzehn nimmt den Druck aus der Produktion – ohne ihn entsteht der Inhalt am Ende immer unter Zeitnot.`,
-      { label: 'Ideen erzeugen', view: 'ideas' }
+      open.length < 3 ? t('Der Ideenvorrat ist fast leer') : t('Der Ideenvorrat wird dünn'),
+      t('Nur {ideas} liegen bereit. Ein Vorrat von zehn bis fünfzehn nimmt den Druck aus der Produktion – ohne ihn entsteht der Inhalt am Ende immer unter Zeitnot.', { ideas: fmt.plural(open.length, mark('offene Idee'), mark('offene Ideen')) }),
+      { label: t('Ideen erzeugen'), view: 'ideas' }
     );
   },
 
@@ -127,11 +131,11 @@ const RULES = [
     const worst = stale[0];
     return insight(
       'neglected-channel', 'info', '⬡',
-      `${platformName(worst.id)} liegt brach`,
+      t('{platform} liegt brach', { platform: platformName(worst.id) }),
       worst.last
-        ? `Dort ging zuletzt ${fmt.relative(worst.last)} etwas raus, obwohl der Kanal aktiv ist. Entweder wieder bespielen – oder in den Einstellungen abschalten, damit die Übersicht ehrlich bleibt.`
-        : `Für diesen Kanal ist noch nie etwas geplant worden. Entweder starten oder in den Einstellungen abwählen.`,
-      { label: 'Kanäle prüfen', view: 'channels' }
+        ? t('Dort ging zuletzt {when} etwas raus, obwohl der Kanal aktiv ist. Entweder wieder bespielen – oder in den Einstellungen abschalten, damit die Übersicht ehrlich bleibt.', { when: fmt.relative(worst.last) })
+        : t('Für diesen Kanal ist noch nie etwas geplant worden. Entweder starten oder in den Einstellungen abwählen.'),
+      { label: t('Kanäle prüfen'), view: 'channels' }
     );
   },
 
@@ -142,9 +146,9 @@ const RULES = [
     if (singles.length / recent.length < 0.7) return null;
     return insight(
       'cross-posting', 'info', '⇄',
-      'Fast alles läuft nur auf einem Kanal',
-      `${singles.length} von ${recent.length} Beiträgen gehen an genau eine Plattform. Ein Langvideo trägt mühelos einen Kurzclip, einen Textbeitrag und einen Blogeintrag – dieselbe Arbeit, mehrfache Reichweite.`,
-      { label: 'Beitrag mehrfach ausspielen', view: 'composer' }
+      t('Fast alles läuft nur auf einem Kanal'),
+      t('{singles} von {total} Beiträgen gehen an genau eine Plattform. Ein Langvideo trägt mühelos einen Kurzclip, einen Textbeitrag und einen Blogeintrag – dieselbe Arbeit, mehrfache Reichweite.', { singles: singles.length, total: recent.length }),
+      { label: t('Beitrag mehrfach ausspielen'), view: 'composer' }
     );
   },
 
@@ -155,9 +159,9 @@ const RULES = [
     if (!analytics.length) {
       return insight(
         'no-analytics', 'warn', '◫',
-        'Es sind noch keine Zahlen erfasst',
-        'Ohne Messwerte bleibt jede Verbesserung Bauchgefühl. Der schnellste Weg: den CSV-Export aus dem jeweiligen Studio einlesen – das dauert zwei Minuten und schaltet die halbe Auswertung frei.',
-        { label: 'Zahlen erfassen', view: 'analytics' }
+        t('Es sind noch keine Zahlen erfasst'),
+        t('Ohne Messwerte bleibt jede Verbesserung Bauchgefühl. Der schnellste Weg: den CSV-Export aus dem jeweiligen Studio einlesen – das dauert zwei Minuten und schaltet die halbe Auswertung frei.'),
+        { label: t('Zahlen erfassen'), view: 'analytics' }
       );
     }
     const newest = analytics.map((entry) => entry.date).sort().at(-1);
@@ -165,9 +169,9 @@ const RULES = [
     if (daysSince < 14) return null;
     return insight(
       'stale-analytics', 'info', '◫',
-      `Die Zahlen sind ${daysSince} Tage alt`,
-      'Neuere Werte machen die Empfehlungen deutlich schärfer – vor allem beim besten Zeitfenster und beim stärksten Format.',
-      { label: 'Zahlen nachtragen', view: 'analytics' }
+      t('Die Zahlen sind {days} Tage alt', { days: daysSince }),
+      t('Neuere Werte machen die Empfehlungen deutlich schärfer – vor allem beim besten Zeitfenster und beim stärksten Format.'),
+      { label: t('Zahlen nachtragen'), view: 'analytics' }
     );
   },
 
@@ -183,10 +187,10 @@ const RULES = [
     const lift = Math.round(((best.value - restAvg) / restAvg) * 100);
     return insight(
       'best-hour', 'ok', '◷',
-      `Deine beste Uhrzeit ist ${String(best.hour).padStart(2, '0')}:00`,
-      `Beiträge zu dieser Stunde erreichen im Schnitt ${lift} Prozent mehr Aufrufe als der Rest. Lege die wichtigsten Veröffentlichungen bewusst dorthin.`,
-      { label: 'Zeitfenster übernehmen', view: 'queue' },
-      `Grundlage: ${best.count} Beiträge um ${best.hour} Uhr, ${fmt.num(best.value, { compact: true })} Aufrufe im Schnitt`
+      t('Deine beste Uhrzeit ist {time}', { time: `${String(best.hour).padStart(2, '0')}:00` }),
+      t('Beiträge zu dieser Stunde erreichen im Schnitt {lift} Prozent mehr Aufrufe als der Rest. Lege die wichtigsten Veröffentlichungen bewusst dorthin.', { lift }),
+      { label: t('Zeitfenster übernehmen'), view: 'queue' },
+      t('Grundlage: {count} Beiträge um {hour} Uhr, {views} Aufrufe im Schnitt', { count: best.count, hour: best.hour, views: fmt.num(best.value, { compact: true }) })
     );
   },
 
@@ -199,8 +203,12 @@ const RULES = [
     if (!worst.value || best.value < worst.value * 1.8) return null;
     return insight(
       'best-weekday', 'info', '▦',
-      `${fmt.weekdayName(best.day)} trägt am weitesten`,
-      `Im Schnitt ${fmt.num(best.value, { compact: true })} Aufrufe gegenüber ${fmt.num(worst.value, { compact: true })} am ${fmt.weekdayName(worst.day)}. Die stärksten Inhalte gehören auf den starken Tag, Experimente auf den schwachen.`
+      t('{day} trägt am weitesten', { day: fmt.weekdayName(best.day) }),
+      t('Im Schnitt {best} Aufrufe gegenüber {worst} am {day}. Die stärksten Inhalte gehören auf den starken Tag, Experimente auf den schwachen.', {
+        best: fmt.num(best.value, { compact: true }),
+        worst: fmt.num(worst.value, { compact: true }),
+        day: fmt.weekdayName(worst.day),
+      })
     );
   },
 
@@ -212,9 +220,14 @@ const RULES = [
     if (best.value < worst.value * 1.5) return null;
     return insight(
       'best-format', 'ok', '★',
-      `Das Format „${best.format}“ funktioniert am besten`,
-      `${fmt.num(best.value, { compact: true })} Aufrufe im Schnitt aus ${fmt.plural(best.count, 'Beitrag', 'Beiträgen')} – gegenüber ${fmt.num(worst.value, { compact: true })} bei „${worst.format}“. Mehr davon zu machen ist die günstigste Verbesserung, die es gibt.`,
-      { label: 'Idee in diesem Format', view: 'ideas' }
+      t('Das Format „{format}“ funktioniert am besten', { format: best.format }),
+      t('{best} Aufrufe im Schnitt aus {posts} – gegenüber {worst} bei „{other}“. Mehr davon zu machen ist die günstigste Verbesserung, die es gibt.', {
+        best: fmt.num(best.value, { compact: true }),
+        posts: fmt.plural(best.count, mark('Beitrag'), mark('Beiträgen')),
+        worst: fmt.num(worst.value, { compact: true }),
+        other: worst.format,
+      }),
+      { label: t('Idee in diesem Format'), view: 'ideas' }
     );
   },
 
@@ -229,10 +242,10 @@ const RULES = [
       if (value === null || value >= benchmark * 0.8) continue;
       return insight(
         'low-ctr', 'warn', '◐',
-        `Schwache Klickrate auf ${p.name}`,
-        `Im Schnitt ${fmt.percent(value)} gegenüber einem üblichen Wert um ${benchmark} Prozent. Das ist fast immer die Verpackung, nicht der Inhalt: Thumbnail mit einem klaren Motiv, Titel mit einem Versprechen, beides in unter zwei Sekunden erfassbar.`,
-        { label: 'Titel-Varianten erzeugen', view: 'ideas' },
-        `Grundlage: ${list.length} Beiträge der letzten 90 Tage`
+        t('Schwache Klickrate auf {platform}', { platform: p.name }),
+        t('Im Schnitt {value} gegenüber einem üblichen Wert um {benchmark} Prozent. Das ist fast immer die Verpackung, nicht der Inhalt: Thumbnail mit einem klaren Motiv, Titel mit einem Versprechen, beides in unter zwei Sekunden erfassbar.', { value: fmt.percent(value), benchmark }),
+        { label: t('Titel-Varianten erzeugen'), view: 'ideas' },
+        t('Grundlage: {count} Beiträge der letzten 90 Tage', { count: list.length })
       );
     }
     return null;
@@ -249,10 +262,10 @@ const RULES = [
       if (value === null || value >= benchmark * 0.8) continue;
       return insight(
         'low-completion', 'warn', '⚡',
-        `Zu wenige sehen ${p.name}-Clips zu Ende`,
-        `Abschlussrate im Schnitt ${fmt.percent(value)}, üblich sind rund ${benchmark} Prozent. Die Ursache liegt fast immer in den ersten ${p.hookWindowSec || 3} Sekunden: Einleitung streichen, sofort mit der Aussage beginnen, Spannung erst am Ende auflösen.`,
-        { label: 'Hooks überarbeiten', view: 'scripts' },
-        `Grundlage: ${list.length} Beiträge der letzten 90 Tage`
+        t('Zu wenige sehen {platform}-Clips zu Ende', { platform: p.name }),
+        t('Abschlussrate im Schnitt {value}, üblich sind rund {benchmark} Prozent. Die Ursache liegt fast immer in den ersten {seconds} Sekunden: Einleitung streichen, sofort mit der Aussage beginnen, Spannung erst am Ende auflösen.', { value: fmt.percent(value), benchmark, seconds: p.hookWindowSec || 3 }),
+        { label: t('Hooks überarbeiten'), view: 'scripts' },
+        t('Grundlage: {count} Beiträge der letzten 90 Tage', { count: list.length })
       );
     }
     return null;
@@ -266,9 +279,13 @@ const RULES = [
       if (change === null || change > -0.25) continue;
       return insight(
         'trend-down', 'warn', '↘',
-        `${platformName(id)} verliert an Reichweite`,
-        `${fmt.num(current, { compact: true })} gegenüber ${fmt.num(previous, { compact: true })} Aufrufen im Vormonat, ein Rückgang um ${Math.abs(Math.round(change * 100))} Prozent. Prüfe zuerst, ob sich Frequenz oder Format verändert haben – meist steckt dort die Ursache, nicht im Algorithmus.`,
-        { label: 'Verlauf ansehen', view: 'analytics' }
+        t('{platform} verliert an Reichweite', { platform: platformName(id) }),
+        t('{current} gegenüber {previous} Aufrufen im Vormonat, ein Rückgang um {change} Prozent. Prüfe zuerst, ob sich Frequenz oder Format verändert haben – meist steckt dort die Ursache, nicht im Algorithmus.', {
+          current: fmt.num(current, { compact: true }),
+          previous: fmt.num(previous, { compact: true }),
+          change: Math.abs(Math.round(change * 100)),
+        }),
+        { label: t('Verlauf ansehen'), view: 'analytics' }
       );
     }
     return null;
@@ -282,8 +299,12 @@ const RULES = [
       if (change === null || change < 0.4) continue;
       return insight(
         'trend-up', 'ok', '↗',
-        `${platformName(id)} zieht deutlich an`,
-        `${fmt.num(current, { compact: true })} statt ${fmt.num(previous, { compact: true })} Aufrufen, ein Plus von ${Math.round(change * 100)} Prozent. Jetzt ist der Moment, dort mehr zu investieren statt die Kraft breit zu verteilen.`
+        t('{platform} zieht deutlich an', { platform: platformName(id) }),
+        t('{current} statt {previous} Aufrufen, ein Plus von {change} Prozent. Jetzt ist der Moment, dort mehr zu investieren statt die Kraft breit zu verteilen.', {
+          current: fmt.num(current, { compact: true }),
+          previous: fmt.num(previous, { compact: true }),
+          change: Math.round(change * 100),
+        })
       );
     }
     return null;
@@ -296,9 +317,13 @@ const RULES = [
     if (!candidate) return null;
     return insight(
       'recycle', 'info', '↻',
-      'Ein alter Erfolg lohnt eine Neuauflage',
-      `„${candidate.entry.title || 'Ein Beitrag'}“ vom ${fmt.date(candidate.entry.date)} liegt mit ${fmt.num(candidate.value, { compact: true })} Aufrufen weit vorn. Nach drei Monaten kennt der grösste Teil des Publikums ihn nicht – als Kurzfassung, Aktualisierung oder Gegenthese trägt das Thema erneut.`,
-      { label: 'Neuauflage planen', view: 'composer' }
+      t('Ein alter Erfolg lohnt eine Neuauflage'),
+      t('„{title}“ vom {date} liegt mit {views} Aufrufen weit vorn. Nach drei Monaten kennt der grösste Teil des Publikums ihn nicht – als Kurzfassung, Aktualisierung oder Gegenthese trägt das Thema erneut.', {
+        title: candidate.entry.title || t('Ein Beitrag'),
+        date: fmt.date(candidate.entry.date),
+        views: fmt.num(candidate.value, { compact: true }),
+      }),
+      { label: t('Neuauflage planen'), view: 'composer' }
     );
   },
 
@@ -312,9 +337,9 @@ const RULES = [
     if (!soon.length) return null;
     return insight(
       'checklist-open', 'info', '☑',
-      `${fmt.plural(soon.length, 'Beitrag', 'Beiträge')} mit offener Checkliste`,
-      'Der Termin ist in weniger als zwei Tagen, aber Thumbnail, Untertitel oder Beschreibung fehlen noch. Genau diese Restarbeiten kosten am Veröffentlichungstag die meiste Nerven.',
-      { label: 'Warteschlange öffnen', view: 'queue' }
+      t('{posts} mit offener Checkliste', { posts: fmt.plural(soon.length, mark('Beitrag'), mark('Beiträge')) }),
+      t('Der Termin ist in weniger als zwei Tagen, aber Thumbnail, Untertitel oder Beschreibung fehlen noch. Genau diese Restarbeiten kosten am Veröffentlichungstag die meiste Nerven.'),
+      { label: t('Warteschlange öffnen'), view: 'queue' }
     );
   },
 
@@ -330,9 +355,9 @@ const RULES = [
     if (weekdays.size <= 3) return null;
     return insight(
       'twitch-consistency', 'warn', '◈',
-      'Deine Streamzeiten sind schwer vorhersehbar',
-      `Die letzten ${streams.length} Streams verteilen sich auf ${weekdays.size} verschiedene Wochentage. Auf Twitch entsteht Publikum durch Verlässlichkeit: zwei bis drei feste Termine bringen dauerhaft mehr Zuschauer im Schnitt als häufigeres, aber unregelmässiges Streamen.`,
-      { label: 'Feste Zeitfenster anlegen', view: 'queue' }
+      t('Deine Streamzeiten sind schwer vorhersehbar'),
+      t('Die letzten {streams} Streams verteilen sich auf {days} verschiedene Wochentage. Auf Twitch entsteht Publikum durch Verlässlichkeit: zwei bis drei feste Termine bringen dauerhaft mehr Zuschauer im Schnitt als häufigeres, aber unregelmässiges Streamen.', { streams: streams.length, days: weekdays.size }),
+      { label: t('Feste Zeitfenster anlegen'), view: 'queue' }
     );
   },
 
@@ -344,11 +369,17 @@ const RULES = [
     if (longform.length < 3) return null;
     const shorts = posts.filter((post) => (post.platforms || []).some((id) => platform(id)?.kind === 'short'));
     if (shorts.length >= longform.length) return null;
+    const params = {
+      long: fmt.plural(longform.length, mark('langes Format'), mark('lange Formate')),
+      short: fmt.plural(shorts.length, mark('Kurzclip'), mark('Kurzclips')),
+    };
     return insight(
       'shorts-from-long', 'info', '✂',
-      'Aus langen Inhalten entstehen zu wenige Clips',
-      `${fmt.plural(longform.length, 'langes Format', 'lange Formate')} ${longform.length === 1 ? 'steht' : 'stehen'} ${fmt.plural(shorts.length, 'Kurzclip', 'Kurzclips')} gegenüber. Zwei bis drei Ausschnitte pro Langvideo oder Stream sind Reichweite ohne zusätzlichen Dreh – und der beste Weg, neue Zuschauer zum Hauptkanal zu führen.`,
-      { label: 'Clips einplanen', view: 'composer' }
+      t('Aus langen Inhalten entstehen zu wenige Clips'),
+      longform.length === 1
+        ? t('{long} steht {short} gegenüber. Zwei bis drei Ausschnitte pro Langvideo oder Stream sind Reichweite ohne zusätzlichen Dreh – und der beste Weg, neue Zuschauer zum Hauptkanal zu führen.', params)
+        : t('{long} stehen {short} gegenüber. Zwei bis drei Ausschnitte pro Langvideo oder Stream sind Reichweite ohne zusätzlichen Dreh – und der beste Weg, neue Zuschauer zum Hauptkanal zu führen.', params),
+      { label: t('Clips einplanen'), view: 'composer' }
     );
   },
 
@@ -359,10 +390,11 @@ const RULES = [
     // Ein Tipp pro Tag, aber stabil innerhalb des Tages.
     const seed = Number(fmt.dayKey().replaceAll('-', ''));
     const p = pool[seed % pool.length];
+    // Die Tipps kommen aus dem Katalog und sind dort schon übersetzt (Getter).
     const tip = p.tips[seed % p.tips.length];
     return insight(
       'daily-tip', 'info', '◆',
-      `Handwerk des Tages · ${p.name}`,
+      t('Handwerk des Tages · {platform}', { platform: p.name }),
       tip
     );
   },
