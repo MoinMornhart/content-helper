@@ -15,7 +15,7 @@ import { toast, confirm, toggle } from '../lib/ui.js';
 import { applyTheme } from '../app.js';
 
 export const title = 'Einstellungen';
-export const lead = 'Alles bleibt auf diesem Rechner. Kein Konto, keine Schlüssel, keine Übertragung.';
+export const lead = 'Deine Daten liegen auf deinen eigenen Geräten. Kein Konto bei uns, kein Abo.';
 
 const TABS = [
   { id: 'look', label: 'Erscheinungsbild' },

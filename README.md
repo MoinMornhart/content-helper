@@ -12,7 +12,8 @@
 <p align="center">
   <b>Der Werkzeugkasten für Creator.</b><br>
   Beiträge für 20 Kanäle planen, aus den eigenen Zahlen erfahren, was wirklich funktioniert –<br>
-  und dabei alles auf dem eigenen PC behalten. Ohne Konto, ohne Abo, ohne API-Schlüssel.
+  und dabei alles auf dem eigenen PC behalten. Ohne Abo, ohne Konto bei uns –<br>
+  YouTube ganz ohne Schlüssel, Twitch per Anmeldung mit dem eigenen Konto.
 </p>
 
 <p align="center">
@@ -39,7 +40,8 @@ und schaut dabei auf **deine** Zahlen, nicht auf allgemeine Ratschläge.
 | **Konto oder Anmeldung beim Anbieter** | keins – die App gehört dir |
 | **Kosten** | keine, dauerhaft |
 | **Wo liegen deine Daten?** | als lesbare Dateien auf deinem PC |
-| **API-Schlüssel oder Developer-Apps** | für YouTube keine, für Twitch einmalig eine Client-ID |
+| **API-Schlüssel oder Developer-Apps** | für YouTube keine; für Twitch meldest du dich mit deinem Konto an – dazu einmalig eine Client-ID, weil Twitch nur registrierte Anwendungen bedient |
+| **Mehrere PCs** | per Code verbunden, verschlüsselt über deinen OneDrive-, Dropbox- oder Google-Drive-Ordner |
 | **Aktualisierung** | lädt sich selbst im Hintergrund und spielt sich beim Neustart ein |
 
 ---
@@ -126,6 +128,15 @@ und schaut dabei auf **deine** Zahlen, nicht auf allgemeine Ratschläge.
 eine installierbare Web-App aus – QR-Code scannen, zum Startbildschirm hinzufügen. Unterwegs
 Ideen festhalten, Beiträge abhaken, Zahlen eintragen; ist der PC aus, wird später nachgereicht.
 
+**Mehrere PCs:** Streaming-PC zu Hause, Laptop unterwegs – beide sehen dieselben Beiträge, Ideen und
+Zahlen. Der erste PC erzeugt einen Code, der zweite gibt ihn ein. Transportweg ist ein Ordner, den du
+ohnehin mit OneDrive, Dropbox, Google Drive oder iCloud synchronisierst; es gibt kein Konto und keinen
+Server. Der Code ist zugleich der Schlüssel – im Cloud-Ordner liegt nur Verschlüsseltes (AES-256).
+
+<p align="center">
+  <img src="docs/screenshots/devices.png" alt="PCs verbinden: Sync-Raum anlegen oder mit Code beitreten" width="100%">
+</p>
+
 ---
 
 ## So funktioniert’s
@@ -203,6 +214,11 @@ Alles liegt als lesbares JSON in deinem Benutzerprofil unter `%APPDATA%\Content 
 Kein Cloud-Zwang, keine Telemetrie. Täglich wird automatisch ein Schnappschuss abgelegt, und in den
 Einstellungen lässt sich jederzeit eine vollständige Sicherung exportieren und wieder einlesen.
 
+Verbindest du mehrere PCs, legt die App im gewählten Cloud-Ordner einen Unterordner
+`Content Helper Sync` an. Jeder PC schreibt dort nur in seine eigenen Dateien – so entstehen keine
+Konfliktkopien –, und alles ist mit dem Code verschlüsselt. Bei gleichzeitigen Änderungen gewinnt die
+jüngere; Gelöschtes bleibt gelöscht. Das Aussehen stellt jeder PC für sich ein.
+
 ---
 
 ## Entwicklung
@@ -227,7 +243,8 @@ zur Laufzeit wird nur `electron-updater` für die Selbstaktualisierung gebraucht
 | `npm run test:connectors` | YouTube- und Twitch-Anbindung, mehrere Kanäle, leere Kanäle – ohne Netz |
 | `npm run test:calendar` | Kalenderdateien nach RFC 5545: Faltung, Maskierung, stabile Kennungen |
 | `npm run test:companion` | den WLAN-Server des Handy-Begleiters von außen, inklusive Zugriffsschutz |
-| `npm test` | alles davor, dazu einen Rauchtest über alle 14 Ansichten und den Assistenten |
+| `npm run test:sync` | drei simulierte PCs an einem Cloud-Ordner: Konflikte, Löschen, Verschlüsselung, Ausfälle |
+| `npm test` | alles davor, dazu einen Rauchtest über alle 15 Ansichten und den Assistenten |
 
 **Neue Version veröffentlichen:**
 

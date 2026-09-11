@@ -42,14 +42,16 @@ Der Ausbau erfolgt in Stufen. Jede Stufe ist für sich benutzbar – die App ist
 - [x] Windows-Installer und Selbstaktualisierung
 - [x] Handy-Begleiter für iPhone und Android über das eigene WLAN
 - [x] Eigenes Erscheinungsbild: Akzentfarben, Hintergründe, eigenes Bild
-- [ ] Mehrere PCs miteinander koppeln ([#2](https://github.com/MoinMornhart/content-helper/issues/2))
+- [x] Mehrere PCs per Code verbinden, verschlüsselt über den eigenen Cloud-Ordner ([#2](https://github.com/MoinMornhart/content-helper/issues/2))
 - [ ] Freigabe-Workflow (Entwurf → Review → geplant)
 - [ ] Globale Suche über alle Inhalte, Ideen und Notizen
 
 ## Grundsatz: so wenig Schlüssel wie möglich
 Wo es geht, braucht die App **keine API-Schlüssel und keine Developer-Apps**. YouTube kommt ganz
-ohne aus. Twitch gibt Daten nur an registrierte Anwendungen heraus – dort genügt eine Anmeldung
-mit dem eigenen Konto und einmalig eine Client-ID.
+ohne aus. Bei Twitch gibt es keine Schlüssel zum Hantieren mehr: Man meldet sich mit dem eigenen
+Konto an. Nur einmalig ist eine Client-ID nötig, weil Twitch Daten ausschließlich an registrierte
+Anwendungen herausgibt – sie ist kein Passwort und steht in jeder öffentlichen App im Klartext.
+Auch der Abgleich zwischen mehreren PCs kommt ohne Schlüssel und ohne Server aus.
 
 Wo eine Plattform gar nichts freiwillig herausgibt, arbeitet die App als **Übergabemaschine**:
 
