@@ -264,7 +264,7 @@ npm run screenshots:en   # regenerate the English screenshots
 npm run dist             # build the Windows installer
 ```
 
-Requires Node.js 20 or newer. The UI has no framework and no build step; at runtime only
+Requires Node.js 22 or newer (recommended: 24). The UI has no framework and no build step; at runtime only
 `electron-updater` is needed for self-updating.
 
 **Translations:** German text in the code is also the key – `t('Gespeichert.')` shows "Saved." in

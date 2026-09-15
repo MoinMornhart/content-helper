@@ -1,0 +1,32 @@
+# Dependabot hält Pakete und GitHub-Actions aktuell: einmal pro Woche ein
+# gebündelter Vorschlag je Bereich, Sicherheitslücken sofort.
+# Kleine Updates (Patch, Minor) übernimmt der Workflow „Prüfung“ selbst,
+# sobald alle Tests grün sind – große Sprünge (Major) bleiben zum Ansehen liegen.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    open-pull-requests-limit: 5
+    groups:
+      electron:
+        patterns: ["electron", "electron-builder", "electron-updater"]
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Berlin
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

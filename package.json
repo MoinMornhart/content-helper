@@ -7,6 +7,9 @@
   "author": "MoinMornhart",
   "license": "MIT",
   "private": true,
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "electron .",
     "dev": "electron . --dev",

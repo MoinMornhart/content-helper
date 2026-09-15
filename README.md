@@ -266,7 +266,7 @@ npm run dist         # Windows-Installer bauen
 Englisch „Saved.“. Die englischen Texte stehen in `src/shared/i18n/en/*.json`; `npm run test:i18n`
 meldet jeden Text ohne Übersetzung.
 
-Voraussetzung ist Node.js 20 oder neuer. Die Oberfläche kommt ohne Framework und ohne Build-Schritt aus;
+Voraussetzung ist Node.js 22 oder neuer (empfohlen: 24). Die Oberfläche kommt ohne Framework und ohne Build-Schritt aus;
 zur Laufzeit wird nur `electron-updater` für die Selbstaktualisierung gebraucht.
 
 **Prüfungen** – laufen bei jeder Änderung auch auf GitHub:
